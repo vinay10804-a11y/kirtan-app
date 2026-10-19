@@ -20,16 +20,23 @@ R2 bucket `kirtans` at `/audio/*`.
   section; "Radhanath"/"Gopal" paths map to Gour Krishna). Anything else is skipped and listed.
 - Kirtan types are **Mahamantra** (not "Hare Kṛṣṇa") and **Bhajans**.
 - Kirtans page: artist switch → Mahamantra/Bhajans tabs → browse by Year / Place / Length chips.
-- Japa: Guided Japa and Japa Inspirations are YouTube video cards (thumbnail opens YouTube) with
-  "Listen here" + save-offline audio; Living Name Meditations is audio only. Guided Japa videos are
-  listed in `tools/guided-japa.txt`. MP4 copies go to `Japa Videos` beside the `Kirtans` folder on the Mac.
+- Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa and Japa Inspirations are
+  YouTube video cards (thumbnail opens YouTube) whose "Listen here" plays the YouTube video in place;
+  Living Name Meditations are SoundCloud tracks that open SoundCloud's player under the title.
+  `tools/videos.mjs` writes the list to `site/videos.json`. Guided Japa videos are listed in
+  `tools/guided-japa.txt`. If audio copies are ever added (Kirtans/Japa), "Listen here" uses them instead.
 - Home: the wave image (`site/art/card-1.webp`), a one-line intro, Kirtans and Japa cards with short
   explanations and links, Recently added, "How to use this site". No quote section, no photo strip.
 - No watercolour images as track artwork. Tracks use embedded cover art, else a plain initials tile.
 - Design: clean, calm, easy to navigate, not clunky; cream/teal palette, EB Garamond + system UI.
 - Public site. Spotify albums are commercial releases; the owner was advised to consider making the
   site login-only (Cloudflare Access) before publishing them.
-- Quotes must be verified, never invented. Lyrics are a web-search link, not invented text.
+- Quotes must be verified, never invented. Lyrics appear only on Bhajans: `site/lyrics.json` maps each
+  bhajan to its kksongs.org page and verified author. Words and translations shown in the app (`verses`)
+  must come from the owner or a source we may use; never copy them from websites or write them from memory.
+- Swipe the player artwork or mini player left/right to change recordings.
+- `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
+  Read it when they ask what's outstanding, and keep it current.
 
 ## First run on the owner's Mac (the chosen path)
 The owner is not technical: explain in plain English, one step at a time, and do the work yourself.
@@ -41,7 +48,7 @@ The owner is not technical: explain in plain English, one step at a time, and do
    `tools/classify.mjs` until every kirtan sits under the right artist, type, year and place.
 4. Ask which photos are Gour Krishna and which are Sacinandana Swami; rename them so `tools/photos.mjs`
    tags them (names containing "gour" or "sns").
-5. Run `./publish.sh`. `wrangler login` opens a browser for the owner to click Allow; no API keys are
+5. Run `./publish.sh` (add `--download` only to download Japa/Spotify audio). `wrangler login` opens a browser for the owner to click Allow; no API keys are
    needed on the Mac. If YouTube or Spotify downloads fail, debug them (spotdl may need the owner's own
    Spotify client ID/secret).
 6. Give the owner the live link, and remind them about Add to Home Screen on their phone.

@@ -2,18 +2,18 @@
 // connection, and saved recordings (put in AUDIO_CACHE by app.js) are served
 // from the device, including the byte-range requests audio players make.
 
-const VERSION = 'de168fe559';
+const VERSION = '6db9d44625';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
 
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
-  'catalog.json', 'photos.json', 'videos.json',
+  'catalog.json', 'photos.json', 'videos.json', 'lyrics.json',
   'art/card-1.webp',
-  'icons/icon-192.png', 'icons/favicon.png',
+  'icons/icon-192.png', 'icons/favicon.png', 'apple-touch-icon.png',
 ];
-const DATA = /\/(catalog|photos|videos)\.json$/;
+const DATA = /\/(catalog|photos|videos|lyrics)\.json$/;
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

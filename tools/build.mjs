@@ -147,7 +147,7 @@ async function pool(items, limit, fn) {
 async function stampServiceWorker() {
   const sw = path.join(ROOT, 'site/sw.js');
   const hash = createHash('sha1');
-  for (const f of ['index.html', 'styles.css', 'app.js', 'catalog.json', 'photos.json', 'videos.json']) {
+  for (const f of ['index.html', 'styles.css', 'app.js', 'catalog.json', 'photos.json', 'videos.json', 'lyrics.json']) {
     try { hash.update(await fs.readFile(path.join(ROOT, 'site', f))); } catch {}
   }
   const src = await fs.readFile(sw, 'utf8');

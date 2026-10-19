@@ -28,11 +28,12 @@ It's hosted free on your own Cloudflare account.
   New videos in the Japa Inspirations playlist and the Living Name SoundCloud set are picked up automatically.
 - **Photos:** whatever is in the `photos of sns` folder (next to the project) shows on the home page.
   Put a name in a photo's file name (e.g. `gour krishna.jpg`, `sns.jpg`) to use it as that person's picture.
-- **Japa videos:** the Guided Japa and Japa Inspirations tabs show the YouTube videos; tapping one opens YouTube.
-  MP4 copies for offline watching are saved to a `Japa Videos` folder beside `Kirtans` (about 1 GB per session at 720p).
-- **Spotify playlists:** add the link to `tools/spotify-playlists.txt`. New tracks download on the next `./publish.sh`.
+- **Japa:** the Guided Japa and Japa Inspirations tabs show the YouTube videos; **Listen here** plays one on the page,
+  and tapping the picture opens YouTube. Living Name meditations play from SoundCloud. Nothing is downloaded.
+  `./publish.sh --download` saves audio and MP4 copies to your Mac instead (about 1 GB per session at 720p).
+- **Spotify playlists:** add the link to `tools/spotify-playlists.txt`. New tracks download on the next `./publish.sh --download`.
   Spotify audio is copy-protected, so each track is fetched from YouTube Music. Check that the odd rare one matched the right recording.
-- **Skip the online checks** (faster): `./publish.sh --no-fetch`
+- **Skip refreshing the Japa list** (faster): `./publish.sh --no-fetch`
 
 ## How things are sorted
 

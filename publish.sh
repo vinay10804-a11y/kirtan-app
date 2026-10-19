@@ -2,12 +2,14 @@
 # One command to (re)publish the app. Run it again any time you add kirtans.
 #
 #   ./publish.sh                 # uses the Kirtans folder next to this project
-#   ./publish.sh --no-fetch      # skip checking YouTube, SoundCloud and Spotify for new recordings
+#   ./publish.sh --no-fetch      # don't refresh the Japa list from YouTube and SoundCloud
+#   ./publish.sh --download      # also download Japa audio/video and the Spotify playlists (many GB)
 #   ./publish.sh /other/folder
 set -euo pipefail
 cd "$(dirname "$0")"
 
 FETCH=1
+DOWNLOAD=0
 # Recordings live in a "Kirtans" folder beside this project
 # (e.g. ~/Desktop/sns kirtan platform/Kirtans); ~/Desktop/KC/Kirtans is the older location.
 SRC="$(cd .. && pwd)/Kirtans"
@@ -15,6 +17,7 @@ SRC="$(cd .. && pwd)/Kirtans"
 for arg in "$@"; do
   case "$arg" in
     --no-fetch|--no-japa) FETCH=0 ;;
+    --download) DOWNLOAD=1 ;;
     *) SRC="$arg" ;;
   esac
 done
@@ -32,12 +35,16 @@ fi
 [ -d node_modules ] || npm install --no-audit --no-fund
 W=./node_modules/.bin/wrangler
 
-if [ "$FETCH" = 1 ]; then
-  echo "== Checking for new japa sessions"
+# Japa plays from YouTube and SoundCloud, so normally only its list is refreshed.
+if [ "$DOWNLOAD" = 1 ]; then
+  echo "== Downloading japa sessions"
   tools/fetch-japa.sh "$SRC"
-  node tools/videos.mjs
   echo "== Checking Spotify playlists"
   tools/fetch-spotify.sh "$SRC"
+fi
+if [ "$FETCH" = 1 ]; then
+  echo "== Refreshing the Japa list"
+  node tools/videos.mjs
 fi
 
 echo "== Photos"

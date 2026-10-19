@@ -8,9 +8,9 @@ const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
 const JAPA_TABS = { 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
 const JAPA_ABOUT = {
-  'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Watch on YouTube, or listen here and save them for offline.',
+  'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap Listen here to play one on this page, or the picture to open it on YouTube.',
   'Japa Inspirations': 'Talks and reflections from Sacinandana Swami to bring fresh attention to your chanting.',
-  'Living Name Meditations': 'Guided meditations from The Living Name, Sacinandana Swami’s book on chanting with attention and feeling.',
+  'Living Name Meditations': 'Guided meditations from The Living Name, Sacinandana Swami’s book on chanting with attention and feeling. They play here from SoundCloud.',
 };
 // Short labels for the plain tiles shown when a recording has no cover art.
 const INITIALS = { 'Sacinandana Swami': 'SS', 'Gour Krishna': 'GK' };
@@ -47,6 +47,7 @@ const S = {
   bySrc: new Map(),
   photos: [],
   videos: [],
+  lyrics: [],
   favs: new Set(store.get('favs', [])),
   played: new Set(store.get('played', [])),
   positions: store.get('positions', {}),
@@ -79,6 +80,17 @@ const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
 const isOnline = () => navigator.onLine !== false;
 const ytThumb = (id, size = 'hqdefault') => `https://i.ytimg.com/vi/${id}/${size}.jpg`;
 const ytLink = id => `https://www.youtube.com/watch?v=${id}`;
+// Japa entries are YouTube videos unless marked as SoundCloud tracks.
+const isSC = v => v.source === 'soundcloud';
+const vidLink = v => (isSC(v) ? v.url : ytLink(v.id));
+const vidThumb = (v, size) => (isSC(v) ? v.thumb : ytThumb(v.id, size));
+const vidSite = v => (isSC(v) ? 'SoundCloud' : 'YouTube');
+function embedSrc(v) {
+  if (!isSC(v)) return `https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&playsinline=1&rel=0`;
+  const q = new URLSearchParams({ url: v.url, auto_play: 'true', visual: 'false', color: '#3a8487',
+    show_comments: 'false', show_reposts: 'false', show_teaser: 'false', show_user: 'false' });
+  return `https://w.soundcloud.com/player/?${q}`;
+}
 
 function fmtDur(sec) {
   sec = Math.max(0, Math.round(sec || 0));
@@ -173,14 +185,16 @@ async function loadJSON(url, fallback) {
 }
 
 async function loadData() {
-  const [catalog, photos, videos] = await Promise.all([
+  const [catalog, photos, videos, lyrics] = await Promise.all([
     loadJSON('catalog.json', { tracks: [] }),
     loadJSON('photos.json', []),
     loadJSON('videos.json', []),
+    loadJSON('lyrics.json', []),
   ]);
   S.tracks = catalog.tracks || [];
   S.photos = photos;
   S.videos = videos;
+  S.lyrics = lyrics.map(l => ({ ...l, re: new RegExp(l.match, 'i') }));
   for (const t of S.tracks) {
     S.byId.set(t.id, t);
     S.bySrc.set(new URL(t.src, location.href).pathname, t);
@@ -351,7 +365,8 @@ function homeView() {
     const vids = S.videos.filter(v => v.collection === c).length;
     const n = vids || allJapa.filter(t => t.type === c).length;
     const art = `<span class="tile" aria-hidden="true">${icon(vids ? 'play' : 'beads')}</span>`;
-    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, vids ? 'video' : 'session'));
+    const sc = S.videos.some(v => v.collection === c && isSC(v));
+    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, sc ? 'meditation' : vids ? 'video' : 'session'));
   }).join('');
 
   return `${topbar()}
@@ -438,6 +453,14 @@ function japaView(colSlug) {
   const key = `japa:${slug(col)}`;
   const videos = S.videos.filter(v => v.collection === col);
 
+  if (videos.some(isSC)) {
+    // SoundCloud meditations: one list in the order of the set, each playing in place.
+    const list = videos.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    return `${header}${tabBar}${about}
+      <div class="list-head"><p class="page-sub">${plural(list.length, 'meditation')} · ${fmtHours(sum(list, v => v.duration))}</p></div>
+      <ul class="tracks sc-list">${list.map(scRow).join('')}</ul>`;
+  }
+
   if (videos.length) {
     // Offline audio copies, matched to their video by YouTube id.
     const byYt = new Map(audioTracks.filter(t => t.yt).map(t => [t.yt, t]));
@@ -472,28 +495,72 @@ function japaView(colSlug) {
 function videoCard(v, track, listKey) {
   const meta = [v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean);
   if (track && S.played.has(track.id)) meta.push(`<span class="played">${icon('tick')}Played</span>`);
+  // With an offline copy, "Listen here" plays it in the app's player; without one,
+  // the YouTube video plays in place of its picture.
   const listen = track ? `<div class="video-actions">
       <button class="text-btn" data-action="play" data-id="${track.id}" data-list="${listKey}">${icon('play')}Listen here</button>
       ${dlButton(track)}
-    </div>` : '';
+    </div>` : `<div class="video-actions">
+      <button class="text-btn embed-btn" data-action="embed" data-vid="${esc(v.id)}">${icon('play')}<span class="when-closed">Listen here</span><span class="when-open">Close player</span></button>
+    </div>`;
   return `<article class="video" ${track ? `data-track="${track.id}"` : ''}>
-    <a class="thumb" href="${ytLink(v.id)}" target="_blank" rel="noopener" aria-label="Watch ${esc(v.title)} on YouTube">
-      <img src="${ytThumb(v.id)}" alt="" loading="lazy" onerror="this.remove()">
-      ${v.duration ? `<span class="thumb-dur">${fmtClock(v.duration)}</span>` : ''}
-      <span class="thumb-play">${icon('play')}</span>
-    </a>
+    <div class="embed-slot" data-embed="${esc(v.id)}">
+      <a class="thumb" href="${ytLink(v.id)}" target="_blank" rel="noopener" aria-label="Watch ${esc(v.title)} on YouTube">
+        <img src="${ytThumb(v.id)}" alt="" loading="lazy" onerror="this.remove()">
+        ${v.duration ? `<span class="thumb-dur">${fmtClock(v.duration)}</span>` : ''}
+        <span class="thumb-play">${icon('play')}</span>
+      </a>
+    </div>
     <a class="video-title" href="${ytLink(v.id)}" target="_blank" rel="noopener">${esc(v.title)}</a>
     <span class="video-meta">${meta.join(' · ')}</span>
     ${listen}
   </article>`;
 }
 
+// A Living Name meditation: tapping it opens SoundCloud's player under the title.
+function scRow(v) {
+  return `<li class="sc-item">
+    <button class="track sc-track embed-btn" data-action="embed" data-vid="${esc(v.id)}">
+      <span class="track-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${fmtDur(v.duration)}</span></span>
+      <span class="sc-play" aria-hidden="true"><span class="when-closed">${icon('play')}</span><span class="when-open">${icon('x')}</span></span>
+    </button>
+    <div class="embed-slot sc-slot" data-embed="${esc(v.id)}"></div>
+  </li>`;
+}
+
 function videoRow(v) {
   const meta = [v.collection, v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean).join(' · ');
-  return `<a class="vrow" href="${ytLink(v.id)}" target="_blank" rel="noopener">
-    <span class="vrow-thumb"><img src="${ytThumb(v.id, 'mqdefault')}" alt="" loading="lazy" onerror="this.remove()">${icon('play')}</span>
-    <span class="vrow-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${esc(meta)} · YouTube</span></span>
+  const href = isSC(v) ? `#/japa/${slug(v.collection)}` : vidLink(v);
+  return `<a class="vrow" href="${esc(href)}" ${isSC(v) ? '' : 'target="_blank" rel="noopener"'}>
+    <span class="vrow-thumb"><img src="${esc(vidThumb(v, 'mqdefault'))}" alt="" loading="lazy" onerror="this.remove()">${icon('play')}</span>
+    <span class="vrow-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${esc(meta)} · ${vidSite(v)}</span></span>
   </a>`;
+}
+
+/* ---------------- YouTube and SoundCloud players in the page ---------------- */
+
+// One embedded player at a time; starting another, or the app's own player, closes it.
+let openEmbed = null;
+function closeEmbed() {
+  if (!openEmbed) return;
+  openEmbed.slot.innerHTML = openEmbed.html;
+  openEmbed.slot.classList.remove('playing');
+  openEmbed.btn?.classList.remove('open');
+  openEmbed = null;
+}
+function playEmbed(vid) {
+  const v = S.videos.find(x => x.id === vid);
+  const slot = view.querySelector(`.embed-slot[data-embed="${CSS.escape(vid)}"]`);
+  if (!v || !slot) return;
+  if (openEmbed?.slot === slot) return closeEmbed();
+  closeEmbed();
+  if (!isOnline()) return toast(`Connect to the internet to play from ${vidSite(v)}`);
+  audio.pause();
+  const btn = view.querySelector(`.embed-btn[data-vid="${CSS.escape(vid)}"]`);
+  openEmbed = { slot, btn, html: slot.innerHTML };
+  slot.classList.add('playing');
+  btn?.classList.add('open');
+  slot.innerHTML = `<iframe src="${esc(embedSrc(v))}" title="${esc(v.title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="eager"></iframe>`;
 }
 
 function searchView() {
@@ -596,6 +663,7 @@ let lastViewKey = null;
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   const [section = '', a, b, c, d] = parts;
+  openEmbed = null; // the page is re-rendered, which removes any embedded player
   let html;
   switch (section) {
     case '': html = homeView(); break;
@@ -731,14 +799,79 @@ function next() {
   }
 }
 
-function prev() {
-  if (audio.currentTime > 5 || S.qi <= 0) {
+function prev({ restart = true } = {}) {
+  if ((restart && audio.currentTime > 5) || S.qi <= 0) {
     audio.currentTime = 0;
     return;
   }
   S.qi--;
   load(S.queue[S.qi]);
 }
+
+/* ---------------- swipe between recordings ---------------- */
+
+// Like Spotify: drag the artwork (or the mini player) left for the next recording
+// and right for the previous one. Short or mostly vertical drags spring back.
+function swipeable(el) {
+  let start = null, dx = 0, sideways = null, swiped = false;
+  const canGo = d => (d < 0 ? S.qi < S.queue.length - 1 : S.qi > 0);
+  const reset = () => { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; };
+
+  el.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || !S.current) return;
+    start = { x: e.clientX, y: e.clientY };
+    dx = 0;
+    sideways = null;
+  });
+  el.addEventListener('pointermove', e => {
+    if (!start) return;
+    dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (sideways === null && Math.hypot(dx, dy) > 10) sideways = Math.abs(dx) > Math.abs(dy) * 1.2;
+    if (!sideways) return;
+    el.style.transition = 'none';
+    // Resist at the ends of the queue, so it's clear there's nothing further.
+    el.style.transform = `translateX(${canGo(dx) ? dx : dx / 4}px)`;
+  });
+  const end = () => {
+    if (!start) return;
+    start = null;
+    if (!sideways) return reset();
+    swiped = true;
+    if (Math.abs(dx) < Math.min(90, el.offsetWidth / 4) || !canGo(dx)) {
+      el.style.transition = 'transform .2s ease-out';
+      el.style.transform = '';
+      return;
+    }
+    const dir = dx < 0 ? -1 : 1;
+    el.style.transition = 'transform .18s ease-in, opacity .18s ease-in';
+    el.style.transform = `translateX(${dir * el.offsetWidth}px)`;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      dir < 0 ? next() : prev({ restart: false });
+      // The new recording slides in from the other side.
+      el.style.transition = 'none';
+      el.style.transform = `translateX(${-dir * 40}px)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = 'transform .22s ease-out, opacity .22s ease-out';
+        el.style.transform = '';
+        el.style.opacity = '';
+      }));
+    }, 180);
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  // A swipe on the mini player shouldn't also open the full player.
+  el.addEventListener('click', e => {
+    if (!swiped) return;
+    swiped = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+  el.addEventListener('pointerdown', () => { swiped = false; }, true);
+}
+swipeable($('#player-swipe'));
+swipeable($('.mini-open'));
 
 function seekBy(sec) {
   if (!S.current) return;
@@ -753,13 +886,12 @@ function updateNowPlaying() {
   $('#mini-title').textContent = t.title;
   $('#mini-sub').textContent = collectionName(t);
   $('#player-art').innerHTML = artHTML(t);
+  $('#player-swipe').style.transform = '';
   $('#player-title').textContent = t.title;
   $('#player-sub').textContent = [collectionName(t), t.year, t.section !== 'japa' && t.place].filter(Boolean).join(' · ');
   $('#player-context').textContent = t.section === 'japa' ? 'Japa' : t.type;
 
-  const lyrics = $('#player-lyrics');
-  lyrics.hidden = t.type !== 'Bhajans';
-  lyrics.href = `https://www.google.com/search?q=${encodeURIComponent(`${t.title} bhajan lyrics translation`)}`;
+  renderLyricsCard(t);
 
   updatePlayerButtons();
 
@@ -771,6 +903,44 @@ function updateNowPlaying() {
       artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
     });
   }
+}
+
+/* ---------------- bhajan lyrics ---------------- */
+
+// Mahamantra kirtans need no lyrics. A bhajan listed in lyrics.json gets a card
+// naming the song and its author: it opens the words in the app when lyrics.json
+// holds them, otherwise the song's page on kksongs.org. Other bhajans get a search link.
+const lyricsFor = t => (t?.type === 'Bhajans' ? S.lyrics.find(l => l.re.test(t.title)) : null);
+
+function renderLyricsCard(t) {
+  const box = $('#player-lyrics');
+  box.hidden = t.type !== 'Bhajans';
+  if (box.hidden) return;
+  const l = lyricsFor(t);
+  if (!l) {
+    const q = encodeURIComponent(`${t.title.split(' · ')[0]} bhajan lyrics translation`);
+    box.innerHTML = `<a class="lyrics-link" href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener">Find lyrics and translation</a>`;
+    return;
+  }
+  const by = [l.author, l.language].filter(Boolean).join(' · ');
+  const inner = `<span class="lyrics-text"><span class="lyrics-label">Lyrics and translation</span>
+      <span class="lyrics-name">${esc(l.name)}</span><span class="lyrics-by">${esc(by)}</span></span>${icon('right')}`;
+  box.innerHTML = l.verses?.length
+    ? `<button class="lyrics-card" data-action="lyrics">${inner}</button>`
+    : `<a class="lyrics-card" href="${esc(l.link)}" target="_blank" rel="noopener">${inner}</a>`;
+}
+
+function openLyrics() {
+  const l = lyricsFor(S.byId.get(S.current));
+  if (!l?.verses?.length) return;
+  $('#lyrics-name').textContent = l.name;
+  $('#lyrics-by').textContent = [l.author, l.language].filter(Boolean).join(' · ');
+  $('#lyrics-body').innerHTML = l.verses.map((v, i) => `<section class="verse">
+      <span class="verse-n">${i + 1}</span>
+      ${v.text ? `<p class="verse-text">${esc(v.text).replace(/\n/g, '<br>')}</p>` : ''}
+      ${v.translation ? `<p class="verse-tr">${esc(v.translation)}</p>` : ''}
+    </section>`).join('') + (l.link ? `<p class="lyrics-source"><a href="${esc(l.link)}" target="_blank" rel="noopener">Word-for-word meanings on kksongs.org</a></p>` : '');
+  $('#lyrics-dialog').showModal();
 }
 
 function updatePlayerButtons() {
@@ -816,7 +986,7 @@ function markPlayed(id) {
 
 let lastTick = null;
 let lastSave = 0;
-audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); });
+audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); });
 audio.addEventListener('pause', () => { lastTick = null; savePosition(); setPlayingClass(); });
 audio.addEventListener('timeupdate', () => {
   const t = S.byId.get(S.current);
@@ -1092,6 +1262,7 @@ document.addEventListener('click', async e => {
       if (ids.length) { S.queue = ids; S.qi = 0; load(ids[0]); }
       break;
     }
+    case 'embed': playEmbed(el.dataset.vid); break;
     case 'toggle': togglePlay(); break;
     case 'next': next(); break;
     case 'prev': prev(); break;
@@ -1132,6 +1303,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'share': shareCurrent(); break;
+    case 'lyrics': openLyrics(); break;
     case 'sleep-menu': $('#sleep-dialog').showModal(); break;
     case 'suggest': {
       S.query = el.dataset.q;
