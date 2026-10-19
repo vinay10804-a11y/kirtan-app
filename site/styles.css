@@ -375,6 +375,12 @@ dialog.sheet[open] { display: flex; flex-direction: column; animation: rise .25s
 .verse-tr { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2, var(--ink)); }
 .lyrics-source { margin: 16px 0 0; font-size: 13.5px; }
 .lyrics-source a { color: var(--teal); }
+/* A kksongs.org page shown inside the lyrics panel */
+dialog.sheet.web { height: min(92dvh, 900px); max-height: none; }
+dialog.sheet.web .lyrics-body { flex: 1; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+dialog.sheet.web iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+.lyrics-credit { margin: 0; padding: 8px 22px calc(var(--safe-b) + 10px); font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--line); }
+.lyrics-credit a { color: var(--teal); }
 /* Swipe areas: let the page scroll vertically while we handle sideways drags */
 .swipe, .mini-open { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .swipe { will-change: transform; }

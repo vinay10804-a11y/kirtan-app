@@ -32,8 +32,10 @@ R2 bucket `kirtans` at `/audio/*`.
 - Public site. Spotify albums are commercial releases; the owner was advised to consider making the
   site login-only (Cloudflare Access) before publishing them.
 - Quotes must be verified, never invented. Lyrics appear only on Bhajans: `site/lyrics.json` maps each
-  bhajan to its kksongs.org page and verified author. Words and translations shown in the app (`verses`)
-  must come from the owner or a source we may use; never copy them from websites or write them from memory.
+  bhajan to its kksongs.org page and verified author. The owner wants lyrics inside the app: the lyrics
+  card opens the kksongs.org page in an in-app panel (an iframe). Words and translations in the app's own
+  style (`verses`) must come from the owner or a source we may use; never copy them from websites or
+  write them from memory.
 - Swipe the player artwork or mini player left/right to change recordings.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.

@@ -2,7 +2,7 @@
 // connection, and saved recordings (put in AUDIO_CACHE by app.js) are served
 // from the device, including the byte-range requests audio players make.
 
-const VERSION = '6db9d44625';
+const VERSION = '5aae50f734';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
