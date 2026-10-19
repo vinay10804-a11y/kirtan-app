@@ -1,0 +1,99 @@
+[
+ {
+  "name": "Sri Gurvastakam",
+  "first": "Samsara Davanala Lidha Loka",
+  "author": "Visvanatha Cakravarti Thakura",
+  "language": "Sanskrit",
+  "match": "gur[uv]*astakam",
+  "link": "https://kksongs.org/songs/s/samsaradavanala.html"
+ },
+ {
+  "name": "Are Bhai Nitai Amar Doyara Avadhi",
+  "author": "Vrndavana Dasa Thakura",
+  "language": "Bengali",
+  "match": "are\\s*bhai\\s*nitai",
+  "link": "https://kksongs.org/songs/a/arebhainitaiamardoyara.html"
+ },
+ {
+  "name": "Emona Durmati",
+  "author": "Bhaktivinoda Thakura",
+  "language": "Bengali",
+  "match": "emona\\s*durmati",
+  "link": "https://kksongs.org/songs/e/emonadurmati.html"
+ },
+ {
+  "name": "Jaya Radha Madhava",
+  "author": "Bhaktivinoda Thakura",
+  "language": "Bengali",
+  "match": "jaya\\s*radha\\s*madhava",
+  "link": "https://kksongs.org/songs/j/jayaradhamadhava.html"
+ },
+ {
+  "name": "Kevalastakam",
+  "first": "Madhuram Madhurebhyo 'Pi",
+  "author": "Nilakantha Gosvami",
+  "language": "Sanskrit",
+  "match": "kevalastakam",
+  "link": "https://kksongs.org/songs/m/madhurammadhurebhyo.html"
+ },
+ {
+  "name": "Madhurastakam",
+  "first": "Adharam Madhuram",
+  "author": "Vallabhacarya",
+  "language": "Sanskrit",
+  "match": "madhurastakam",
+  "link": "https://kksongs.org/songs/a/adharammadhuram.html"
+ },
+ {
+  "name": "Mama Mana Mandire",
+  "author": "Bhaktivinoda Thakura",
+  "language": "Bengali",
+  "match": "mama\\s*mana\\s*mandire",
+  "link": "https://kksongs.org/songs/m/mamamanamandire.html"
+ },
+ {
+  "name": "Sri Nrsimha Pranama",
+  "first": "Namaste Narasimhaya",
+  "author": "Vyasadeva",
+  "language": "Sanskrit",
+  "match": "narash?imh?a|nrsimha",
+  "link": "https://kksongs.org/songs/n/namastenarasimha.html"
+ },
+ {
+  "name": "Nitai Pada Kamala",
+  "author": "Narottama Dasa Thakura",
+  "language": "Bengali",
+  "match": "nitai\\s*pada\\s*kamala",
+  "link": "https://kksongs.org/songs/n/nitaipadakamala.html"
+ },
+ {
+  "name": "Sri Siksastakam",
+  "first": "Ceto Darpana Marjanam",
+  "author": "Sri Caitanya Mahaprabhu",
+  "language": "Sanskrit",
+  "match": "s[ih]?iks?astakam",
+  "link": "https://kksongs.org/songs/c/cetodarpana.html"
+ },
+ {
+  "name": "Sri Krsna Caitanya Prabhu Doya Koro More",
+  "author": "Narottama Dasa Thakura",
+  "language": "Bengali",
+  "match": "caitanya\\s*prabhu\\s*doya",
+  "link": "https://kksongs.org/songs/s/srikrsnacaitanyaprabhu.html"
+ },
+ {
+  "name": "Sri Damodarastakam",
+  "first": "Namamisvaram Sac-cid-ananda Rupam",
+  "author": "Satyavrata Muni, from the Padma Purana",
+  "language": "Sanskrit",
+  "match": "damodarastakam",
+  "link": "https://kksongs.org/songs/n/namamisvaram.html"
+ },
+ {
+  "name": "Jaya Jaya Radhe Jaya Jaya Syama",
+  "author": "Traditional Vrndavana kirtana",
+  "language": "Braj",
+  "match": "jaya\\s*jaya\\s*radhe\\s*jaya\\s*jaya\\s*s(h)?yam",
+  "link": "https://kksongs.org/songs/j/jayajayaradhejayajayasyama.html"
+ }
+]

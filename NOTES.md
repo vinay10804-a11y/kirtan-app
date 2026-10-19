@@ -1,0 +1,54 @@
+# Notes: what's next for the kirtan app
+
+A running list for Vinoda Govinda. Ask "what's on the list?" and Claude reads this file.
+Tick items off (or delete them) as they're done.
+
+## Changes still to make
+
+- **Places for 42 kirtans.** They show no place until we know where they were recorded
+  (list under "What I need from you").
+- **Artwork for each recording.** Today a kirtan shows its own embedded cover art, else a photo
+  of the artist. When the images arrive, the build needs to pick up an image saved next to a
+  recording with the same name (e.g. `Sacinandana Swami | Damodarastakam | Govardhan | 2025.jpg`).
+  That isn't built yet.
+- **Lyrics inside the app.** Every bhajan with a known song page shows a card naming the song and
+  its author, linking to kksongs.org. The app can show the words and translation itself (a lyrics
+  sheet is built in), but only from text we have permission to use: add `verses` to the song in
+  `site/lyrics.json`.
+- **Four bhajans have no lyrics page yet** and still use a web search: He Govinda, He Gopal
+  (kksongs has three different songs with this name), Gauranga Karuna Koro, Radharaman Kaho,
+  and Sakhi He (Smita Krsna).
+- **Japa plays from YouTube and SoundCloud** (chosen 19 Oct 2026). Downside: it stops when the
+  phone screen locks or you leave the Japa page, there's no offline listening, and YouTube may show
+  ads. If that gets annoying, switch to audio-only copies on Cloudflare (about 0.5 GB, free tier).
+- **Check five kirtan types.** Radhe Govinda, KKS Tune, Manu Tune, Adhivas and Meditation on
+  Krsna's Arrival are filed as Mahamantra. Move any that are bhajans.
+- **Spotify playlist not included.** The site is public and those albums are commercial releases.
+  Consider making the site login-only (Cloudflare Access) before adding them.
+- **Mac storage (optional).** `kirtan-app/build/audio` keeps a 4.7 GB copy of the compressed audio.
+  The build could skip files already uploaded so that copy can be deleted.
+
+## What I need from you
+
+1. **Where each of these was recorded** (e.g. "Holy Name Immersion = Radhadesh"):
+   - Sacinandana Swami: Govinda Kund · Swiss Church (2025); He Govinda, He Gopal; Holy Name
+     Immersion; Holy Name Retreat · Govinda Kund; Jaya Jaya Radhe Jaya Jaya Shyam; Mantra Lounge ·
+     Govinda Kund; Ter Kadamba (2023); The Cure for the Mind · Gauranga Karuna Koro.
+   - Gour Krishna: Abhishek Kirtan, Narasimha Caturdasi (2024); Adhivas (2025); Are Bhai Nitai Amar
+     Doyara Avadhi; Bhakti Retreat (2024); Emona Durmati; Guruvastakam with Manu (2026); Holy Name
+     Immersion; Holy Name Immersion 8hr Kirtan (2025); Holy Name Immersion Day 4 (2025); Holy Name
+     Immersion Evening Kirtan (2025); Holy Name Immersion Retreat (2023); Janmashtami (2024);
+     Janmashtami Midnight Kirtan (2025); Jaya Radha Madhava; Kevalastakam (2023); KKS Tune; Manu
+     Tune; Meditation on Krsna's Arrival, Janmastami (2023); Mentorship (2025); Mentorship Kirtan #1
+     and #2 (2022); Narashimadev Prayers; Nityananda Trayodashi (2025); Prabhupada's Room (2025);
+     Radharaman Kaho; Radhe Govinda · Mantra Lounge (2025); Rama Navami (2026); Sanga Mela;
+     Siksastakam Parts 1 and 2; Sakhi He Bhajan (Smita Krsna); Sri Krishna Caitanya Prabhu Doya
+     Koro; Srila Prabhupada's House; The Mood of Longing (2022).
+2. **Track images**, whenever they're ready.
+3. **The four bhajans without a lyrics page:** which "He Govinda, He Gopal" it is, and a page for
+   the others if you know one.
+4. **Bhajan or Mahamantra?** for the five kirtans listed above.
+5. **Lyrics text you're happy to have in the app** (for example from your own songbook), if you
+   want the words shown inside the app rather than linked.
+6. **One-time on your iPhone:** delete the old home-screen shortcut, then in Safari open the site,
+   tap Share → Add to Home Screen, so the new icon is picked up.
