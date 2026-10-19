@@ -205,6 +205,8 @@ async function loadData() {
       for (const req of await cache.keys()) {
         const t = S.bySrc.get(new URL(req.url).pathname);
         if (t) S.saved.add(t.id);
+        // A copy no longer in the catalog (e.g. replaced by a smaller format) only takes up space.
+        else if (S.tracks.length) await cache.delete(req);
       }
     } catch {}
   }

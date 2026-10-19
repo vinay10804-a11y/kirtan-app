@@ -28,10 +28,15 @@ const CATALOG = path.join(ROOT, 'site/catalog.json');
 const COVERS = path.join(ROOT, 'site/covers');
 
 const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus', '.wma', '.aif', '.aiff', '.mp4', '.webm']);
-// Files already at or below the keep bitrate are copied as-is instead of
-// re-encoded. Japa sessions are mostly voice, so they get a lighter encode.
-const MUSIC = { keep: 200_000, args: ['-ac', '2', '-b:a', '128k'] };
-const SPEECH = { keep: 96_000, args: ['-ac', '1', '-b:a', '64k'] };
+// Audio is AAC in .m4a: 96 kbps stereo sounds like 128 kbps MP3 at three quarters
+// of the size. Files already at or below the keep bitrate are copied as-is, since
+// re-encoding them would only lose quality. Japa sessions are mostly voice, so
+// they get a lighter encode. Changing FORMAT re-makes every file whose original
+// is on this Mac (new file names, so browsers never mix old and new).
+const FORMAT = 'aac96';
+const MUSIC = { keep: 100_000, args: ['-ac', '2', '-b:a', '96k'] };
+const SPEECH = { keep: 72_000, args: ['-ac', '1', '-b:a', '64k'] };
+let AAC = 'aac'; // Apple's encoder (aac_at) when ffmpeg has it: it sounds better.
 
 async function walk(dir) {
   const out = [];
@@ -82,23 +87,23 @@ async function processFile(file, meta) {
   const key = await keyFor(file);
 
   let info = meta[key];
-  if (!info || !(await exists(path.join(OUT, info.file)))) {
+  if (!info || (info.format !== FORMAT && !info.copied) || !(await exists(path.join(OUT, info.file)))) {
     const src = await probe(file);
     const ext = path.extname(file).toLowerCase();
     const profile = isSpeech(rel) ? SPEECH : MUSIC;
     const sameFormat = (src.codec === 'mp3' && ext === '.mp3') || (src.codec === 'aac' && ext === '.m4a');
     const copy = sameFormat && src.bitrate > 0 && src.bitrate <= profile.keep;
-    const outExt = copy ? ext : '.mp3';
-    const outFile = `${key}${outExt}`;
+    const outFile = copy ? `${key}${ext}` : `${key}-${FORMAT}.m4a`;
     const dest = path.join(OUT, outFile);
-    const tmp = path.join(OUT, `${key}.part${outExt}`);
+    const tmp = path.join(OUT, outFile.replace(/(\.[^.]+)$/, '.part$1'));
 
     try {
       if (copy) {
         await fs.copyFile(file, tmp);
       } else {
         await run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-vn', '-map_metadata', '-1',
-          ...profile.args, '-ar', '44100', '-c:a', 'libmp3lame', tmp]);
+          ...profile.args, '-ar', '44100', '-c:a', AAC, ...(AAC === 'aac_at' ? ['-aac_at_mode', 'cvbr'] : []),
+          '-movflags', '+faststart', tmp]);
       }
     } catch (err) {
       await fs.rm(tmp, { force: true });
@@ -113,6 +118,7 @@ async function processFile(file, meta) {
       duration: Math.round(outProbe.duration || src.duration),
       tagTitle: src.tags.title || src.tags.TITLE || '',
       added: Math.floor(stat.birthtimeMs || stat.mtimeMs),
+      ...(copy ? { copied: true } : { format: FORMAT }),
     };
     meta[key] = info;
   }
@@ -177,6 +183,7 @@ function refresh(t) {
 async function main() {
   // Everything in the current catalog is online: publish.sh uploads before it deploys.
   const previous = (await exists(CATALOG)) ? JSON.parse(await fs.readFile(CATALOG, 'utf8')).tracks || [] : [];
+  AAC = (await run('ffmpeg', ['-hide_banner', '-encoders'])).includes(' aac_at ') ? 'aac_at' : 'aac';
   const online = new Map(previous.map(t => [t.id, t]));
   const haveSrc = await exists(SRC);
   if (!haveSrc && !previous.length) {
@@ -200,11 +207,15 @@ async function main() {
     if (skipped.length > 40) console.log(`  … and ${skipped.length - 40} more`);
   }
 
-  // Files already online are reused as they are; only new ones are compressed.
+  // Files already online in the current format are reused as they are; new ones,
+  // and ones made in an older format, are compressed.
   const local = await Promise.all(files.map(async f => ({ file: f, rel: path.relative(SRC, f), key: await keyFor(f) })));
-  const reused = local.filter(l => online.has(l.key))
+  const current = t => t && (t.enc === FORMAT || t.enc === 'copy');
+  const reused = local.filter(l => current(online.get(l.key)))
     .map(l => ({ ...online.get(l.key), rel: l.rel, tag: online.get(l.key).tag || meta[l.key]?.tagTitle || undefined }));
-  const fresh = local.filter(l => !online.has(l.key)).map(l => l.file);
+  const fresh = local.filter(l => !current(online.get(l.key))).map(l => l.file);
+  const remade = fresh.filter(f => online.has(local.find(l => l.file === f).key)).length;
+  if (remade) console.log(`Re-making ${remade} recordings in the current format (${FORMAT}, encoder ${AAC})`);
   const limit = Math.max(1, Math.min(4, os.cpus().length - 1));
   const results = (await pool(fresh, limit, f => processFile(f, meta))).filter(Boolean);
   await fs.writeFile(META, JSON.stringify(meta, null, 1));
@@ -215,7 +226,8 @@ async function main() {
     duration: info.duration,
     size: info.size,
     added: info.added,
-    src: `audio/${info.file}`,
+    src: `media/${info.file}`,
+    enc: info.copied ? 'copy' : info.format,
     cover: info.cover || undefined,
     yt: rel.match(/\[([A-Za-z0-9_-]{11})\]/)?.[1],
     rel,
@@ -237,7 +249,8 @@ async function main() {
   const totalMB = tracks.reduce((s, t) => s + t.size, 0) / 1e6;
   await fs.writeFile(CATALOG, JSON.stringify({ generated: new Date().toISOString(), tracks }));
   await stampServiceWorker();
-  console.log(`Catalog: ${tracks.length} tracks (${added.length} new), ${(totalMB / 1000).toFixed(2)} GB → site/catalog.json`);
+  const brandNew = added.filter(t => !online.has(t.id)).length;
+  console.log(`Catalog: ${tracks.length} tracks (${brandNew} new), ${(totalMB / 1000).toFixed(2)} GB → site/catalog.json`);
 
   const summary = {};
   for (const t of tracks) {

@@ -65,14 +65,17 @@ wants recordings removed. Cover art lives in `site/covers/` (in git).
 
 Sorting/place changes with no recordings to hand: `node tools/build.mjs none && npx wrangler deploy`.
 
+Audio format (owner's choice, 19 Oct 2026): AAC 96 kbps stereo in .m4a, made with Apple's encoder
+(`aac_at`), under `media/` in the `kirtans` bucket (FORMAT `aac96` in build.mjs; files at or below
+100 kbps are copied as-is). Total about 3.5 GB, inside R2's free 10 GB; keep it there. The old 128k
+MP3s under `audio/` are no longer used. The owner chose not to keep a backup of the originals on
+Cloudflare: the published files are the only copy once local files are deleted, so a future format
+change can only re-encode files whose originals are on the Mac (others are kept as they are).
+
 ## Working in the cloud (no Mac)
-All 109 originals are backed up in the R2 bucket `kirtans-source`. Its layout is mixed (some keys are
-at the root, some under the artist folder), so pull into `source/` and treat it as a backup, not a
-build input (`wrangler r2 object put` cuts keys at "#", so the two "Mentorship Kirtan #1/#2" files are
-saved as "No 1/No 2"): rebuilding everything from it gives every file a new id, so it needs `--forget-missing`
-to avoid duplicates (and re-uploads all the audio). With these environment variables set:
-- `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: read the source bucket
-- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`: Wrangler deploys and uploads non-interactively
+There are no originals in the cloud (the `kirtans-source` backup was removed at the owner's request;
+`tools/pull-source.mjs` only matters if it's ever recreated). Sorting changes need no recordings.
+With `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set, Wrangler deploys and uploads non-interactively.
 
 For sorting changes, or new recordings in a folder of their own:
 ```
