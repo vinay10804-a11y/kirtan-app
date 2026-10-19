@@ -44,7 +44,7 @@ const photos = files.map((f, i) => {
   const h = Number(dims.match(/pixelHeight: (\d+)/)[1]);
   // Put a name in the file name ("gour krishna 1.jpg", "sns smiling.jpg") to use
   // that photo for the person's section.
-  const person = /g[ao]u?r|gopal|radhanath/i.test(f) ? 'Radhanath Swami & Gour Krishna'
+  const person = /g[ao]u?r|gopal|radhanath/i.test(f) ? 'Gour Krishna'
     : /sns|sac?h?inandana|swami/i.test(f) ? 'Sacinandana Swami' : undefined;
   return { src: `photos/photo-${n}.jpg`, thumb: `photos/photo-${n}-thumb.jpg`, w, h, person };
 });

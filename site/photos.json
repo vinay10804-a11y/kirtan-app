@@ -3,24 +3,91 @@
   "src": "photos/photo-01.jpg",
   "thumb": "photos/photo-01-thumb.jpg",
   "w": 1200,
-  "h": 1600
+  "h": 1600,
+  "person": "Sacinandana Swami"
  },
  {
   "src": "photos/photo-02.jpg",
   "thumb": "photos/photo-02-thumb.jpg",
-  "w": 1066,
-  "h": 1600
+  "w": 1600,
+  "h": 1066,
+  "person": "Sacinandana Swami"
  },
  {
   "src": "photos/photo-03.jpg",
   "thumb": "photos/photo-03-thumb.jpg",
-  "w": 1600,
-  "h": 1066
+  "w": 1066,
+  "h": 1600,
+  "person": "Sacinandana Swami"
  },
  {
   "src": "photos/photo-04.jpg",
   "thumb": "photos/photo-04-thumb.jpg",
+  "w": 1066,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-05.jpg",
+  "thumb": "photos/photo-05-thumb.jpg",
+  "w": 1280,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-06.jpg",
+  "thumb": "photos/photo-06-thumb.jpg",
+  "w": 1066,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-07.jpg",
+  "thumb": "photos/photo-07-thumb.jpg",
+  "w": 1200,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-08.jpg",
+  "thumb": "photos/photo-08-thumb.jpg",
   "w": 901,
-  "h": 1600
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-09.jpg",
+  "thumb": "photos/photo-09-thumb.jpg",
+  "w": 900,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-10.jpg",
+  "thumb": "photos/photo-10-thumb.jpg",
+  "w": 1600,
+  "h": 900,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-11.jpg",
+  "thumb": "photos/photo-11-thumb.jpg",
+  "w": 1200,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-12.jpg",
+  "thumb": "photos/photo-12-thumb.jpg",
+  "w": 900,
+  "h": 1600,
+  "person": "Sacinandana Swami"
+ },
+ {
+  "src": "photos/photo-13.jpg",
+  "thumb": "photos/photo-13-thumb.jpg",
+  "w": 1200,
+  "h": 1600,
+  "person": "Sacinandana Swami"
  }
 ]
