@@ -1,9 +1,11 @@
 // Streams kirtan audio from R2 with HTTP Range support (needed for seeking,
 // and by Safari for playback at all). Everything else is a static asset.
+// /media/ holds the current AAC files; /audio/ the older MP3s.
+const AUDIO_PATH = /^\/(media|audio)\//;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/audio/')) {
+    if (AUDIO_PATH.test(url.pathname)) {
       return serveAudio(request, env, decodeURIComponent(url.pathname.slice(1)));
     }
     return env.ASSETS.fetch(request);

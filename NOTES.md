@@ -25,12 +25,11 @@ Tick items off (or delete them) as they're done.
   Krsna's Arrival are filed as Mahamantra. Move any that are bhajans.
 - **Spotify playlist not included.** The site is public and those albums are commercial releases.
   Consider making the site login-only (Cloudflare Access) before adding them.
-- **Mac storage: done.** Publishing keeps every recording that's already online, so the local copies
-  can be deleted (see "Safe to delete" below). Originals are backed up in Cloudflare (`kirtans-source`).
-- **Tidy the backup (optional).** Cloudflare's `kirtans-source` holds all 109 originals plus a few
-  older copies saved under different folder names, and one cut-off name ("Mentorship Kirtan ").
-  They're harmless and cost a few cents a year; clear them in the Cloudflare dashboard if you like.
-  The two "Mentorship Kirtan #1/#2" originals are backed up as "No 1/No 2".
+- **Smaller audio: done.** All kirtans are AAC 96 kbps (3.5 GB online instead of 4.9 GB), inside
+  Cloudflare's free 10 GB. Publishing keeps every recording that's already online, so local copies can
+  be deleted (see "Safe to delete" below).
+- **No backup of the originals** (your choice). The app's versions are the only copy once you delete
+  your local files. Keep the Kirtans folder on an external drive if you ever want full quality again.
 
 ## Safe to delete on your Mac
 

@@ -2,7 +2,7 @@
 // connection, and saved recordings (put in AUDIO_CACHE by app.js) are served
 // from the device, including the byte-range requests audio players make.
 
-const VERSION = '922abdd40c';
+const VERSION = '610e58fe1d';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  if (url.origin === location.origin && url.pathname.startsWith('/audio/')) {
+  if (url.origin === location.origin && /^\/(media|audio)\//.test(url.pathname)) {
     event.respondWith(audioResponse(req, url));
     return;
   }
