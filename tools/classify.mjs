@@ -11,8 +11,12 @@
 import path from 'node:path';
 
 export const ARTISTS = [
-  { name: 'Sacinandana Swami', pattern: /s[ae]?c?h?i\s*nandana(\s*swami|\s*maharaj)?|sacinandan|\bS\.?N\.?S\.?\b|\bS\.?S\.?\b/i },
-  { name: 'Gour Krishna', pattern: /g[ao]u?ra?\s*kr?i?s?h?na|\bgour\b|\bgaur\b|gopal(\s*kr?i?s?h?na)?|radhanath(\s*swami)?|\bR\.?N\.?S\.?\b|\bG\.?K\.?\b/i },
+  // `pattern` decides who a file belongs to; `name` is what gets cut out of a title
+  // (narrower, so "He Govinda, He Gopal" keeps its "Gopal").
+  { name: 'Sacinandana Swami', pattern: /s[ae]?c?h?i\s*nandana(\s*swami|\s*maharaj)?|sacinandan|\bS\.?N\.?S\.?\b|\bS\.?S\.?\b/i,
+    strip: /(?:HH\s+)?s[ae]?c?h?i\s*nandana(?:\s*swami|\s*maharaj)?|\bSNS\b/i },
+  { name: 'Gour Krishna', pattern: /g[ao]u?ra?\s*kr?i?s?h?na|\bgour\b|\bgaur\b|gopal(\s*kr?i?s?h?na)?|radhanath(\s*swami)?|\bR\.?N\.?S\.?\b|\bG\.?K\.?\b/i,
+    strip: /g[ao]u?ra?[\s-]*kr?i?s?h?na(?:\s*(?:prabhu|dasa?))?|\bGK\b/i },
 ];
 
 // Order the Japa collections appear in the app; unknown folders sort after.
@@ -21,10 +25,10 @@ export const JAPA_COLLECTIONS = ['Guided Japa', 'Japa Inspirations', 'Living Nam
 // Holy places and temples that show up in kirtan titles and folder names.
 // More specific names come first ("New Vrindaban" before "Vrindavan").
 const PLACES = [
-  ['New Vrindaban', /new\s*vrinda?ban/i],
-  ['Vrindavan', /vr[iṛ]?n?d[aā]v[aā]na?|vrindaban|brindavan/i],
+  ['New Vrindaban', /new\s*vrinda?[bv]an/i],
+  ['Vrindavan', /vr[iṛ]?n?d[aā]v[aā]na?|vrindaban|brindavan|krishna\s*balaram\s*mandir|madan\s*mohan\s*temple/i],
   ['Mayapur', /m[aā]y[aā]pura?/i],
-  ['Govardhan', /govardh?ana?/i],
+  ['Govardhan', /gov[ae]rdh?ana?|kusum\s*sarovara?|haridev|mansi\s*ganga/i],
   ['Radha Kunda', /r[aā]dh[aā][\s-]*ku[nṇ][dḍ]a/i],
   ['Jagannath Puri', /jagannath[a]?\s*puri|\bpuri\b/i],
   ['Navadvip', /nava?dv[iī]pa?|nabadwip/i],
@@ -34,12 +38,23 @@ const PLACES = [
   ['London', /london|bhaktivedanta\s*manor/i],
   ['Radhadesh', /radhadesh/i],
   ['Simhachalam', /simhachalam/i],
+  ['Berlin', /\bberlin\b/i],
+  ['Bahrain', /bahrain/i],
+  ['Switzerland', /switzerland/i],
+  ['Goloka Dham', /goloka\s*dham/i],
+  ['Gita Nagari', /gita\s*nagari/i],
 ];
 
 const MAHAMANTRA = /hare\s*kr?i?s?h?n|maha\s*-?\s*mantra|mahamantra|\bH\.?K\.?\b|hari\s*-?\s*n[aā]m/i;
 const BHAJAN = /bhajan/i;
+// Named songs and prayers are bhajans; any other kirtan is a mahamantra kirtan.
+const BHAJAN_SONG = /bhajan|astaka?m|prayers?|jaya\s*radha\s*madhava|emona\s*durmati|\bnitai\b|doya\s*koro|karuna\s*koro|mama\s*mana\s*mandire|radharaman\s*kaho|\bhe\s*govinda|jaya\s*jaya\s*radhe|sakhi\s*he/i;
 const YEAR = /(?:^|\D)(19[89]\d|20[0-4]\d)(?!\d)/g;
 const DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})\s+/;
+// A filename part that is only a date: "2019", "12-2022", "28-11-2023" or "051219" (ddmmyy).
+const DATE_PART = /^(?:(?:\d{1,2}[-.\/])?\d{1,2}[-.\/])?(?:19|20)\d\d$|^\d{6}$/;
+const DMY = /(?:^|\|)\s*(\d{2})-(\d{2})-((?:19|20)\d\d)\s*(?:\||$)/;
+const DMY_SHORT = /(?:^|\|)\s*\d{4}(\d{2})\s*(?:\||$)/;
 
 export function isSpeech(rel) {
   return /^japa$/i.test(rel.split(path.sep)[0]);
@@ -49,11 +64,16 @@ export function classify(rel, tagTitle = '') {
   const parts = rel.split(path.sep);
   const base = path.basename(rel, path.extname(rel));
   const folders = parts.slice(0, -1);
-  const date = base.match(DATE_PREFIX)?.slice(1, 4).join('-') || null;
+  const dmy = base.match(DMY);
+  const date = base.match(DATE_PREFIX)?.slice(1, 4).join('-') || (dmy ? `${dmy[3]}-${dmy[2]}-${dmy[1]}` : null);
 
   const years = [...rel.matchAll(YEAR)].map(m => Number(m[1]));
-  const year = date ? Number(date.slice(0, 4)) : years.length ? years[years.length - 1] : null;
-  const title = cleanTitle(tagTitle || base.replace(DATE_PREFIX, '').replace(/^undated\s+/, ''));
+  const short = base.match(DMY_SHORT);
+  const year = date ? Number(date.slice(0, 4)) : years.length ? years[years.length - 1] : short ? 2000 + Number(short[1]) : null;
+  const place = placeFor(rel, null);
+  // Hand-named files ("Artist | Title | Place | Date") read better than their embedded tags.
+  const named = base.includes('|');
+  const title = cleanTitle(named ? base : tagTitle || base.replace(DATE_PREFIX, '').replace(/^undated\s+/, ''), place);
 
   if (isSpeech(rel)) {
     const type = folders[1] || 'Japa';
@@ -64,10 +84,12 @@ export function classify(rel, tagTitle = '') {
 
   const artist = ARTISTS.find(a => a.pattern.test(rel))?.name || null;
 
-  // A folder explicitly called "Bhajans" wins; otherwise look for the mahamantra in the name.
+  // A folder explicitly called "Bhajans" wins; then the mahamantra named outright;
+  // then a named song; anything else is a mahamantra kirtan.
   const type = folders.some(f => BHAJAN.test(f)) ? 'Bhajans'
-    : MAHAMANTRA.test(rel) ? 'Mahamantra'
-    : 'Bhajans';
+    : MAHAMANTRA.test(base) ? 'Mahamantra'
+    : BHAJAN_SONG.test(base) ? 'Bhajans'
+    : 'Mahamantra';
 
   // Innermost folder that isn't just the artist, type or year: often an event or album.
   const album = [...folders].reverse().find(f =>
@@ -88,7 +110,8 @@ function placeFor(rel, album) {
   return name.length >= 3 ? name : null;
 }
 
-function cleanTitle(raw) {
+function cleanTitle(raw, place = null) {
+  if (raw.includes('|')) return pipedTitle(raw, place);
   let t = raw
     .replace(/[_]+/g, ' ')
     .replace(/^\s*\d{1,3}\s*[-.)]\s*/, '')          // leading track number "01 - "
@@ -98,10 +121,31 @@ function cleanTitle(raw) {
     .replace(/\s{2,}/g, ' ')
     .trim();
   for (const a of ARTISTS) {
-    const g = new RegExp(`\\s*(?:with|by|-|–|\\|)?\\s*(?:${a.pattern.source})`, 'gi');
+    const g = new RegExp(`\\s*(?:with|by|-|–|\\|)?\\s*(?:${a.strip.source})`, 'gi');
     const stripped = tidy(t.replace(g, ' '));
     if (stripped.length >= 3) t = stripped;
   }
+  return t || raw;
+}
+
+// "Gour Krsna & Manu | Guruvastakam | 31-01-2026" → "Guruvastakam (with Manu)".
+// Date-only parts and the part that is just the place are dropped (the app shows
+// year and place on their own); a co-singer next to the artist becomes "with …".
+function pipedTitle(raw, place) {
+  const parts = raw.split('|').map(s => s.trim()).filter(Boolean);
+  const withs = [];
+  const keep = [];
+  for (const p of parts) {
+    const artist = ARTISTS.find(a => a.strip.test(p));
+    if (artist) {
+      const other = p.replace(new RegExp(artist.strip.source, 'gi'), ' ').replace(/^[\s&,]+|[\s&,]+$/g, '').trim();
+      if (other) withs.push(other);
+    } else if (!DATE_PART.test(p) && !(place && p.toLowerCase() === place.toLowerCase())) {
+      keep.push(p);
+    }
+  }
+  if (!keep.length && place) keep.push(place);
+  const t = keep.join(' · ') + (withs.length ? ` (with ${withs.join(', ')})` : '');
   return t || raw;
 }
 
