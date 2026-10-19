@@ -5,6 +5,7 @@
 
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,7 +13,9 @@ import { fileURLToPath } from 'node:url';
 import { classify, isSpeech } from './classify.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = path.resolve(process.argv[2] || path.join(os.homedir(), 'Desktop/KC/Kirtans'));
+// Recordings: the argument, else a "Kirtans" folder beside the project, else ~/Desktop/KC/Kirtans.
+const SIBLING = path.resolve(ROOT, '..', 'Kirtans');
+const SRC = path.resolve(process.argv[2] || (existsSync(SIBLING) ? SIBLING : path.join(os.homedir(), 'Desktop/KC/Kirtans')));
 const OUT = path.join(ROOT, 'build/audio');
 const META = path.join(ROOT, 'build/meta.json');
 const CATALOG = path.join(ROOT, 'site/catalog.json');

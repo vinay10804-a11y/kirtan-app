@@ -1,4 +1,4 @@
-// Copies photos from the Desktop "photos of sns" folder into site/photos/,
+// Copies photos from the "photos of sns" folder (beside the project, or on the Desktop) into site/photos/,
 // resized for the web, and writes site/photos.json. Uses macOS `sips`, which
 // also handles iPhone HEIC files. Without that folder the current photos stay.
 
@@ -13,12 +13,12 @@ const OUT = path.join(ROOT, 'site/photos');
 const desktop = path.join(os.homedir(), 'Desktop');
 const IMAGE = /\.(jpe?g|png|heic|heif|webp|tiff?)$/i;
 
-const folder = [desktop, path.join(desktop, 'KC')]
+const folder = [path.resolve(ROOT, '..'), desktop, path.join(desktop, 'KC')]
   .flatMap(d => (fs.existsSync(d) ? fs.readdirSync(d).map(n => path.join(d, n)) : []))
   .find(p => /^photos of sns$/i.test(path.basename(p)) && fs.statSync(p).isDirectory());
 
 if (!folder || process.platform !== 'darwin') {
-  console.log('No "photos of sns" folder found on the Desktop, keeping the current photos.');
+  console.log('No "photos of sns" folder found, keeping the current photos.');
   process.exit(0);
 }
 

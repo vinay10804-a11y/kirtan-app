@@ -7,7 +7,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-KIRTANS="${1:-$HOME/Desktop/KC/Kirtans}"
+KIRTANS="${1:-$(cd "$(dirname "$0")/../.." && pwd)/Kirtans}"
 AUDIO="$KIRTANS/Japa"
 VIDEO="$(dirname "$KIRTANS")/Japa Videos"
 mkdir -p "$AUDIO" "$VIDEO"

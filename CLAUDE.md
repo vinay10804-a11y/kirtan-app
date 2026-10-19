@@ -22,7 +22,7 @@ R2 bucket `kirtans` at `/audio/*`.
 - Kirtans page: artist switch → Mahamantra/Bhajans tabs → browse by Year / Place / Length chips.
 - Japa: Guided Japa and Japa Inspirations are YouTube video cards (thumbnail opens YouTube) with
   "Listen here" + save-offline audio; Living Name Meditations is audio only. Guided Japa videos are
-  listed in `tools/guided-japa.txt`. MP4 copies go to `~/Desktop/KC/Japa Videos` on the Mac.
+  listed in `tools/guided-japa.txt`. MP4 copies go to `Japa Videos` beside the `Kirtans` folder on the Mac.
 - Home: the wave image (`site/art/card-1.webp`), a one-line intro, Kirtans and Japa cards with short
   explanations and links, Recently added, "How to use this site". No quote section, no photo strip.
 - No watercolour images as track artwork. Tracks use embedded cover art, else a plain initials tile.
@@ -33,8 +33,9 @@ R2 bucket `kirtans` at `/audio/*`.
 
 ## First run on the owner's Mac (the chosen path)
 The owner is not technical: explain in plain English, one step at a time, and do the work yourself.
-1. Recordings are in `~/Desktop/KC/Kirtans`; photos in `~/Desktop/photos of sns`. The project lives in
-   `~/Desktop/KC/kirtan-app`.
+1. Everything lives in `~/Desktop/sns kirtan platform/`: the recordings folder (expected name `Kirtans`;
+   check the real name), the `photos of sns` folder, and this project as `kirtan-app`. The scripts default
+   to a `Kirtans` folder beside the project; pass the path explicitly if it's named differently.
 2. Install what's missing with Homebrew (`node ffmpeg yt-dlp`, plus `pipx install spotdl`).
 3. Run `node tools/build.mjs` and show the owner the category summary and the skipped list. Fix
    `tools/classify.mjs` until every kirtan sits under the right artist, type, year and place.
@@ -47,7 +48,7 @@ The owner is not technical: explain in plain English, one step at a time, and do
 
 ## Working in the cloud (no Mac)
 The originals are uploaded to the R2 bucket `kirtans-source` (same folder structure as
-`~/Desktop/KC/Kirtans`). With these environment variables set:
+`~/Desktop/sns kirtan platform/Kirtans`). With these environment variables set:
 - `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: read the source bucket
 - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`: Wrangler deploys and uploads non-interactively
 

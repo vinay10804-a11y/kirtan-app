@@ -7,7 +7,7 @@
 #   tools/fetch-spotify.sh [KirtansFolder]
 set -uo pipefail
 
-KIRTANS="${1:-$HOME/Desktop/KC/Kirtans}"
+KIRTANS="${1:-$(cd "$(dirname "$0")/../.." && pwd)/Kirtans}"
 LIST="$(dirname "$0")/spotify-playlists.txt"
 SPOTDL="$(command -v spotdl || echo "$HOME/.local/bin/spotdl")"
 

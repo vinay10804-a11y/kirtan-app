@@ -13,9 +13,9 @@ It's hosted free on your own Cloudflare account.
 2. **Create a free Cloudflare account** at https://dash.cloudflare.com/sign-up.
    Then open **R2 Object Storage** in the left menu and turn it on. It may ask for a card.
    The free tier covers 10 GB, so a collection this size costs nothing.
-3. **Publish.** Put this folder anywhere (for example `~/Desktop/KC/kirtan-app`) and run:
+3. **Publish.** Put this folder next to your `Kirtans` folder (for example `~/Desktop/sns kirtan platform/kirtan-app`) and run:
    ```
-   cd ~/Desktop/KC/kirtan-app
+   cd ~/Desktop/sns\ kirtan\ platform/kirtan-app
    ./publish.sh
    ```
    The first time, a browser window opens: log in to Cloudflare and click **Allow**.
@@ -23,13 +23,13 @@ It's hosted free on your own Cloudflare account.
 
 ## Adding more later
 
-- **New kirtans:** drop them anywhere in `~/Desktop/KC/Kirtans` and run `./publish.sh` again. Only new files are processed.
+- **New kirtans:** drop them anywhere in the `Kirtans` folder and run `./publish.sh` again. Only new files are processed.
 - **New guided japa sessions:** add the YouTube link to `tools/guided-japa.txt`, then run `./publish.sh`.
   New videos in the Japa Inspirations playlist and the Living Name SoundCloud set are picked up automatically.
-- **Photos:** whatever is in the `photos of sns` folder on your Desktop shows on the home page.
+- **Photos:** whatever is in the `photos of sns` folder (next to the project) shows on the home page.
   Put a name in a photo's file name (e.g. `gour krishna.jpg`, `sns.jpg`) to use it as that person's picture.
 - **Japa videos:** the Guided Japa and Japa Inspirations tabs show the YouTube videos; tapping one opens YouTube.
-  MP4 copies for offline watching are saved to `~/Desktop/KC/Japa Videos` (about 1 GB per session at 720p).
+  MP4 copies for offline watching are saved to a `Japa Videos` folder beside `Kirtans` (about 1 GB per session at 720p).
 - **Spotify playlists:** add the link to `tools/spotify-playlists.txt`. New tracks download on the next `./publish.sh`.
   Spotify audio is copy-protected, so each track is fetched from YouTube Music. Check that the odd rare one matched the right recording.
 - **Skip the online checks** (faster): `./publish.sh --no-fetch`

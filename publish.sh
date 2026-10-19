@@ -1,14 +1,17 @@
 #!/bin/bash
 # One command to (re)publish the app. Run it again any time you add kirtans.
 #
-#   ./publish.sh                 # uses ~/Desktop/KC/Kirtans
+#   ./publish.sh                 # uses the Kirtans folder next to this project
 #   ./publish.sh --no-fetch      # skip checking YouTube, SoundCloud and Spotify for new recordings
 #   ./publish.sh /other/folder
 set -euo pipefail
 cd "$(dirname "$0")"
 
 FETCH=1
-SRC="$HOME/Desktop/KC/Kirtans"
+# Recordings live in a "Kirtans" folder beside this project
+# (e.g. ~/Desktop/sns kirtan platform/Kirtans); ~/Desktop/KC/Kirtans is the older location.
+SRC="$(cd .. && pwd)/Kirtans"
+[ -d "$SRC" ] || SRC="$HOME/Desktop/KC/Kirtans"
 for arg in "$@"; do
   case "$arg" in
     --no-fetch|--no-japa) FETCH=0 ;;
