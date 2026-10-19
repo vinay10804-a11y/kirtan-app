@@ -32,7 +32,8 @@ async function main() {
   let uploaded = {};
   try { uploaded = JSON.parse(await fs.readFile(LEDGER, 'utf8')); } catch {}
 
-  const files = (await fs.readdir(AUDIO)).filter(f => TYPES[path.extname(f)] && !f.includes('.part'));
+  // build/audio may have been deleted to save space; then there's nothing new to send.
+  const files = (await fs.readdir(AUDIO).catch(() => [])).filter(f => TYPES[path.extname(f)] && !f.includes('.part'));
   const todo = files.filter(f => !uploaded[f]);
   console.log(`${files.length} audio files, ${todo.length} to upload`);
 

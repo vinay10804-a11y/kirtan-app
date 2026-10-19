@@ -24,6 +24,10 @@ It's hosted free on your own Cloudflare account.
 ## Adding more later
 
 - **New kirtans:** drop them anywhere in the `Kirtans` folder and run `./publish.sh` again. Only new files are processed.
+- **Saving space:** once published, recordings stay online even if you delete them from your Mac, so you can
+  delete the `Kirtans` folder's contents and `kirtan-app/build`. The originals are backed up in the Cloudflare
+  bucket `kirtans-source`. To take a recording off the site, delete it from the folder and run
+  `./publish.sh --forget-missing` (this removes every recording that isn't in the folder).
 - **New guided japa sessions:** add the YouTube link to `tools/guided-japa.txt`, then run `./publish.sh`.
   New videos in the Japa Inspirations playlist and the Living Name SoundCloud set are picked up automatically.
 - **Photos:** whatever is in the `photos of sns` folder (next to the project) shows on the home page.

@@ -55,18 +55,30 @@ The owner is not technical: explain in plain English, one step at a time, and do
    Spotify client ID/secret).
 6. Give the owner the live link, and remind them about Add to Home Screen on their phone.
 
+## What's online, and the owner's Mac (since 19 Oct 2026)
+`site/catalog.json` (in git) is the record of what's online. The build keeps every catalog entry even
+when its original isn't on the Mac, re-applies `classify.mjs` to it (each entry stores `rel`, its path
+in the Kirtans folder), and only compresses files that are new. So the owner may delete originals and
+`build/` once published, and the Kirtans folder only needs new recordings until they're published.
+`--forget-missing` (build or publish) drops entries whose original is gone; use it only when the owner
+wants recordings removed. Cover art lives in `site/covers/` (in git).
+
+Sorting/place changes with no recordings to hand: `node tools/build.mjs none && npx wrangler deploy`.
+
 ## Working in the cloud (no Mac)
-The originals are uploaded to the R2 bucket `kirtans-source` (same folder structure as
-`~/Desktop/sns kirtan platform/Kirtans`). With these environment variables set:
+All 109 originals are backed up in the R2 bucket `kirtans-source`. Its layout is mixed (some keys are
+at the root, some under the artist folder), so pull into `source/` and treat it as a backup, not a
+build input (`wrangler r2 object put` cuts keys at "#", so the two "Mentorship Kirtan #1/#2" files are
+saved as "No 1/No 2"): rebuilding everything from it gives every file a new id, so it needs `--forget-missing`
+to avoid duplicates (and re-uploads all the audio). With these environment variables set:
 - `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: read the source bucket
 - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`: Wrangler deploys and uploads non-interactively
 
-run:
+For sorting changes, or new recordings in a folder of their own:
 ```
 npm install
-node tools/pull-source.mjs            # originals → source/
-node tools/build.mjs source/Kirtans   # compress + catalog (prints the category summary and skipped files)
-node tools/upload.mjs                 # compressed audio → R2 bucket "kirtans"
+node tools/build.mjs <folder with only the new recordings, or "none">   # prints the category summary
+node tools/upload.mjs                 # new compressed audio → R2 bucket "kirtans"
 npx wrangler deploy
 ```
 Show the owner the category summary before deploying. YouTube downloads often fail from cloud IPs;
