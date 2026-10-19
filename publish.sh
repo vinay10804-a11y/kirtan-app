@@ -4,12 +4,17 @@
 #   ./publish.sh                 # uses the Kirtans folder next to this project
 #   ./publish.sh --no-fetch      # don't refresh the Japa list from YouTube and SoundCloud
 #   ./publish.sh --download      # also download Japa audio/video and the Spotify playlists (many GB)
+#   ./publish.sh --forget-missing  # remove recordings whose originals were deleted from the folder
 #   ./publish.sh /other/folder
+#
+# Recordings already online stay online even if you delete them from your Mac,
+# so the Kirtans folder only needs the new ones until they're published.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 FETCH=1
 DOWNLOAD=0
+BUILD_FLAGS=()
 # Recordings live in a "Kirtans" folder beside this project
 # (e.g. ~/Desktop/sns kirtan platform/Kirtans); ~/Desktop/KC/Kirtans is the older location.
 SRC="$(cd .. && pwd)/Kirtans"
@@ -18,6 +23,7 @@ for arg in "$@"; do
   case "$arg" in
     --no-fetch|--no-japa) FETCH=0 ;;
     --download) DOWNLOAD=1 ;;
+    --forget-missing) BUILD_FLAGS+=(--forget-missing) ;;
     *) SRC="$arg" ;;
   esac
 done
@@ -51,7 +57,7 @@ echo "== Photos"
 node tools/photos.mjs
 
 echo "== Preparing audio"
-node tools/build.mjs "$SRC"
+node tools/build.mjs "$SRC" ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}
 
 echo "== Cloudflare"
 if $W whoami 2>&1 | grep -qi "not authenticated"; then

@@ -25,8 +25,20 @@ Tick items off (or delete them) as they're done.
   Krsna's Arrival are filed as Mahamantra. Move any that are bhajans.
 - **Spotify playlist not included.** The site is public and those albums are commercial releases.
   Consider making the site login-only (Cloudflare Access) before adding them.
-- **Mac storage (optional).** `kirtan-app/build/audio` keeps a 4.7 GB copy of the compressed audio.
-  The build could skip files already uploaded so that copy can be deleted.
+- **Mac storage: done.** Publishing keeps every recording that's already online, so the local copies
+  can be deleted (see "Safe to delete" below). Originals are backed up in Cloudflare (`kirtans-source`).
+- **Tidy the backup (optional).** Cloudflare's `kirtans-source` holds all 109 originals plus a few
+  older copies saved under different folder names, and one cut-off name ("Mentorship Kirtan ").
+  They're harmless and cost a few cents a year; clear them in the Cloudflare dashboard if you like.
+  The two "Mentorship Kirtan #1/#2" originals are backed up as "No 1/No 2".
+
+## Safe to delete on your Mac
+
+Once a kirtan is published it stays on the website. You can delete (or move to an external drive):
+- the recordings in `Kirtans` (keep any new ones until they've been published);
+- `kirtan-app/build` (4.6 GB of compressed copies);
+- the `Photos of SNS` folder (the photos are already in the app).
+Add new kirtans to an empty `Kirtans` folder next to `kirtan-app` and ask Claude to publish.
 
 ## What I need from you
 
