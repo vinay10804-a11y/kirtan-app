@@ -908,8 +908,9 @@ function updateNowPlaying() {
 /* ---------------- bhajan lyrics ---------------- */
 
 // Mahamantra kirtans need no lyrics. A bhajan listed in lyrics.json gets a card
-// naming the song and its author: it opens the words in the app when lyrics.json
-// holds them, otherwise the song's page on kksongs.org. Other bhajans get a search link.
+// naming the song and its author, which opens a panel over the player: the words
+// from lyrics.json when it holds them, otherwise the song's kksongs.org page shown
+// inside the panel. Other bhajans get a search link.
 const lyricsFor = t => (t?.type === 'Bhajans' ? S.lyrics.find(l => l.re.test(t.title)) : null);
 
 function renderLyricsCard(t) {
@@ -925,16 +926,24 @@ function renderLyricsCard(t) {
   const by = [l.author, l.language].filter(Boolean).join(' · ');
   const inner = `<span class="lyrics-text"><span class="lyrics-label">Lyrics and translation</span>
       <span class="lyrics-name">${esc(l.name)}</span><span class="lyrics-by">${esc(by)}</span></span>${icon('right')}`;
-  box.innerHTML = l.verses?.length
-    ? `<button class="lyrics-card" data-action="lyrics">${inner}</button>`
-    : `<a class="lyrics-card" href="${esc(l.link)}" target="_blank" rel="noopener">${inner}</a>`;
+  box.innerHTML = `<button class="lyrics-card" data-action="lyrics">${inner}</button>`;
 }
 
 function openLyrics() {
   const l = lyricsFor(S.byId.get(S.current));
-  if (!l?.verses?.length) return;
+  if (!l) return;
+  const dialog = $('#lyrics-dialog');
   $('#lyrics-name').textContent = l.name;
   $('#lyrics-by').textContent = [l.author, l.language].filter(Boolean).join(' · ');
+  const web = !l.verses?.length;
+  dialog.classList.toggle('web', web);
+  if (web) {
+    if (!isOnline()) return toast('Connect to the internet to see the lyrics');
+    $('#lyrics-body').innerHTML = `<iframe src="${esc(l.link)}" title="Lyrics and translation of ${esc(l.name)}"></iframe>
+      <p class="lyrics-credit">From <a href="${esc(l.link)}" target="_blank" rel="noopener">kksongs.org</a></p>`;
+    dialog.showModal();
+    return;
+  }
   $('#lyrics-body').innerHTML = l.verses.map((v, i) => `<section class="verse">
       <span class="verse-n">${i + 1}</span>
       ${v.text ? `<p class="verse-text">${esc(v.text).replace(/\n/g, '<br>')}</p>` : ''}
@@ -1330,6 +1339,8 @@ document.addEventListener('click', async e => {
     case 'install': S.installEvent?.prompt(); S.installEvent = null; break;
   }
 });
+
+$('#lyrics-dialog').addEventListener('close', () => { $('#lyrics-body').innerHTML = ''; });
 
 $('#sleep-dialog').addEventListener('close', e => {
   const v = e.target.returnValue;

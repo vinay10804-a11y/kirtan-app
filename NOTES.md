@@ -11,10 +11,10 @@ Tick items off (or delete them) as they're done.
   of the artist. When the images arrive, the build needs to pick up an image saved next to a
   recording with the same name (e.g. `Sacinandana Swami | Damodarastakam | Govardhan | 2025.jpg`).
   That isn't built yet.
-- **Lyrics inside the app.** Every bhajan with a known song page shows a card naming the song and
-  its author, linking to kksongs.org. The app can show the words and translation itself (a lyrics
-  sheet is built in), but only from text we have permission to use: add `verses` to the song in
-  `site/lyrics.json`.
+- **Lyrics inside the app.** Done for 14 bhajans: the lyrics card opens that song's kksongs.org
+  page in a panel inside the app (it needs internet, and looks like the KKSongs site). To show the
+  words in the app's own style and offline instead, add `verses` to the song in `site/lyrics.json`,
+  using only text we have permission to use (e.g. your own songbook).
 - **Four bhajans have no lyrics page yet** and still use a web search: He Govinda, He Gopal
   (kksongs has three different songs with this name), Gauranga Karuna Koro, Radharaman Kaho,
   and Sakhi He (Smita Krsna).
