@@ -31,6 +31,20 @@ R2 bucket `kirtans` at `/audio/*`.
   site login-only (Cloudflare Access) before publishing them.
 - Quotes must be verified, never invented. Lyrics are a web-search link, not invented text.
 
+## First run on the owner's Mac (the chosen path)
+The owner is not technical: explain in plain English, one step at a time, and do the work yourself.
+1. Recordings are in `~/Desktop/KC/Kirtans`; photos in `~/Desktop/photos of sns`. The project lives in
+   `~/Desktop/KC/kirtan-app`.
+2. Install what's missing with Homebrew (`node ffmpeg yt-dlp`, plus `pipx install spotdl`).
+3. Run `node tools/build.mjs` and show the owner the category summary and the skipped list. Fix
+   `tools/classify.mjs` until every kirtan sits under the right artist, type, year and place.
+4. Ask which photos are Gour Krishna and which are Sacinandana Swami; rename them so `tools/photos.mjs`
+   tags them (names containing "gour" or "sns").
+5. Run `./publish.sh`. `wrangler login` opens a browser for the owner to click Allow; no API keys are
+   needed on the Mac. If YouTube or Spotify downloads fail, debug them (spotdl may need the owner's own
+   Spotify client ID/secret).
+6. Give the owner the live link, and remind them about Add to Home Screen on their phone.
+
 ## Working in the cloud (no Mac)
 The originals are uploaded to the R2 bucket `kirtans-source` (same folder structure as
 `~/Desktop/KC/Kirtans`). With these environment variables set:
