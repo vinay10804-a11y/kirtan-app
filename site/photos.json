@@ -1,0 +1,26 @@
+[
+ {
+  "src": "photos/photo-01.jpg",
+  "thumb": "photos/photo-01-thumb.jpg",
+  "w": 1200,
+  "h": 1600
+ },
+ {
+  "src": "photos/photo-02.jpg",
+  "thumb": "photos/photo-02-thumb.jpg",
+  "w": 1066,
+  "h": 1600
+ },
+ {
+  "src": "photos/photo-03.jpg",
+  "thumb": "photos/photo-03-thumb.jpg",
+  "w": 1600,
+  "h": 1066
+ },
+ {
+  "src": "photos/photo-04.jpg",
+  "thumb": "photos/photo-04-thumb.jpg",
+  "w": 901,
+  "h": 1600
+ }
+]

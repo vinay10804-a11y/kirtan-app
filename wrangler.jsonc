@@ -1,0 +1,10 @@
+{
+  // The site is served from ./site; audio lives in the R2 bucket below and is
+  // streamed through worker/index.js at /audio/*.
+  "name": "kirtans",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./site", "binding": "ASSETS" },
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "kirtans" }],
+  "workers_dev": true
+}

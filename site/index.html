@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sacinandana Swami and Gour Krishna Kirtans</title>
+  <meta name="description" content="Kirtans, bhajans and guided japa with Sacinandana Swami and Gour Krishna. Listen online or save for offline.">
+  <meta name="theme-color" content="#eeecd9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e2427" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kirtans">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="#/">Sacinandana Swami and Gour Krishna <b>Kirtans</b></a>
+      <nav class="nav" aria-label="Main">
+        <a href="#/" data-nav="home"><svg><use href="#i-home"/></svg><span>Home</span></a>
+        <a href="#/kirtans" data-nav="kirtans"><svg><use href="#i-music"/></svg><span>Kirtans</span></a>
+        <a href="#/japa" data-nav="japa"><svg><use href="#i-beads"/></svg><span>Japa</span></a>
+        <a href="#/search" data-nav="search"><svg><use href="#i-search"/></svg><span>Search</span></a>
+        <a href="#/library" data-nav="library"><svg><use href="#i-library"/></svg><span>Library</span></a>
+      </nav>
+      <p class="offline-pill" hidden>You're offline. Saved kirtans still play.</p>
+    </aside>
+
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
+
+  <!-- Mini player -->
+  <div class="mini" id="mini" hidden>
+    <div class="mini-progress"><span id="mini-bar"></span></div>
+    <button class="mini-open" data-action="open-player" aria-label="Open player">
+      <span id="mini-art" class="mini-art"></span>
+      <span class="mini-text"><span id="mini-title" class="mini-title"></span><span id="mini-sub" class="mini-sub"></span></span>
+    </button>
+    <button class="icon-btn" data-action="back15" aria-label="Back 15 seconds"><svg><use href="#i-back"/></svg></button>
+    <button class="icon-btn play-btn" data-action="toggle" aria-label="Play"><svg class="i-play"><use href="#i-play"/></svg><svg class="i-pause"><use href="#i-pause"/></svg></button>
+  </div>
+
+  <!-- Full player -->
+  <section class="player" id="player" hidden aria-label="Now playing">
+    <div class="player-inner">
+      <header class="player-head">
+        <button class="icon-btn" data-action="close-player" aria-label="Close player"><svg><use href="#i-down"/></svg></button>
+        <span class="player-context" id="player-context"></span>
+        <button class="icon-btn" data-action="share" aria-label="Share this recording"><svg><use href="#i-share"/></svg></button>
+      </header>
+      <div id="player-art" class="player-art"></div>
+      <h2 id="player-title" class="player-title"></h2>
+      <p id="player-sub" class="player-sub"></p>
+      <a id="player-lyrics" class="lyrics-link" target="_blank" rel="noopener" hidden>Find lyrics and translation</a>
+      <div class="scrub">
+        <input type="range" id="scrub" min="0" max="100" step="1" value="0" aria-label="Seek">
+        <div class="scrub-times"><span id="t-cur">0:00</span><span id="t-left">0:00</span></div>
+      </div>
+      <div class="controls">
+        <button class="icon-btn" data-action="prev" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+        <button class="icon-btn" data-action="back15" aria-label="Back 15 seconds"><svg><use href="#i-back"/></svg></button>
+        <button class="play-big" data-action="toggle" aria-label="Play"><svg class="i-play"><use href="#i-play"/></svg><svg class="i-pause"><use href="#i-pause"/></svg></button>
+        <button class="icon-btn" data-action="fwd30" aria-label="Forward 30 seconds"><svg><use href="#i-fwd"/></svg></button>
+        <button class="icon-btn" data-action="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
+      </div>
+      <button class="up-next" id="up-next" data-action="next" hidden><span>Up next</span><b id="up-next-title"></b><svg><use href="#i-next"/></svg></button>
+      <div class="extras">
+        <button data-action="fav-current" id="player-fav" aria-pressed="false"><svg><use href="#i-heart"/></svg><span>Favourite</span></button>
+        <button data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
+        <button data-action="loop" id="loop-btn" aria-pressed="false"><svg><use href="#i-repeat"/></svg><span>Loop</span></button>
+        <button data-action="sleep-menu" id="sleep-btn"><svg><use href="#i-moon"/></svg><span id="sleep-label">Sleep timer</span></button>
+        <button data-action="speed" id="speed-btn"><svg><use href="#i-speed"/></svg><span id="speed-label">1× speed</span></button>
+      </div>
+    </div>
+  </section>
+
+  <dialog id="sleep-dialog" class="menu">
+    <form method="dialog">
+      <h3>Sleep timer</h3>
+      <button value="15">15 minutes</button>
+      <button value="30">30 minutes</button>
+      <button value="45">45 minutes</button>
+      <button value="60">1 hour</button>
+      <button value="end">End of this track</button>
+      <button value="off" class="muted">Turn off</button>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="menu">
+    <form method="dialog">
+      <h3 id="confirm-text"></h3>
+      <button value="yes" id="confirm-yes">Remove</button>
+      <button value="no" class="muted">Cancel</button>
+    </form>
+  </dialog>
+
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <audio id="audio" preload="metadata"></audio>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+      <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+      <symbol id="i-beads" viewBox="0 0 24 24"><circle cx="12" cy="3.6" r="1.5"/><circle cx="16.6" cy="5" r="1.5"/><circle cx="19.2" cy="8.8" r="1.5"/><circle cx="18.6" cy="13.3" r="1.5"/><circle cx="7.4" cy="5" r="1.5"/><circle cx="4.8" cy="8.8" r="1.5"/><circle cx="5.4" cy="13.3" r="1.5"/><circle cx="8.6" cy="16.5" r="1.5"/><circle cx="15.4" cy="16.5" r="1.5"/><path d="M12 17.5v4.5M10.5 22h3"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-library" viewBox="0 0 24 24"><path d="m16 6 4 14M12 6v14M8 8v12M4 4v16"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z" class="fill"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2" class="fill"/><rect x="14" y="4" width="4" height="16" rx="1.2" class="fill"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24"><path d="M19 20 9 12l10-8z" class="fill"/><path d="M5 19V5"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="m5 4 10 8-10 8z" class="fill"/><path d="M19 5v14"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><text x="12" y="15.5" text-anchor="middle" class="sym-text">15</text></symbol>
+      <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><text x="12" y="15.5" text-anchor="middle" class="sym-text">30</text></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></symbol>
+      <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+      <symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+      <symbol id="i-speed" viewBox="0 0 24 24"><path d="M3.5 18a9 9 0 1 1 17 0"/><path d="m12 14 4.5-5"/><circle cx="12" cy="14" r="1.2" class="fill"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    </defs>
+  </svg>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

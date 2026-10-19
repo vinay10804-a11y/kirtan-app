@@ -1,0 +1,3 @@
+# Spotify playlists or albums to keep in the app. One link per line.
+# Each run of ./publish.sh downloads only tracks that are new.
+https://open.spotify.com/playlist/19yd281EksSMJtGgkdlT38

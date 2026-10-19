@@ -1,0 +1,9 @@
+# Guided Japa sessions with Sacinandana Swami.
+# One YouTube link per line. Add a line, then run ./publish.sh again.
+https://www.youtube.com/watch?v=LtAG4BFVdZ8
+https://www.youtube.com/watch?v=6KaKlelqfDs
+https://www.youtube.com/watch?v=JKTwuE1KBBk
+https://www.youtube.com/watch?v=dq9Ya_q6YNo
+https://www.youtube.com/watch?v=1GJsKw9Dd4c
+https://www.youtube.com/watch?v=53OGuW9wJiU
+https://www.youtube.com/watch?v=OFfaCaX7bt8

@@ -1,0 +1,15 @@
+{
+  "name": "Sacinandana Swami and Gour Krishna Kirtans",
+  "short_name": "Kirtans",
+  "description": "Kirtans, bhajans and guided japa. Listen online or save for offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eeecd9",
+  "theme_color": "#eeecd9",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "kirtan-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "upload": "node tools/upload.mjs",
+    "deploy": "wrangler deploy",
+    "pull": "node tools/pull-source.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.145.0",
+    "@aws-sdk/client-s3": "3.1146.0"
+  }
+}
