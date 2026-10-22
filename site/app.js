@@ -8,7 +8,7 @@ const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
 const JAPA_TABS = { 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
 const JAPA_ABOUT = {
-  'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap Listen here to play one on this page, or the picture to open it on YouTube.',
+  'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap a session to watch it here.',
   'Japa Inspirations': 'Short talks and reflections from Sacinandana Swami to bring fresh attention to your chanting. They play here from SoundCloud.',
   'Living Name Meditations': 'Guided meditations from The Living Name, Sacinandana Swami’s book on chanting with attention and feeling. They play here from SoundCloud.',
 };
@@ -530,25 +530,16 @@ function japaView(colSlug) {
 function videoCard(v, track, listKey) {
   const meta = [v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean);
   if (track && S.played.has(track.id)) meta.push(`<span class="played">${icon('tick')}Played</span>`);
-  // With an offline copy, "Listen here" plays it in the app's player; without one,
-  // the YouTube video plays in place of its picture.
-  const listen = track ? `<div class="video-actions">
-      <button class="text-btn" data-action="play" data-id="${track.id}" data-list="${listKey}">${icon('play')}Listen here</button>
-      ${dlButton(track)}
-    </div>` : `<div class="video-actions">
-      <button class="text-btn embed-btn" data-action="embed" data-vid="${esc(v.id)}">${icon('play')}<span class="when-closed">Listen here</span><span class="when-open">Close player</span></button>
-    </div>`;
-  return `<article class="video" ${track ? `data-track="${track.id}"` : ''}>
-    <div class="embed-slot" data-embed="${esc(v.id)}">
-      <a class="thumb" href="${ytLink(v.id)}" target="_blank" rel="noopener" aria-label="Watch ${esc(v.title)} on YouTube">
-        <img src="${ytThumb(v.id)}" alt="" loading="lazy" onerror="this.remove()">
-        ${v.duration ? `<span class="thumb-dur">${fmtClock(v.duration)}</span>` : ''}
-        <span class="thumb-play">${icon('play')}</span>
-      </a>
-    </div>
-    <a class="video-title" href="${ytLink(v.id)}" target="_blank" rel="noopener">${esc(v.title)}</a>
+  // Tapping the picture (with its play button) or the title opens the video in
+  // the app's YouTube player. Nothing else to choose.
+  return `<article class="video">
+    <button class="thumb" data-action="video" data-vid="${esc(v.id)}" aria-label="Play ${esc(v.title)}">
+      <img src="${ytThumb(v.id)}" alt="" loading="lazy" onerror="this.remove()">
+      ${v.duration ? `<span class="thumb-dur">${fmtClock(v.duration)}</span>` : ''}
+      <span class="thumb-play">${icon('play')}</span>
+    </button>
+    <button class="video-title" data-action="video" data-vid="${esc(v.id)}">${esc(v.title)}</button>
     <span class="video-meta">${meta.join(' · ')}</span>
-    ${listen}
   </article>`;
 }
 
@@ -567,12 +558,36 @@ function scRow(v) {
 
 function videoRow(v) {
   const meta = [v.collection, v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean).join(' · ');
-  const href = isSC(v) ? `#/japa/${slug(v.collection)}` : vidLink(v);
-  return `<a class="vrow" href="${esc(href)}" ${isSC(v) ? '' : 'target="_blank" rel="noopener"'}>
-    <span class="vrow-thumb"><img src="${esc(vidThumb(v, 'mqdefault'))}" alt="" loading="lazy" onerror="this.remove()">${icon('play')}</span>
-    <span class="vrow-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${esc(meta)} · ${vidSite(v)}</span></span>
-  </a>`;
+  const inner = `<span class="vrow-thumb"><img src="${esc(vidThumb(v, 'mqdefault'))}" alt="" loading="lazy" onerror="this.remove()">${icon('play')}</span>
+    <span class="vrow-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${esc(meta)} · ${vidSite(v)}</span></span>`;
+  // YouTube videos open in the app's player; SoundCloud tracks open their Japa tab.
+  return isSC(v)
+    ? `<a class="vrow" href="#/japa/${slug(v.collection)}">${inner}</a>`
+    : `<button class="vrow" data-action="video" data-vid="${esc(v.id)}">${inner}</button>`;
 }
+
+/* ---------------- the YouTube player for Guided Japa ---------------- */
+
+// YouTube chooses the picture quality from the player's size on screen and the
+// connection; it no longer lets sites force one. So the player is as large as
+// the screen allows, asks for HD (vq, which YouTube may honour), and allows full
+// screen, where YouTube switches to its best quality.
+function openVideo(vid) {
+  const v = S.videos.find(x => x.id === vid && !isSC(x));
+  if (!v) return;
+  if (!isOnline()) return toast('Connect to the internet to watch');
+  audio.pause();
+  closeEmbed();
+  const q = new URLSearchParams({ autoplay: '1', playsinline: '1', rel: '0', modestbranding: '1', vq: 'hd1080' });
+  $('#video-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?${q}" title="${esc(v.title)}"
+    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  $('#video-title').textContent = v.title;
+  $('#video-meta').textContent = [v.collection, v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean).join(' · ');
+  $('#video-yt').href = ytLink(v.id);
+  $('#video-dialog').showModal();
+}
+// Closing the player stops the video.
+$('#video-dialog').addEventListener('close', () => { $('#video-frame').innerHTML = ''; });
 
 /* ---------------- YouTube and SoundCloud players in the page ---------------- */
 
@@ -1589,6 +1604,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'embed': playEmbed(el.dataset.vid); break;
+    case 'video': openVideo(el.dataset.vid); break;
     case 'toggle': togglePlay(); break;
     case 'next': next(); break;
     case 'prev': prev(); break;

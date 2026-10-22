@@ -113,6 +113,21 @@
     <div id="lyrics-body" class="lyrics-body"></div>
   </dialog>
 
+  <!-- Guided Japa: the YouTube player, as large as the screen allows -->
+  <dialog id="video-dialog" class="video-sheet" aria-labelledby="video-title">
+    <header class="video-head">
+      <form method="dialog"><button class="icon-btn" aria-label="Close video"><svg><use href="#i-down"/></svg></button></form>
+      <span class="video-head-label">Guided Japa</span>
+      <a id="video-yt" class="text-btn" target="_blank" rel="noopener">Open in YouTube</a>
+    </header>
+    <div class="video-frame" id="video-frame"></div>
+    <div class="video-info">
+      <h2 id="video-title"></h2>
+      <p id="video-meta"></p>
+      <p class="video-tip">For the sharpest picture, tap full screen in the player, or choose the quality under its settings (⚙).</p>
+    </div>
+  </dialog>
+
   <!-- A kirtan's "⋯" menu, filled in by app.js -->
   <dialog id="track-dialog" class="menu"><form method="dialog" id="track-menu"></form></dialog>
 

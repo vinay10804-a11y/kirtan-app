@@ -332,7 +332,31 @@ dialog.menu[open] { animation: menu-pop .18s var(--ease-out); }
 /* ---------- Japa videos ---------- */
 .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 22px 16px; margin-top: 18px; }
 .video { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.thumb { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.thumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+button.video-title { padding: 0; text-align: left; cursor: pointer; }
+button.vrow { width: 100%; text-align: left; }
+
+/* Guided Japa: the YouTube player. Full screen on phones; on larger screens as
+   big as fits, since YouTube picks a sharper quality for a bigger player. */
+dialog.video-sheet { border: 0; padding: 0; margin: 0; width: 100%; max-width: 100%; height: 100%; max-height: 100%; background: #000; color: #fff; }
+dialog.video-sheet[open] { display: flex; flex-direction: column; animation: sheet-up .34s var(--ease-out); }
+dialog.video-sheet::backdrop { background: #000; }
+.video-head { display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 6px) 10px 6px; }
+.video-head .icon-btn { color: #fff; }
+.video-head .icon-btn:active { background-color: rgba(255, 255, 255, .15); }
+.video-head-label { flex: 1; text-align: center; font-size: 13px; letter-spacing: .03em; color: rgba(255, 255, 255, .7); }
+.video-head .text-btn { padding: 8px 6px; font-size: 13px; color: rgba(255, 255, 255, .85); text-decoration: none; }
+.video-frame { width: min(100%, calc((100dvh - 200px) * 16 / 9)); aspect-ratio: 16 / 9; margin: 0 auto; background: #000; }
+.video-frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+.video-info { width: min(100%, 900px); margin: 0 auto; padding: 16px 18px calc(var(--safe-b) + 20px); }
+.video-info h2 { margin: 0; font: 500 22px/1.25 var(--serif); color: #fff; }
+.video-info p { margin: 6px 0 0; font-size: 13.5px; color: rgba(255, 255, 255, .65); }
+.video-info .video-tip { margin-top: 18px; font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, .5); }
+@media (orientation: landscape) and (max-height: 500px) {
+  /* A phone on its side: the video fills the screen. */
+  .video-head, .video-info { display: none; }
+  .video-frame { width: min(100%, calc(100dvh * 16 / 9)); margin: auto; }
+}
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .thumb-dur { position: absolute; right: 6px; bottom: 6px; padding: 2px 6px; border-radius: 5px; background: rgba(0, 0, 0, .72); color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
 .thumb-play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; }
