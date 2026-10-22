@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = 'a6c0325e35';
+const VERSION = '5766138290';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -13,7 +13,7 @@ const RUNTIME_CACHE = 'runtime';
 // response when opening a page, which stopped the app opening offline.
 const SHELL = [
   './', `styles.css?v=${VERSION}`, `app.js?v=${VERSION}`, 'manifest.webmanifest',
-  'catalog.json', 'photos.json', 'videos.json', 'lyrics.json',
+  'catalog.json', 'photos.json', 'videos.json', 'lyrics.json', 'library.js',
   'art/card-1.webp',
   'icons/icon-192.png', 'icons/favicon.png', 'apple-touch-icon.png',
   'fonts/eb-garamond-latin.woff2', 'fonts/eb-garamond-latin-ext.woff2',
@@ -43,6 +43,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(audioResponse(req, url));
     return;
   }
+  // Accounts always go to the server, never to a stored copy.
+  if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
   if (req.mode === 'navigate') {
     event.respondWith(openPage(req, url));
     return;

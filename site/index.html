@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=a6c0325e35">
+  <link rel="stylesheet" href="styles.css?v=5766138290">
 </head>
 <body>
   <div class="app">
@@ -141,6 +141,27 @@
     </form>
   </dialog>
 
+  <!-- Accounts: sign in, create an account, change password, delete account.
+       The autocomplete names let iPhone and Chrome suggest and save a strong password. -->
+  <dialog id="account-dialog" class="menu name-menu account-menu" aria-labelledby="account-title">
+    <form id="account-form" novalidate data-mode="login">
+      <h3 id="account-title">Sign in</h3>
+      <div class="account-tabs" id="account-tabs">
+        <button type="button" data-mode="login">Sign in</button>
+        <button type="button" data-mode="signup">Create account</button>
+      </div>
+      <label class="field" id="f-name"><span>Your name (optional)</span><input name="name" autocomplete="name" maxlength="60"></label>
+      <label class="field" id="f-email"><span>Email</span><input name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false"></label>
+      <label class="field" id="f-password"><span id="pw-label">Password</span><input name="password" type="password" autocomplete="current-password"></label>
+      <label class="field" id="f-newpassword"><span>New password (at least 8 characters)</span><input name="newpassword" type="password" autocomplete="new-password"></label>
+      <label class="show-pw"><input type="checkbox" id="show-pw"> Show password</label>
+      <p class="account-error" id="account-error" role="alert"></p>
+      <button type="submit" class="btn account-submit" id="account-submit">Sign in</button>
+      <button type="button" class="muted" id="account-cancel">Cancel</button>
+      <p class="account-note" id="account-note"></p>
+    </form>
+  </dialog>
+
   <!-- Adding kirtans to a playlist from the playlist itself -->
   <dialog id="add-dialog" class="sheet" aria-labelledby="add-title">
     <header class="sheet-head">
@@ -209,6 +230,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=a6c0325e35" type="module"></script>
+  <script src="app.js?v=5766138290" type="module"></script>
 </body>
 </html>
