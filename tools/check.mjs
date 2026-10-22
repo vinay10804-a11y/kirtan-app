@@ -37,6 +37,11 @@ const checks = [
   ['Swipe down anywhere on the player closes it', app.includes("player.addEventListener('touchmove'")],
   ['Kirtans list.xlsx: build reads and rewrites the sheet (edits, thumbnails, hidden)', read('tools/build.mjs').includes('applySheet(tracks)') && read('tools/build.mjs').includes('writeSheet(tracks)')],
   ['Kirtans hidden in the sheet stay out of the app', app.includes('.filter(t => !t.hidden)')],
+  ['Accounts: server answers /api/* (worker/api.js) with the D1 database', read('worker/index.js').includes("startsWith('/api/')") && read('wrangler.jsonc').includes('"binding": "DB"')],
+  ['Accounts: passwords become a key on the device; only the key is sent', app.includes('function passwordKey') && app.includes('iterations: 600000')],
+  ['Accounts: sign-in card in Library, and favourites/playlists sync', app.includes('function accountCard') && app.includes('async function syncNow')],
+  ['Accounts: sync replies merge with newer local changes (no lost edits)', app.includes('applyLibrary(mergeLibrary(library, localLibrary()))')],
+  ['Accounts: the service worker never caches /api/', sw.includes("url.pathname.startsWith('/api/')) return")],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
 ];

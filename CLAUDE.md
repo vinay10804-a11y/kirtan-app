@@ -43,8 +43,8 @@ R2 bucket `kirtans` at `/audio/*`.
   top bar to close it. The progress bar works like Spotify's (tap to jump, drag, seek on release).
 - Spotify-inspired (22 Oct 2026): every kirtan has a "⋯" menu (Play next, Add to queue, Add to playlist,
   Favourite, Save offline, Share; inside a playlist also Move up/down and Remove). "Up next" in the
-  player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists live in
-  the browser's storage on each device (no accounts).
+  player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists and
+  favourites live on the device, and in the person's account when they sign in (see Accounts).
 - Feel (owner: "premium, like Spotify"): every button and row gives press feedback (shrink or dim), the
   player and phone menus slide up as bottom sheets and slide down to close, and a new page is drawn at
   once and fades up (`.page-enter`). No View Transitions API: its snapshot step delayed some page
@@ -127,6 +127,22 @@ named after the number, e.g. `12.jpg`, or the name typed in the Thumbnail cell) 
 `site/covers/u-<id>-<hash>.jpg`, and `writeSheet` rewrites the sheet, adding new kirtans at the end.
 Clearing a Thumbnail cell returns the recording's own art (`ownCover`). "Show in app: No" sets
 `hidden`; app.js filters those out. The owner should save and close Excel before publishing.
+
+## Accounts (22 Oct 2026, owner chose email + password)
+Signing in keeps a person's favourites and playlists on all their devices; without an account the app
+works as before (device only). Server: `worker/api.js` at `/api/*` with the D1 database
+`kirtan-accounts` (binding `DB`, tables in `migrations/`; apply with
+`wrangler d1 migrations apply kirtan-accounts --remote`). Passwords never leave the device: app.js
+derives a key (PBKDF2-SHA256, 600,000 rounds, salt `kirtan-app|<email>`) and the server stores
+SHA-256(random salt + key), which keeps the Worker inside the free plan's CPU limit. Sessions are
+HttpOnly Secure SameSite=Lax cookies (1 year); 10 wrong passwords lock an email for 15 minutes;
+requests from other origins are refused. `site/library.js` (shared by app and server) merges libraries
+item by item, latest change wins, with tombstones for deleted playlists. Sync replies are merged with
+changes made while they were in flight, and playlists are updated in place (code may hold one across
+an `await`). Sign-out clears the account's data from the device. No email can be sent (free plan), so
+forgotten passwords go through the owner: `node tools/account.mjs reset <email>` prints a temporary
+password; `count` shows how many accounts exist. Don't create test accounts on the live site; test
+with `wrangler dev --local` (localhost and 127.0.0.1 act as two devices).
 
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted

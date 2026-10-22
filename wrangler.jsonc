@@ -1,10 +1,13 @@
 {
   // The site is served from ./site; audio lives in the R2 bucket below and is
-  // streamed through worker/index.js at /audio/*.
+  // streamed through worker/index.js at /media/* (and the older /audio/*).
+  // Accounts live in the D1 database below, served at /api/*.
   "name": "kirtans",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
   "assets": { "directory": "./site", "binding": "ASSETS" },
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "kirtans" }],
+  // Accounts: users, sessions and each person's favourites and playlists.
+  "d1_databases": [{ "binding": "DB", "database_name": "kirtan-accounts", "database_id": "109947eb-cd46-4b46-8a2d-816c91cf01db", "migrations_dir": "migrations" }],
   "workers_dev": true
 }

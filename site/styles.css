@@ -198,6 +198,30 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .add-toggle { border: 1px solid var(--line); }
 .add-toggle.in { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--bg); }
 dialog.menu .menu-done { text-align: center; justify-content: center; font-weight: 600; color: var(--teal-deep); }
+/* Accounts */
+.account-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.account-card .account-text { flex: 1 1 220px; min-width: 0; }
+.account-card b { display: block; font: 500 18px/1.25 var(--serif); }
+.account-card small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--ink-3); overflow-wrap: anywhere; }
+.account-card .account-actions { display: flex; gap: 8px; }
+.account-card .avatar { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--teal-deep); color: var(--bg); font: 500 19px var(--serif); }
+dialog.account-menu form { display: flex; flex-direction: column; gap: 10px; padding: 6px 8px 4px; }
+dialog.account-menu h3 { padding: 6px 4px 0; }
+.account-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+.account-tabs button { flex: 1; padding: 8px; border-radius: 8px; font-size: 14px; text-align: center; color: var(--ink-2); }
+.account-tabs button[aria-current="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-2); }
+.field input { padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 16px var(--sans); outline: none; }
+.field input:focus { border-color: var(--teal); }
+.show-pw { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.account-error { margin: 0; min-height: 1em; font-size: 13.5px; color: #b0503c; }
+.account-error:empty { display: none; }
+dialog.menu .account-submit { justify-content: center; text-align: center; margin-top: 2px; }
+dialog.menu .account-submit.danger, dialog.menu button.danger { color: #b0503c; }
+dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
+.account-submit.busy { opacity: .6; pointer-events: none; }
+.account-submit.busy::after { content: "…"; }
+.account-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
 /* Typing a playlist name: keep the box near the top on phones, clear of the keyboard. */
 @media (max-width: 640px) {
   dialog.menu.name-menu { width: calc(100% - 24px); margin: calc(env(safe-area-inset-top, 0px) + 14vh) auto auto; border-radius: 20px; padding: 12px 10px 10px; }
@@ -549,3 +573,4 @@ dialog.sheet.web iframe { flex: 1; width: 100%; border: 0; background: #fff; }
 body:has(.player:not([hidden])) .toast { top: calc(env(safe-area-inset-top, 0px) + 60px); bottom: auto; transform: translate(-50%, -12px); }
 body:has(.player:not([hidden])) .toast.show { transform: translate(-50%, 0); }
 @media (min-width: 960px) { body:has(.player:not([hidden])) .toast { left: 50%; } }
+dialog.menu .btn:hover { background: var(--teal-deep); }

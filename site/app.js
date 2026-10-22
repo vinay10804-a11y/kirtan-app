@@ -2,6 +2,8 @@
 // No framework: hash routes render HTML strings into #view, and one delegated
 // click handler drives everything through data-action attributes.
 
+import { mergeLibrary } from './library.js';
+
 const AUDIO_CACHE = 'kirtan-audio';
 // Cover pictures of saved and recently played kirtans, so they show offline too.
 const ART_CACHE = 'kirtan-art';
@@ -54,7 +56,11 @@ const S = {
   lyrics: [],
   favs: new Set(store.get('favs', [])),
   theme: store.get('theme', 'auto'), // 'auto' follows the device; or 'light' / 'dark'
-  playlists: store.get('playlists', []), // [{ id, name, ids: [track ids] }], kept on this device
+  playlists: store.get('playlists', []), // [{ id, name, ids: [track ids], created, at }]
+  // For merging with an account: when each favourite last changed, and deleted playlists.
+  favAt: store.get('favAt', {}),
+  plDeleted: store.get('plDeleted', {}),
+  user: store.get('user', null), // { email, name } when signed in
   played: new Set(store.get('played', [])),
   positions: store.get('positions', {}),
   history: store.get('history', []),
@@ -181,7 +187,25 @@ function ask(text, yes) {
   $('#confirm-yes').textContent = yes;
   dlg.returnValue = '';
   dlg.showModal();
-  return new Promise(resolve => dlg.addEventListener('close', () => resolve(dlg.returnValue === 'yes'), { once: true }));
+  return dialogAnswer(dlg, value => value === 'yes');
+}
+
+// Resolves with a dialog's answer as soon as a button is tapped (its form's
+// submit), or when it's dismissed (Esc / back). Doesn't wait for the "close"
+// event, which browsers can hold back while a page isn't being drawn.
+function dialogAnswer(dlg, read) {
+  const form = dlg.querySelector('form');
+  return new Promise(resolve => {
+    const done = value => {
+      form.removeEventListener('submit', onSubmit);
+      dlg.removeEventListener('close', onClose);
+      resolve(read(value));
+    };
+    const onSubmit = e => done(e.submitter?.value ?? '');
+    const onClose = () => done(dlg.returnValue);
+    form.addEventListener('submit', onSubmit);
+    dlg.addEventListener('close', onClose);
+  });
 }
 
 let toastTimer;
@@ -731,7 +755,7 @@ function libraryView(tab = 'favourites', sub) {
     }
   }
 
-  return `<h1 class="page-title">Library</h1>${tabs(tabItems, tab)}${body}${appearance()}`;
+  return `<h1 class="page-title">Library</h1>${accountCard()}${tabs(tabItems, tab)}${body}${appearance()}`;
 }
 
 // One playlist: play or shuffle it, save it offline, rename or delete it. Each
@@ -1377,6 +1401,9 @@ function toggleFav(id) {
   const on = !S.favs.has(id);
   on ? S.favs.add(id) : S.favs.delete(id);
   store.set('favs', [...S.favs]);
+  S.favAt[id] = Date.now();
+  store.set('favAt', S.favAt);
+  scheduleSync();
   if (id === S.current) updatePlayerButtons();
   toast(on ? 'Added to Favourites' : 'Removed from Favourites');
   if (location.hash.startsWith('#/library/favourites') || location.hash === '#/library') route();
@@ -1385,9 +1412,22 @@ function toggleFav(id) {
 const playlistById = id => S.playlists.find(p => p.id === id);
 // A playlist's kirtans that are in the app (a removed recording simply drops out).
 const playlistTracks = p => p.ids.map(x => S.byId.get(x)).filter(Boolean);
-function savePlaylists() { store.set('playlists', S.playlists); }
+// Saves playlists on this device, noting which ones changed or were deleted so
+// an account can merge them with other devices.
+let plShape = null;
+const shapeOf = p => JSON.stringify([p.name, p.ids]);
+function savePlaylists() {
+  const now = Date.now();
+  plShape ??= new Map();
+  for (const p of S.playlists) if (plShape.get(p.id) !== shapeOf(p)) p.at = now;
+  for (const id of plShape.keys()) if (!S.playlists.some(p => p.id === id)) S.plDeleted[id] = now;
+  plShape = new Map(S.playlists.map(p => [p.id, shapeOf(p)]));
+  store.set('playlists', S.playlists);
+  store.set('plDeleted', S.plDeleted);
+  scheduleSync();
+}
 function newPlaylist(name) {
-  const p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, ids: [] };
+  const p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, ids: [], created: Date.now() };
   S.playlists.push(p);
   savePlaylists();
   return p;
@@ -1426,8 +1466,7 @@ function askName(title, value, save) {
   dlg.returnValue = '';
   dlg.showModal();
   input.focus();
-  return new Promise(resolve => dlg.addEventListener('close', () =>
-    resolve(dlg.returnValue === 'save' && input.value.trim() ? input.value.trim().slice(0, 60) : null), { once: true }));
+  return dialogAnswer(dlg, value => (value === 'save' && input.value.trim() ? input.value.trim().slice(0, 60) : null));
 }
 
 // The "⋯" menu for a kirtan, like Spotify's. Inside a playlist it can also move
@@ -1551,6 +1590,225 @@ function renderQueue() {
       <span class="track-title">${esc(now.title)}</span><span class="track-meta">${esc(collectionName(now))}</span></span></span></li></ul>` : '')
     + (upcoming.length ? `<h4 class="queue-head">Next</h4><ul class="tracks">${upcoming.map(row).join('')}</ul>`
       : `<p class="empty">When this one ends, playback stops. Tap ${icon('more')} next to any kirtan and choose <b>Play next</b> or <b>Add to queue</b>.</p>`);
+}
+
+/* ---------------- accounts: favourites and playlists on every device ---------------- */
+
+// This device's favourites and playlists in the mergeable form (site/library.js).
+function localLibrary() {
+  const favs = {};
+  for (const id of new Set([...Object.keys(S.favAt), ...S.favs])) favs[id] = { on: S.favs.has(id), at: S.favAt[id] || 0 };
+  const playlists = {};
+  for (const [id, at] of Object.entries(S.plDeleted)) playlists[id] = { deleted: true, at };
+  for (const p of S.playlists) playlists[p.id] = { name: p.name, ids: p.ids, created: p.created || 0, at: p.at || 0 };
+  return { favs, playlists };
+}
+// Makes this device show a merged library, and keeps it.
+function applyLibrary(lib) {
+  S.favs = new Set(Object.entries(lib.favs).filter(([, f]) => f.on).map(([id]) => id));
+  S.favAt = Object.fromEntries(Object.entries(lib.favs).map(([id, f]) => [id, f.at]));
+  S.plDeleted = Object.fromEntries(Object.entries(lib.playlists).filter(([, p]) => p.deleted).map(([id, p]) => [id, p.at]));
+  // Update playlists in place, so code holding one (e.g. while a rename box is
+  // open) still holds the playlist the app shows.
+  const byId = new Map(S.playlists.map(p => [p.id, p]));
+  S.playlists = Object.entries(lib.playlists).filter(([, p]) => !p.deleted)
+    .map(([id, p]) => Object.assign(byId.get(id) || { id }, { name: p.name, ids: p.ids, created: p.created, at: p.at }))
+    .sort((a, b) => (a.created || 0) - (b.created || 0));
+  plShape = new Map(S.playlists.map(p => [p.id, shapeOf(p)]));
+  store.set('favs', [...S.favs]);
+  store.set('favAt', S.favAt);
+  store.set('playlists', S.playlists);
+  store.set('plDeleted', S.plDeleted);
+  if (S.current) updatePlayerButtons();
+  if (location.hash.startsWith('#/library') || location.hash === '' || location.hash === '#/') route();
+}
+
+async function apiCall(path, body) {
+  const res = await fetch(`/api/${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: 'same-origin',
+    keepalive: path === 'sync',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || 'Something went wrong. Please try again.'), { status: res.status });
+  return data;
+}
+
+// Sends this device's changes and takes the merged result; quietly retries later
+// when offline. Signed-out people keep everything on the device, as before.
+let syncTimer = null, syncDirty = store.get('syncDirty', false), changes = 0;
+function scheduleSync() {
+  changes++; // counted even when signed out, so a sync in flight knows it's out of date
+  if (!S.user) return;
+  syncDirty = true;
+  store.set('syncDirty', true);
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 800);
+}
+async function syncNow() {
+  clearTimeout(syncTimer);
+  if (!S.user || !isOnline()) return;
+  const sentAt = changes;
+  try {
+    const { library } = await apiCall('sync', { library: localLibrary() });
+    // Anything changed on this device while the reply was on its way is newer:
+    // merge it in rather than overwrite it, and send it next.
+    applyLibrary(mergeLibrary(library, localLibrary()));
+    if (changes !== sentAt) return scheduleSync();
+    syncDirty = false;
+    store.set('syncDirty', false);
+  } catch (err) {
+    if (err.status === 401) return signedOutHere();
+    syncTimer = setTimeout(syncNow, 30000); // network trouble: try again shortly
+  }
+}
+window.addEventListener('online', () => { if (syncDirty) syncNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && syncDirty) syncNow(); });
+
+// At start: check the account, then merge the account's library with this device's.
+async function accountStart() {
+  if (!isOnline()) return;
+  try {
+    const { user, library } = await apiCall('me');
+    if (!user) { if (S.user) signedOutHere(); return; }
+    S.user = user;
+    store.set('user', user);
+    applyLibrary(mergeLibrary(library, localLibrary()));
+    syncNow();
+  } catch {}
+}
+function signedOutHere() {
+  S.user = null;
+  store.set('user', null);
+  if (location.hash.startsWith('#/library')) route();
+}
+
+// The password never leaves the device: it becomes a key (PBKDF2-SHA256,
+// 600,000 rounds, salted with the email) and only the key is sent.
+async function passwordKey(email, password) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', iterations: 600000, salt: enc.encode(`kirtan-app|${email.trim().toLowerCase()}`) }, base, 256);
+  return btoa(String.fromCharCode(...new Uint8Array(bits))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Library: a card to sign in or create an account, or who's signed in.
+function accountCard() {
+  if (S.user) {
+    const who = S.user.name || S.user.email;
+    return `<section class="account-card in">
+      <span class="avatar" aria-hidden="true">${esc(who.trim()[0]?.toUpperCase() || '·')}</span>
+      <span class="account-text"><b>${esc(who)}</b><small>Favourites and playlists are saved to your account${S.user.name ? ` · ${esc(S.user.email)}` : ''}</small></span>
+      <button class="icon-btn" data-action="account-menu" aria-label="Account options">${icon('more')}</button>
+    </section>`;
+  }
+  return `<section class="account-card">
+    <span class="account-text"><b>Keep your favourites and playlists safe</b>
+      <small>Sign in, or create a free account, and they’re saved and on all your devices.</small></span>
+    <span class="account-actions"><button class="btn" data-action="account" data-mode="login">Sign in</button>
+      <button class="btn ghost" data-action="account" data-mode="signup">Create account</button></span>
+  </section>`;
+}
+
+const ACCOUNT_MODES = {
+  login: { title: 'Sign in', submit: 'Sign in', pw: 'Password', pwAuto: 'current-password',
+    note: 'Forgot your password? Ask the person who runs this site to reset it for you.' },
+  signup: { title: 'Create an account', submit: 'Create account', pw: 'Password (at least 8 characters)', pwAuto: 'new-password',
+    note: 'We only keep your email, your name, and your favourites and playlists. You can delete your account at any time.' },
+  password: { title: 'Change password', submit: 'Change password', pw: 'Current password', pwAuto: 'current-password',
+    note: 'Your other devices will need the new password next time.' },
+  delete: { title: 'Delete account', submit: 'Delete my account', pw: 'Password', pwAuto: 'current-password',
+    note: 'This removes your account and everything saved to it online. This device keeps its favourites and playlists.' },
+};
+function openAccount(mode) {
+  const dlg = $('#account-dialog'), form = $('#account-form');
+  form.reset();
+  form.dataset.mode = mode;
+  const m = ACCOUNT_MODES[mode];
+  $('#account-title').textContent = m.title;
+  $('#account-submit').textContent = m.submit;
+  $('#account-submit').classList.toggle('danger', mode === 'delete');
+  $('#pw-label').textContent = m.pw;
+  form.password.autocomplete = m.pwAuto;
+  $('#account-note').textContent = m.note;
+  $('#account-error').textContent = '';
+  $('#account-tabs').hidden = !(mode === 'login' || mode === 'signup');
+  for (const b of $$('#account-tabs button')) b.setAttribute('aria-current', b.dataset.mode === mode);
+  $('#f-name').hidden = mode !== 'signup';
+  $('#f-email').hidden = !(mode === 'login' || mode === 'signup');
+  $('#f-newpassword').hidden = mode !== 'password';
+  form.email.value = S.user?.email || form.email.value;
+  if (!dlg.open) dlg.showModal();
+  (mode === 'login' || mode === 'signup' ? form.email : form.password).focus();
+}
+
+async function submitAccount(e) {
+  e.preventDefault();
+  const form = $('#account-form'), mode = form.dataset.mode;
+  const err = msg => { $('#account-error').textContent = msg; };
+  const email = (S.user && (mode === 'password' || mode === 'delete') ? S.user.email : form.email.value).trim().toLowerCase();
+  const pw = form.password.value;
+  if (!isOnline()) return err('Connect to the internet first.');
+  if ((mode === 'login' || mode === 'signup') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Please enter your email address.');
+  if (mode === 'signup' && pw.length < 8) return err('Please choose a password of at least 8 characters.');
+  if (mode === 'password' && form.newpassword.value.length < 8) return err('Please choose a new password of at least 8 characters.');
+  if (!pw) return err('Please enter your password.');
+  const btn = $('#account-submit');
+  btn.disabled = true;
+  btn.classList.add('busy');
+  try {
+    const key = await passwordKey(email, pw);
+    if (mode === 'login' || mode === 'signup') {
+      const { user } = await apiCall(mode, { email, name: form.name.value, key });
+      S.user = user;
+      store.set('user', user);
+      $('#account-dialog').close();
+      await accountStart(); // merges what this device already had into the account
+      toast(mode === 'signup' ? 'Account created. Your favourites and playlists are saved.' : `Signed in. Welcome${user.name ? `, ${user.name}` : ''}!`);
+    } else if (mode === 'password') {
+      await apiCall('password', { key, newKey: await passwordKey(email, form.newpassword.value) });
+      $('#account-dialog').close();
+      toast('Password changed');
+    } else if (mode === 'delete') {
+      await apiCall('delete', { key });
+      $('#account-dialog').close();
+      signedOutHere();
+      toast('Account deleted');
+    }
+    route();
+  } catch (error) {
+    err(error.message);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('busy');
+  }
+}
+$('#account-form').addEventListener('submit', submitAccount);
+$('#account-tabs').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) openAccount(b.dataset.mode); });
+$('#account-cancel').addEventListener('click', () => $('#account-dialog').close());
+$('#show-pw').addEventListener('change', e => { for (const i of $$('#account-form input[name$="password"]')) i.type = e.target.checked ? 'text' : 'password'; });
+
+async function signOut() {
+  if (!(await ask('Sign out? Your favourites and playlists stay saved in your account.', 'Sign out'))) return;
+  if (syncDirty) await syncNow();
+  try { await apiCall('logout', {}); } catch {}
+  // This device forgets the account's library; signing in again brings it back.
+  applyLibrary({ favs: {}, playlists: {} });
+  for (const k of ['favs', 'favAt', 'playlists', 'plDeleted']) store.set(k, k === 'favs' || k === 'playlists' ? [] : {});
+  signedOutHere();
+  toast('Signed out');
+  route();
+}
+
+function openAccountMenu() {
+  $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(S.user.name || 'Your account')}<small>${esc(S.user.email)}</small></h3>
+    <button value="pw" data-action="account" data-mode="password">${icon('tick')}<span>Change password</span></button>
+    <button value="out" data-action="sign-out">${icon('left')}<span>Sign out</span></button>
+    <button value="del" data-action="account" data-mode="delete" class="danger">${icon('trash')}<span>Delete account</span></button>
+    <button value="cancel" class="muted">Cancel</button>`;
+  $('#track-dialog').showModal();
 }
 
 /* ---------------- sleep timer ---------------- */
@@ -1750,6 +2008,9 @@ document.addEventListener('click', async e => {
     }
     case 'share': shareTrack(); break;
     case 'theme': setTheme(el.dataset.theme); break;
+    case 'account': setTimeout(() => openAccount(el.dataset.mode)); break;
+    case 'account-menu': openAccountMenu(); break;
+    case 'sign-out': setTimeout(signOut); break;
     case 'theme-toggle': setTheme(isDark() ? 'light' : 'dark'); break;
     case 'share-track': shareTrack(id); break;
     case 'track-menu': openTrackMenu(el.dataset.current ? S.current : id, el.closest('.track')); break;
@@ -1794,15 +2055,16 @@ document.addEventListener('click', async e => {
     case 'pl-remove': removeFromPlaylist(playlistById(el.dataset.pl), id); break;
     case 'pl-move': movePlaylistItem(playlistById(el.dataset.pl), id, Number(el.dataset.dir)); break;
     case 'pl-rename': {
-      const p = playlistById(el.dataset.pl);
-      const name = p && await askName('Rename playlist', p.name, 'Save');
-      if (name) { p.name = name; savePlaylists(); route(); }
+      const old = playlistById(el.dataset.pl);
+      const name = old && await askName('Rename playlist', old.name, 'Save');
+      const p = playlistById(el.dataset.pl); // the current one, in case a sync arrived meanwhile
+      if (name && p) { p.name = name; savePlaylists(); route(); }
       break;
     }
     case 'pl-delete': {
       const p = playlistById(el.dataset.pl);
       if (!p || !(await ask(`Delete the playlist “${p.name}”? The kirtans stay in the app.`, 'Delete'))) return;
-      S.playlists = S.playlists.filter(x => x !== p);
+      S.playlists = S.playlists.filter(x => x.id !== p.id);
       savePlaylists();
       location.hash = '#/library/playlists';
       break;
@@ -1877,6 +2139,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 
 (async function start() {
   await loadData();
+  plShape = new Map(S.playlists.map(p => [p.id, shapeOf(p)])); // so the next save only marks real changes
   $('.offline-pill').hidden = isOnline();
 
   // Show the last recording in the mini player, ready to resume.
@@ -1889,6 +2152,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
   }
   route();
   setPlayingClass();
+  accountStart();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
