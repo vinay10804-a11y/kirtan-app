@@ -52,8 +52,9 @@ R2 bucket `kirtans` at `/audio/*`.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
-- Home has a "Use it as an app" section with install steps for iPhone and laptop, Safari and Chrome
-  (hidden when already running as an installed app).
+- Home has an "Install the app" button right under the intro (owner: must be near the top) that scrolls
+  to the "Use it as an app" steps (iPhone and laptop, Safari and Chrome) above "How to use this site",
+  which also links there. Inside the installed app both stay, worded for installing on another device.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.
 
