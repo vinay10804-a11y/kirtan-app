@@ -29,11 +29,11 @@ It's hosted free on your own Cloudflare account.
   on an external drive if you want full quality later. To take a recording off the site, delete it from the folder and run
   `./publish.sh --forget-missing` (this removes every recording that isn't in the folder).
 - **New guided japa sessions:** add the YouTube link to `tools/guided-japa.txt`, then run `./publish.sh`.
-  New videos in the Japa Inspirations playlist and the Living Name SoundCloud set are picked up automatically.
+  New tracks in the Japa Inspirations and Living Name SoundCloud sets are picked up automatically.
 - **Photos:** whatever is in the `photos of sns` folder (next to the project) shows on the home page.
   Put a name in a photo's file name (e.g. `gour krishna.jpg`, `sns.jpg`) to use it as that person's picture.
-- **Japa:** the Guided Japa and Japa Inspirations tabs show the YouTube videos; **Listen here** plays one on the page,
-  and tapping the picture opens YouTube. Living Name meditations play from SoundCloud. Nothing is downloaded.
+- **Japa:** the Guided Japa tab shows the YouTube videos; **Listen here** plays one on the page, and tapping the
+  picture opens YouTube. Japa Inspirations and Living Name meditations play from SoundCloud. Nothing is downloaded.
   `./publish.sh --download` saves audio and MP4 copies to your Mac instead (about 1 GB per session at 720p).
 - **Spotify playlists:** add the link to `tools/spotify-playlists.txt`. New tracks download on the next `./publish.sh --download`.
   Spotify audio is copy-protected, so each track is fetched from YouTube Music. Check that the odd rare one matched the right recording.
