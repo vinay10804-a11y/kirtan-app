@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = '5766138290';
+const VERSION = '98d8c8dd64';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  if (url.origin === location.origin && /^\/(media|audio)\//.test(url.pathname)) {
+  if (url.origin === location.origin && /^\/(stream|media|audio)\//.test(url.pathname)) {
     event.respondWith(audioResponse(req, url));
     return;
   }

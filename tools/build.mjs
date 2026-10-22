@@ -30,11 +30,13 @@ const COVERS = path.join(ROOT, 'site/covers');
 
 const AUDIO_EXT = new Set(['.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus', '.wma', '.aif', '.aiff', '.mp4', '.webm']);
 // Audio is AAC in .m4a: 96 kbps stereo sounds like 128 kbps MP3 at three quarters
-// of the size. Files already at or below the keep bitrate are copied as-is, since
-// re-encoding them would only lose quality. Japa sessions are mostly voice, so
-// they get a lighter encode. Changing FORMAT re-makes every file whose original
-// is on this Mac (new file names, so browsers never mix old and new).
-const FORMAT = 'aac96';
+// of the size. Japa sessions are mostly voice, so they get a lighter encode.
+// Every recording is levelled to the same loudness (-16 LUFS, like Apple Music),
+// so a playlist doesn't jump between barely audible and very loud (the originals
+// differ by up to 34 dB). Changing FORMAT re-makes every file whose original is on
+// this Mac (new file names, so browsers never mix old and new).
+const FORMAT = 'aac96lv';
+const TARGET_LUFS = -16;
 const MUSIC = { keep: 100_000, args: ['-ac', '2', '-b:a', '96k'] };
 const SPEECH = { keep: 72_000, args: ['-ac', '1', '-b:a', '64k'] };
 let AAC = 'aac'; // Apple's encoder (aac_at) when ffmpeg has it: it sounds better.
@@ -61,6 +63,36 @@ function run(cmd, args) {
   });
 }
 
+// Integrated loudness (LUFS) and sample peak (dBFS) of a recording.
+function loudness(file) {
+  return new Promise((resolve, reject) => {
+    const p = spawn('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-vn', '-af', 'ebur128=peak=sample:framelog=quiet', '-f', 'null', '-'],
+      { stdio: ['ignore', 'ignore', 'pipe'] });
+    let err = '';
+    p.stderr.on('data', d => (err += d));
+    p.on('error', reject);
+    p.on('close', () => {
+      const summary = err.slice(err.lastIndexOf('Summary:'));
+      resolve({ i: Number(/I:\s+(-?[\d.]+) LUFS/.exec(summary)?.[1]), peak: Number(/Peak:\s+(-?[\d.]+) dBFS/.exec(summary)?.[1] ?? 0) });
+    });
+  });
+}
+
+// How each recording reaches the target loudness:
+//  - a plain volume change when its loudest moments allow it;
+//  - a volume change plus a fast peak limiter when only its rare peaks would go
+//    over (gains up to 8 dB: the limiter barely touches the sound);
+//  - loudnorm, which smooths the whole range, for very quiet recordings with loud
+//    peaks, where a big boost would otherwise squash the peaks. It's slow (it
+//    works at 192 kHz), so it's kept for those few.
+function levelling({ i, peak }) {
+  if (!Number.isFinite(i)) return null;
+  const gain = Math.round(Math.max(-12, Math.min(14, TARGET_LUFS - i)) * 10) / 10;
+  if (peak + gain <= -1.5) return { filter: `volume=${gain}dB`, how: 'gain', gain };
+  if (gain <= 8) return { filter: `volume=${gain}dB,alimiter=limit=0.84:attack=5:release=50:level=disabled`, how: 'limited', gain };
+  return { filter: `loudnorm=I=${TARGET_LUFS}:TP=-1.5:LRA=11`, how: 'smoothed', gain };
+}
+
 async function probe(file) {
   const json = JSON.parse(await run('ffprobe', ['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', '-select_streams', 'a:0', file]));
   const stream = json.streams?.[0] || {};
@@ -82,19 +114,25 @@ async function keyFor(file) {
   return createHash('sha1').update(`${path.relative(SRC, file)}|${stat.size}|${Math.floor(stat.mtimeMs)}`).digest('hex').slice(0, 16);
 }
 
+// Saved after every file, so a stopped build picks up where it left off.
+let saving = Promise.resolve();
+function saveMeta(meta) {
+  saving = saving.then(() => fs.writeFile(META, JSON.stringify(meta, null, 1)));
+  return saving;
+}
+
 async function processFile(file, meta) {
   const rel = path.relative(SRC, file);
   const stat = await fs.stat(file);
   const key = await keyFor(file);
 
   let info = meta[key];
-  if (!info || (info.format !== FORMAT && !info.copied) || !(await exists(path.join(OUT, info.file)))) {
+  if (!info || info.format !== FORMAT || !(await exists(path.join(OUT, info.file)))) {
     const src = await probe(file);
-    const ext = path.extname(file).toLowerCase();
     const profile = isSpeech(rel) ? SPEECH : MUSIC;
-    const sameFormat = (src.codec === 'mp3' && ext === '.mp3') || (src.codec === 'aac' && ext === '.m4a');
-    const copy = sameFormat && src.bitrate > 0 && src.bitrate <= profile.keep;
-    const outFile = copy ? `${key}${ext}` : `${key}-${FORMAT}.m4a`;
+    const level = levelling(await loudness(file));
+    const copy = false; // levelling means every file is re-encoded
+    const outFile = `${key}-${FORMAT}.m4a`;
     const dest = path.join(OUT, outFile);
     const tmp = path.join(OUT, outFile.replace(/(\.[^.]+)$/, '.part$1'));
 
@@ -103,6 +141,7 @@ async function processFile(file, meta) {
         await fs.copyFile(file, tmp);
       } else {
         await run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-vn', '-map_metadata', '-1',
+          ...(level ? ['-af', level.filter] : []),
           ...profile.args, '-ar', '44100', '-c:a', AAC, ...(AAC === 'aac_at' ? ['-aac_at_mode', 'cvbr'] : []),
           '-movflags', '+faststart', tmp]);
       }
@@ -119,9 +158,11 @@ async function processFile(file, meta) {
       duration: Math.round(outProbe.duration || src.duration),
       tagTitle: src.tags.title || src.tags.TITLE || '',
       added: Math.floor(stat.birthtimeMs || stat.mtimeMs),
-      ...(copy ? { copied: true } : { format: FORMAT }),
+      format: FORMAT,
+      ...(level && { level: { how: level.how, gain: level.gain } }),
     };
     meta[key] = info;
+    await saveMeta(meta);
   }
   if (info.cover === undefined) info.cover = await extractCover(file, key);
   return { key, rel, info };
@@ -228,13 +269,13 @@ async function main() {
   // Files already online in the current format are reused as they are; new ones,
   // and ones made in an older format, are compressed.
   const local = await Promise.all(files.map(async f => ({ file: f, rel: path.relative(SRC, f), key: await keyFor(f) })));
-  const current = t => t && (t.enc === FORMAT || t.enc === 'copy');
+  const current = t => t && t.enc === FORMAT;
   const reused = local.filter(l => current(online.get(l.key)))
     .map(l => ({ ...online.get(l.key), rel: l.rel, tag: online.get(l.key).tag || meta[l.key]?.tagTitle || undefined }));
   const fresh = local.filter(l => !current(online.get(l.key))).map(l => l.file);
   const remade = fresh.filter(f => online.has(local.find(l => l.file === f).key)).length;
   if (remade) console.log(`Re-making ${remade} recordings in the current format (${FORMAT}, encoder ${AAC})`);
-  const limit = Math.max(1, Math.min(4, os.cpus().length - 1));
+  const limit = Math.max(1, Math.min(7, os.cpus().length - 1));
   const results = (await pool(fresh, limit, f => processFile(f, meta))).filter(Boolean);
   await fs.writeFile(META, JSON.stringify(meta, null, 1));
 
@@ -244,8 +285,9 @@ async function main() {
     duration: info.duration,
     size: info.size,
     added: info.added,
-    src: `media/${info.file}`,
-    enc: info.copied ? 'copy' : info.format,
+    src: `stream/${info.file}`,
+    enc: info.format,
+    level: info.level,
     cover: info.cover || undefined,
     yt: rel.match(/\[([A-Za-z0-9_-]{11})\]/)?.[1],
     rel,

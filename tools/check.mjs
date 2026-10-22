@@ -26,7 +26,7 @@ const checks = [
   ['Covers offline: saved and played kirtans keep their cover (keepArt)', (app.match(/keepArt\(/g) || []).length >= 4 && app.includes("ART_CACHE = 'kirtan-art'")],
   ['Covers offline: a missing picture falls back to the initials tile', app.includes('data-fallback')],
   // Audio and features.
-  ['Audio is served from media/ (AAC)', sw.includes('media|audio')],
+  ['Audio is served from stream/ (levelled AAC) and media/', sw.includes('stream|media|audio')],
   ['Saved offline copies no longer in the catalog are cleaned up', app.includes('only takes up space')],
   ['Lyrics open inside the app', app.includes('kksongs.org page shown') || app.includes("dialog.classList.toggle('web'")],
   ['Guided Japa plays in the in-app YouTube player', app.includes('function openVideo') && html.includes('id="video-dialog"')],
@@ -44,6 +44,18 @@ const checks = [
   ['Accounts: the service worker never caches /api/', sw.includes("url.pathname.startsWith('/api/')) return")],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
+  // Platform audit (22 Oct): smooth playback, as on SoundCloud and Spotify.
+  ['Quick skips: only the latest kirtan tapped starts playing (loadSeq)', app.includes('let loadSeq = 0') && app.includes('if (seq !== loadSeq) return')],
+  ['Dropped connection: playback picks up where it stopped', app.includes('const recovery = {') && app.includes('function resumeAfterDrop')],
+  ['Offline: next/previous skip kirtans that are not saved', app.includes('function stepIndex') && app.includes('const playable =')],
+  ['Repeat off / all / one', app.includes("S.repeat === 'all'") && css.includes('#loop-btn.one::after')],
+  ['Loading spinner while a kirtan buffers', app.includes('function setBuffering') && css.includes('.is-buffering')],
+  ['Queue survives closing the app', app.includes('function saveQueue') && app.includes("store.get('queue'")],
+  ['Phone back button closes the player instead of leaving the app', app.includes('history.pushState({ player: true }') && app.includes("addEventListener('popstate'")],
+  ['Shared links (/k/<id>) show a preview with title and picture', read('worker/index.js').includes('sharePage(') && read('worker/share.js').includes('og:image') && app.includes('/k/${')],
+  ['Recent searches and storage used on the Saved tab', app.includes('function rememberSearch') && app.includes('function showStorage')],
+  ['Continue listening across devices (positions sync with the account)', read('site/library.js').includes('positions:') && app.includes('S.posAt')],
+  ['Every kirtan levelled to the same loudness', read('tools/build.mjs').includes('TARGET_LUFS') && read('tools/build.mjs').includes('function levelling')],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);

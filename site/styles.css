@@ -574,3 +574,16 @@ body:has(.player:not([hidden])) .toast { top: calc(env(safe-area-inset-top, 0px)
 body:has(.player:not([hidden])) .toast.show { transform: translate(-50%, 0); }
 @media (min-width: 960px) { body:has(.player:not([hidden])) .toast { left: 50%; } }
 dialog.menu .btn:hover { background: var(--teal-deep); }
+
+/* Loading: a ring turns around the play buttons while a recording buffers. */
+.is-buffering .play-big, .is-buffering .mini .play-btn { position: relative; }
+.is-buffering .play-big::after, .is-buffering .mini .play-btn::after {
+  content: ""; position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid transparent; border-top-color: var(--teal); border-right-color: var(--teal);
+  animation: spin .8s linear infinite; pointer-events: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Repeat one: a small 1 on the repeat icon. */
+#loop-btn { position: relative; }
+#loop-btn.one::after { content: "1"; position: absolute; top: 3px; left: calc(50% + 7px); font: 700 9px/1 var(--sans); color: var(--teal-deep); }
+.suggest h2 .text-btn { margin-left: 8px; font: 500 13px var(--sans); }

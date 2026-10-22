@@ -1,14 +1,17 @@
 // Streams kirtan audio from R2 with HTTP Range support (needed for seeking,
 // and by Safari for playback at all), and answers account requests at /api/*
-// (worker/api.js). Everything else is a static asset.
-// /media/ holds the current AAC files; /audio/ the older MP3s.
+// (worker/api.js) and shared kirtan links at /k/<id> (worker/share.js, with a
+// preview for WhatsApp and the like). Everything else is a static asset.
+// /stream/ holds the current, volume-levelled AAC files; /media/ and /audio/ older ones.
 import { api } from './api.js';
+import { sharePage } from './share.js';
 
-const AUDIO_PATH = /^\/(media|audio)\//;
+const AUDIO_PATH = /^\/(stream|media|audio)\//;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) return api(request, env, url);
+    if (url.pathname.startsWith('/k/') && request.method === 'GET') return sharePage(request, env, url);
     if (AUDIO_PATH.test(url.pathname)) {
       return serveAudio(request, env, decodeURIComponent(url.pathname.slice(1)));
     }

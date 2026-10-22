@@ -24,8 +24,20 @@ Tick items off (or delete them) as they're done.
   ads. If that gets annoying, switch to audio-only copies on Cloudflare (about 0.5 GB, free tier).
 - **Check five kirtan types.** Radhe Govinda, KKS Tune, Manu Tune, Adhivas and Meditation on
   Krsna's Arrival are filed as Mahamantra. Move any that are bhajans.
+- **Platform audit: done** (22 Oct). Compared with SoundCloud and Spotify and fixed: quick skips
+  playing the wrong kirtan, playback stopping for good when the signal drops, offline next/previous
+  stopping at unsaved kirtans, no loading indicator, the queue being lost on closing the app, the
+  phone's back button leaving the app, favourites listed oldest first, and very different volumes
+  between kirtans (all now levelled to the same loudness). Added: Repeat all / Repeat one, link
+  previews when sharing (title, leader and picture in WhatsApp/Messages), recent searches,
+  space used by saved kirtans, and continue-listening on every device for signed-in people.
+- **Kirtans saved offline before 22 Oct** need saving again (the levelled versions are new files;
+  the app clears the old copies by itself).
 - **Spotify-style ideas not built yet** (say which you'd like): drag to reorder playlists (today it's
-  Move up/down in the ⋯ menu); repeat a whole playlist; suggestions based on what you listen to most; recent searches.
+  Move up/down in the ⋯ menu); suggestions based on what you listen to most; a sleep-timer fade-out.
+- **Optional tidy-up on Cloudflare:** the older audio copies (`media/` folder in the kirtans bucket,
+  about 3.5 GB) are no longer used. Still free (about 7 GB of 10 GB), but removing them leaves room
+  for more kirtans. Ask Claude to walk you through it.
 - **Accounts: done** (22 Oct). People can sign in under Library to keep favourites and playlists on all
   their devices. If someone forgets their password, ask Claude to "reset the password for <their
   email>": you'll get a temporary password to pass on, and they change it in the app.
