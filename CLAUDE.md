@@ -117,6 +117,12 @@ app.js/styles.css with a new index.html after a deploy. Cover pictures of saved 
 is played, are kept in the `kirtan-art` cache (`keepArt` in app.js); a picture that can't load falls back
 to the initials tile.
 
+## Don't undo earlier fixes
+Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
+font, offline covers, fresh styling/code). `tools/check.mjs` lists each fix the owner asked for; it
+runs in `publish.sh` and stops a publish if one is missing. Re-read files from disk before editing,
+and add a line to `check.mjs` for every new fix.
+
 ## Checking changes
 Serve `site/` locally (or `npx wrangler dev --local` with a few files put via
 `wrangler r2 object put --local`) and screenshot phone (iPhone 13) and desktop widths with

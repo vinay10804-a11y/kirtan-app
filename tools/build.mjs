@@ -161,15 +161,32 @@ async function pool(items, limit, fn) {
   return results;
 }
 
-// A new version string makes browsers pick up the new app and catalog.
+// A new version string makes browsers pick up the new app and catalog. The same
+// string goes on index.html's styles.css and app.js links (?v=), so a page can
+// only ever load the styling and code it was made with, never a stored older copy.
+const ASSET_VERSION = /((?:styles\.css|app\.js)\?v=)[^"]*/g;
 async function stampServiceWorker() {
   const sw = path.join(ROOT, 'site/sw.js');
+  const index = path.join(ROOT, 'site/index.html');
   const hash = createHash('sha1');
   for (const f of ['index.html', 'styles.css', 'app.js', 'catalog.json', 'photos.json', 'videos.json', 'lyrics.json']) {
-    try { hash.update(await fs.readFile(path.join(ROOT, 'site', f))); } catch {}
+    try {
+      const text = await fs.readFile(path.join(ROOT, 'site', f), 'utf8');
+      hash.update(f === 'index.html' ? text.replace(ASSET_VERSION, '$1') : text); // ignore the stamp itself
+    } catch {}
   }
+  const version = hash.digest('hex').slice(0, 10);
   const src = await fs.readFile(sw, 'utf8');
-  await fs.writeFile(sw, src.replace(/const VERSION = '[^']*';/, `const VERSION = '${hash.digest('hex').slice(0, 10)}';`));
+  await fs.writeFile(sw, src.replace(/const VERSION = '[^']*';/, `const VERSION = '${version}';`));
+  const html = await fs.readFile(index, 'utf8');
+  await fs.writeFile(index, html.replace(ASSET_VERSION, `$1${version}`));
+  // Guard: without these, a new page can run with an old stored copy of its
+  // styling and code (it happened twice), so refuse to publish.
+  const swNow = await fs.readFile(sw, 'utf8');
+  if (!/styles\.css\?v=/.test(html) || !/app\.js\?v=/.test(html)
+      || !swNow.includes('styles.css?v=${VERSION}') || !swNow.includes("searchParams.has('v')")) {
+    throw new Error('index.html must load styles.css?v= and app.js?v=, and sw.js must cache and serve those versioned files');
+  }
 }
 
 // Re-applies the sorting rules to a catalog entry (they may have changed since it

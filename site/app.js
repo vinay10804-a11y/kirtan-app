@@ -3,6 +3,8 @@
 // click handler drives everything through data-action attributes.
 
 const AUDIO_CACHE = 'kirtan-audio';
+// Cover pictures of saved and recently played kirtans, so they show offline too.
+const ART_CACHE = 'kirtan-art';
 const ARTIST_ORDER = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
@@ -144,14 +146,29 @@ function tile(label) {
 function initialsFor(name) {
   return INITIALS[name] || name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 2);
 }
+// A picture that can't load (e.g. offline and never stored) becomes the plain
+// initials tile instead of a broken image; see the 'error' listener below.
 function artHTML(t) {
+  const label = t.section === 'japa' ? 'Japa' : initialsFor(t.artist);
   const src = artFor(t);
-  if (src) return `<img src="${esc(src)}" alt="">`;
-  return tile(t.section === 'japa' ? 'Japa' : initialsFor(t.artist));
+  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(label)}">` : tile(label);
 }
 function collectionArt(name) {
   const src = personPhoto(name);
-  return src ? `<img src="${esc(src)}" alt="">` : tile(initialsFor(name));
+  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(initialsFor(name))}">` : tile(initialsFor(name));
+}
+document.addEventListener('error', e => {
+  if (e.target.matches?.('img[data-fallback]')) e.target.outerHTML = tile(e.target.dataset.fallback);
+}, true);
+
+// Keeps a kirtan's cover picture on the device (no-op offline or if already kept).
+async function keepArt(t) {
+  const src = t && artFor(t);
+  if (!src || !('caches' in window) || !isOnline()) return;
+  try {
+    const cache = await caches.open(ART_CACHE);
+    if (!(await cache.match(src))) await cache.add(src);
+  } catch {}
 }
 function collectionName(t) {
   return t.section === 'japa' ? `${t.type} · Sacinandana Swami` : t.artist;
@@ -213,6 +230,8 @@ async function loadData() {
         else if (S.tracks.length) await cache.delete(req);
       }
     } catch {}
+    // Kirtans saved before covers were kept with them get their covers now.
+    for (const id of S.saved) keepArt(S.byId.get(id));
   }
 }
 
@@ -678,7 +697,7 @@ function libraryView(tab = 'favourites', sub) {
   if (tab === 'playlists' && sub) return playlistView(sub);
   if (tab === 'playlists') {
     const rows = S.playlists.map(p => {
-      const list = p.ids.map(id => S.byId.get(id)).filter(Boolean);
+      const list = playlistTracks(p);
       const art = list[0] ? artHTML(list[0]) : tile('');
       return entryLink(`#/library/playlists/${p.id}`, art, p.name,
         `${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}`);
@@ -716,17 +735,35 @@ function libraryView(tab = 'favourites', sub) {
 
 // One playlist: play or shuffle it, save it offline, rename or delete it. Each
 // kirtan's "⋯" menu here can also move it up or down, or take it out.
+// One playlist: its cover, Play / Shuffle, Add kirtans (search and tick them),
+// Edit (move up or down, remove, all on the page), save offline, rename, delete.
 function playlistView(id) {
   const p = playlistById(id);
   if (!p) return `<h1 class="page-title">Playlist</h1><p class="empty">This playlist isn’t on this device. <a href="#/library/playlists">See your playlists</a></p>`;
-  const list = p.ids.map(x => S.byId.get(x)).filter(Boolean);
+  const list = playlistTracks(p);
   const key = `pl:${p.id}`;
-  const tracks = trackList(list, key, { source: true, year: true, pl: p.id });
+  const editing = S.plEdit === p.id && list.length > 0;
+  const rows = editing
+    ? `<ul class="tracks pl-edit">${list.map((t, i) => `<li class="track">
+        <span class="track-main"><span class="track-num">${i + 1}</span><span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${esc(t.artist)}${t.year ? ` · ${t.year}` : ''}</span></span></span>
+        <button class="icon-btn" data-action="pl-move" data-pl="${p.id}" data-id="${t.id}" data-dir="-1" aria-label="Move up" ${i ? '' : 'disabled'}>${icon('up')}</button>
+        <button class="icon-btn" data-action="pl-move" data-pl="${p.id}" data-id="${t.id}" data-dir="1" aria-label="Move down" ${i < list.length - 1 ? '' : 'disabled'}>${icon('down')}</button>
+        <button class="icon-btn" data-action="pl-remove" data-pl="${p.id}" data-id="${t.id}" aria-label="Remove from playlist">${icon('x')}</button>
+      </li>`).join('')}</ul>`
+    : trackList(list, key, { source: true, year: true, pl: p.id });
+  if (editing) S.lists[key] = list.map(t => t.id);
   return `<a class="back" href="#/library/playlists">${icon('left')}Playlists</a>
-    <h1 class="page-title">${esc(p.name)}</h1>
-    <div class="list-head"><p class="page-sub">${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p>${playActions(key)}</div>
-    <p class="pl-tools">${saveListButton(key)}<button class="text-btn" data-action="pl-rename" data-pl="${p.id}">Rename</button><button class="text-btn" data-action="pl-delete" data-pl="${p.id}">Delete playlist</button></p>
-    ${list.length ? `<div class="group">${tracks}</div>` : `<p class="empty">Nothing here yet. Tap ${icon('more')} next to any kirtan, or in the player, and choose <b>Add to playlist</b>.</p>`}`;
+    <div class="pl-header">
+      <span class="pl-cover">${list[0] ? artHTML(list[0]) : `<span class="tile" aria-hidden="true">${icon('playlist')}</span>`}</span>
+      <div><h1 class="page-title">${esc(p.name)}</h1>
+        <p class="page-sub">${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p></div>
+    </div>
+    <div class="actions">${list.length ? `<button class="btn" data-action="play-list" data-list="${key}">${icon('play')}Play</button>
+      <button class="btn ghost" data-action="shuffle" data-list="${key}">${icon('shuffle')}Shuffle</button>` : ''}
+      <button class="btn ghost" data-action="pl-add" data-pl="${p.id}">${icon('plus')}Add kirtans</button></div>
+    <p class="pl-tools">${list.length ? `<button class="text-btn" data-action="pl-edit" data-pl="${p.id}">${editing ? 'Done editing' : 'Edit order'}</button>` : ''}${saveListButton(key)}<button class="text-btn" data-action="pl-rename" data-pl="${p.id}">Rename</button><button class="text-btn danger" data-action="pl-delete" data-pl="${p.id}">Delete playlist</button></p>
+    ${list.length ? `<div class="group">${rows}</div>`
+      : `<p class="empty">Nothing here yet. Tap <b>Add kirtans</b> to choose some, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
 }
 
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -874,7 +911,8 @@ function closePlayer({ instant = false } = {}) {
   const done = () => {
     player.classList.remove('closing');
     player.hidden = true;
-    $('.player-inner').style.transform = '';
+    player.style.transition = '';
+    player.style.transform = '';
     document.body.style.overflow = '';
   };
   if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
@@ -919,6 +957,7 @@ async function load(id, { autoplay = true } = {}) {
   }, { once: true });
 
   if (autoplay) audio.play().catch(() => {});
+  keepArt(t);
   updateNowPlaying();
   if (prev) refreshTrack(prev);
   refreshTrack(id);
@@ -1247,37 +1286,52 @@ scrub.addEventListener('pointercancel', () => {
   showPosition(audio.currentTime, scrubDur());
 });
 
-// Swipe down on the top of the player to close it, like Spotify.
+// Swipe down anywhere on the player to close it, like Spotify: the whole screen
+// follows your finger, and a long or quick swipe closes it (same as the ↓ button).
+// Sideways swipes on the artwork still change recording; the progress bar keeps
+// its own drag; once the player is scrolled down, swiping scrolls it back first.
 (function swipeDownToClose() {
-  const head = $('#player-head');
-  const sheet = $('.player-inner');
-  let y0 = null, dy = 0;
-  head.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
-    y0 = e.clientY;
+  const player = $('#player');
+  let y0 = null, x0 = 0, t0 = 0, dy = 0, mode = null;
+  const reset = () => { player.style.transition = 'transform .22s var(--ease-out)'; player.style.transform = ''; };
+  player.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || e.target.closest('.scrub-bar, iframe, dialog')) return;
+    y0 = e.touches[0].clientY;
+    x0 = e.touches[0].clientX;
+    t0 = performance.now();
     dy = 0;
-    try { head.setPointerCapture(e.pointerId); } catch {}
-    sheet.style.transition = 'none';
-  });
-  head.addEventListener('pointermove', e => {
+    mode = null;
+  }, { passive: true });
+  player.addEventListener('touchmove', e => {
     if (y0 === null) return;
-    dy = Math.max(0, e.clientY - y0);
-    sheet.style.transform = `translateY(${dy}px)`;
-  });
+    const ddy = e.touches[0].clientY - y0, ddx = e.touches[0].clientX - x0;
+    if (mode === null && Math.hypot(ddx, ddy) > 8) {
+      mode = ddy > 0 && Math.abs(ddy) > Math.abs(ddx) * 1.2 && player.scrollTop <= 0 ? 'close' : 'other';
+    }
+    if (mode !== 'close') return;
+    e.preventDefault(); // the player follows the finger instead of the page bouncing
+    dy = Math.max(0, ddy);
+    player.style.transition = 'none';
+    player.style.transform = `translateY(${dy}px)`;
+  }, { passive: false });
   const end = () => {
     if (y0 === null) return;
+    const wasClosing = mode === 'close';
+    const speed = dy / Math.max(1, performance.now() - t0); // px per ms
     y0 = null;
-    sheet.style.transition = 'transform .2s ease-out';
-    if (dy <= 110) sheet.style.transform = '';
-    if (dy > 110) {
+    mode = null;
+    if (!wasClosing) return;
+    if (dy > 120 || (dy > 50 && speed > 0.5)) {
       // Carry on down from where the finger left it, then close.
-      sheet.style.transition = 'transform .2s ease-in';
-      sheet.style.transform = 'translateY(100%)';
-      setTimeout(() => closePlayer({ instant: true }), 200);
+      player.style.transition = 'transform .22s var(--ease-in)';
+      player.style.transform = 'translateY(100%)';
+      setTimeout(() => closePlayer({ instant: true }), 220);
+    } else {
+      reset();
     }
   };
-  head.addEventListener('pointerup', end);
-  head.addEventListener('pointercancel', end);
+  player.addEventListener('touchend', end);
+  player.addEventListener('touchcancel', end);
 })();
 
 if ('mediaSession' in navigator) {
@@ -1328,6 +1382,8 @@ function toggleFav(id) {
 }
 
 const playlistById = id => S.playlists.find(p => p.id === id);
+// A playlist's kirtans that are in the app (a removed recording simply drops out).
+const playlistTracks = p => p.ids.map(x => S.byId.get(x)).filter(Boolean);
 function savePlaylists() { store.set('playlists', S.playlists); }
 function newPlaylist(name) {
   const p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, ids: [] };
@@ -1346,6 +1402,7 @@ function removeFromPlaylist(p, id) {
   p.ids = p.ids.filter(x => x !== id);
   savePlaylists();
   toast(`Removed from ${p.name}`);
+  if (!playlistTracks(p).length) S.plEdit = null;
   if (location.hash.startsWith('#/library/playlists')) route();
 }
 function movePlaylistItem(p, id, dir) {
@@ -1394,16 +1451,55 @@ function openTrackMenu(id, row) {
   $('#track-dialog').showModal();
 }
 
+// Choose playlists for a kirtan: each tap ticks or unticks one, the menu stays
+// open so you can pick several, and Done closes it.
 function openPlaylistPicker(id) {
-  const t = S.byId.get(id);
-  if (!t) return;
-  $('#playlist-menu').innerHTML = `<h3 class="menu-title">Add to playlist<small>${esc(t.title)}</small></h3>
-    <button value="new" data-action="pl-create-add" data-id="${id}">${icon('plus')}<span>New playlist</span></button>
-    ${S.playlists.map(p => `<button value="pl" data-action="pl-toggle" data-pl="${p.id}" data-id="${id}" class="${p.ids.includes(id) ? 'in' : ''}">
-      ${icon(p.ids.includes(id) ? 'check' : 'playlist')}<span>${esc(p.name)}</span><small>${p.ids.length}</small></button>`).join('')}
-    <button value="cancel" class="muted">Cancel</button>`;
+  if (!S.byId.has(id)) return;
+  renderPicker(id);
   $('#playlist-dialog').showModal();
 }
+function renderPicker(id) {
+  const t = S.byId.get(id);
+  $('#playlist-menu').innerHTML = `<h3 class="menu-title">Add to playlist<small>${esc(t.title)}</small></h3>
+    <button type="button" data-action="pl-create-add" data-id="${id}">${icon('plus')}<span>New playlist</span></button>
+    ${S.playlists.map(p => {
+      const on = p.ids.includes(id);
+      return `<button type="button" data-action="pl-toggle" data-pl="${p.id}" data-id="${id}" class="${on ? 'in' : ''}" aria-pressed="${on}">
+        ${icon(on ? 'check' : 'playlist')}<span>${esc(p.name)}</span><small>${playlistTracks(p).length}</small></button>`;
+    }).join('')}
+    <button value="done" class="menu-done">Done</button>`;
+}
+
+// "Add kirtans" on a playlist: every kirtan, searchable, each with + / ✓.
+function openAddKirtans(plId) {
+  const p = playlistById(plId);
+  if (!p) return;
+  const dlg = $('#add-dialog');
+  dlg.dataset.pl = p.id;
+  $('#add-title').textContent = `Add to ${p.name}`;
+  $('#add-q').value = '';
+  renderAddList();
+  dlg.showModal();
+}
+function renderAddList() {
+  const p = playlistById($('#add-dialog').dataset.pl);
+  if (!p) return;
+  const words = norm($('#add-q').value).split(/\s+/).filter(Boolean);
+  const list = kirtans()
+    .filter(t => words.every(w => norm(`${t.title} ${t.artist} ${t.type} ${t.place || ''} ${t.year || ''}`).includes(w)))
+    .sort((a, b) => a.artist.localeCompare(b.artist) || byTitle(a, b));
+  $('#add-sub').textContent = `${plural(playlistTracks(p).length, 'kirtan')} in ${p.name}`;
+  $('#add-body').innerHTML = list.length ? `<ul class="tracks">${list.slice(0, 200).map(t => {
+    const on = p.ids.includes(t.id);
+    return `<li class="track add-row">
+      <span class="track-main"><span class="track-text"><span class="track-title">${esc(t.title)}</span>
+        <span class="track-meta">${esc(t.artist)} · ${esc(t.type)}${t.year ? ` · ${t.year}` : ''} · ${fmtDur(t.duration)}</span></span></span>
+      <button class="icon-btn add-toggle${on ? ' in' : ''}" data-action="pl-add-toggle" data-pl="${p.id}" data-id="${t.id}" aria-pressed="${on}" aria-label="Add or remove ${esc(t.title)}">${icon(on ? 'check' : 'plus')}</button>
+    </li>`;
+  }).join('')}</ul>` : `<p class="empty">No kirtans match “${esc($('#add-q').value)}”.</p>`;
+}
+$('#add-q').addEventListener('input', renderAddList);
+$('#add-dialog').addEventListener('close', () => { if (location.hash.startsWith('#/library/playlists')) route(); });
 
 // Play next: straight after the current recording. Add to queue: at the end.
 function playNext(id) {
@@ -1562,6 +1658,7 @@ async function download(id) {
   const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'audio/mpeg' });
   const cache = await caches.open(AUDIO_CACHE);
   await cache.put(t.src, new Response(blob, { headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) } }));
+  await keepArt(t);
   S.saved.add(id);
   S.downloads.delete(id);
   refreshTrack(id);
@@ -1670,13 +1767,29 @@ document.addEventListener('click', async e => {
     case 'pl-create-add': {
       const name = await askName('New playlist', '', 'Create');
       if (name) addToPlaylist(newPlaylist(name), id);
+      if ($('#playlist-dialog').open) renderPicker(id);
       break;
     }
     case 'pl-toggle': {
       const p = playlistById(el.dataset.pl);
       if (p?.ids.includes(id)) removeFromPlaylist(p, id); else if (p) addToPlaylist(p, id);
+      if ($('#playlist-dialog').open) renderPicker(id);
       break;
     }
+    case 'pl-add': openAddKirtans(el.dataset.pl); break;
+    case 'pl-add-toggle': {
+      const p = playlistById(el.dataset.pl);
+      if (!p) break;
+      const on = !p.ids.includes(id);
+      on ? p.ids.push(id) : (p.ids = p.ids.filter(x => x !== id));
+      savePlaylists();
+      el.classList.toggle('in', on);
+      el.setAttribute('aria-pressed', on);
+      el.innerHTML = icon(on ? 'check' : 'plus');
+      $('#add-sub').textContent = `${plural(playlistTracks(p).length, 'kirtan')} in ${p.name}`;
+      break;
+    }
+    case 'pl-edit': S.plEdit = S.plEdit === el.dataset.pl ? null : el.dataset.pl; route(); break;
     case 'pl-remove': removeFromPlaylist(playlistById(el.dataset.pl), id); break;
     case 'pl-move': movePlaylistItem(playlistById(el.dataset.pl), id, Number(el.dataset.dir)); break;
     case 'pl-rename': {
@@ -1704,6 +1817,7 @@ document.addEventListener('click', async e => {
     case 'remove-all': {
       if (!(await ask('Remove all saved recordings from this device?', 'Remove all'))) return;
       await caches.delete(AUDIO_CACHE);
+      await caches.delete(ART_CACHE);
       S.saved.clear();
       route();
       break;

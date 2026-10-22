@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = '8fe0c4b71b';
+const VERSION = '9eb4662c87';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -12,7 +12,7 @@ const RUNTIME_CACHE = 'runtime';
 // No 'index.html': it redirects to './', and browsers refuse a redirected
 // response when opening a page, which stopped the app opening offline.
 const SHELL = [
-  './', 'styles.css', 'app.js', 'manifest.webmanifest',
+  './', `styles.css?v=${VERSION}`, `app.js?v=${VERSION}`, 'manifest.webmanifest',
   'catalog.json', 'photos.json', 'videos.json', 'lyrics.json',
   'art/card-1.webp',
   'icons/icon-192.png', 'icons/favicon.png', 'apple-touch-icon.png',
@@ -47,7 +47,16 @@ self.addEventListener('fetch', event => {
     event.respondWith(openPage(req, url));
     return;
   }
-  if (url.origin === location.origin && DATA.test(url.pathname)) {
+  // Styling and code carry their version (?v=, stamped by the build into
+  // index.html), so a page only ever gets its own: that exact stored copy at
+  // once, else the network. A stored copy of another version is never used.
+  if (url.origin === location.origin && url.searchParams.has('v') && /\.(js|css)$/.test(url.pathname)) {
+    event.respondWith(caches.match(req).then(hit => hit || fetch(req)));
+    return;
+  }
+  // Data, and anything unversioned, comes from the network when it answers;
+  // offline it comes from the device.
+  if (url.origin === location.origin && (DATA.test(url.pathname) || /\.(js|css|webmanifest)$/.test(url.pathname))) {
     event.respondWith(networkFirst(req));
     return;
   }
