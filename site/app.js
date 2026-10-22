@@ -3,8 +3,6 @@
 // click handler drives everything through data-action attributes.
 
 const AUDIO_CACHE = 'kirtan-audio';
-// Cover pictures of saved and recently played kirtans, so they show offline too.
-const ART_CACHE = 'kirtan-art';
 const ARTIST_ORDER = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
@@ -146,29 +144,14 @@ function tile(label) {
 function initialsFor(name) {
   return INITIALS[name] || name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 2);
 }
-// A picture that can't load (e.g. offline and never stored) becomes the plain
-// initials tile instead of a broken image; see the 'error' listener below.
 function artHTML(t) {
-  const label = t.section === 'japa' ? 'Japa' : initialsFor(t.artist);
   const src = artFor(t);
-  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(label)}">` : tile(label);
+  if (src) return `<img src="${esc(src)}" alt="">`;
+  return tile(t.section === 'japa' ? 'Japa' : initialsFor(t.artist));
 }
 function collectionArt(name) {
   const src = personPhoto(name);
-  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(initialsFor(name))}">` : tile(initialsFor(name));
-}
-document.addEventListener('error', e => {
-  if (e.target.matches?.('img[data-fallback]')) e.target.outerHTML = tile(e.target.dataset.fallback);
-}, true);
-
-// Keeps a kirtan's cover picture on the device (no-op offline or if already kept).
-async function keepArt(t) {
-  const src = t && artFor(t);
-  if (!src || !('caches' in window) || !isOnline()) return;
-  try {
-    const cache = await caches.open(ART_CACHE);
-    if (!(await cache.match(src))) await cache.add(src);
-  } catch {}
+  return src ? `<img src="${esc(src)}" alt="">` : tile(initialsFor(name));
 }
 function collectionName(t) {
   return t.section === 'japa' ? `${t.type} · Sacinandana Swami` : t.artist;
@@ -230,8 +213,6 @@ async function loadData() {
         else if (S.tracks.length) await cache.delete(req);
       }
     } catch {}
-    // Kirtans saved before covers were kept with them get their covers now.
-    for (const id of S.saved) keepArt(S.byId.get(id));
   }
 }
 
@@ -783,6 +764,14 @@ function notFound() {
 
 let lastViewKey = null;
 
+// Which "page" a link is on: filters and tabs inside the Kirtans page count as the same page.
+function viewKeyFor(hash) {
+  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  return parts[0] === 'kirtans' ? parts.slice(0, 3).join('/') : parts[0] || '';
+}
+
+// Going somewhere new draws the page at once and fades it up (.page-enter);
+// filters and tabs inside a page switch instantly, keeping your place.
 function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   const [section = '', a, b, c, d] = parts;
@@ -803,10 +792,11 @@ function route() {
     if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
   }
   const offline = isOnline() ? '' : `<p class="offline-note">You’re offline. Saved recordings still play.</p>`;
-  view.innerHTML = `<div class="page">${offline}${html}</div>`;
-
   // Changing a filter or tab within the same list keeps your place on the page.
-  const viewKey = section === 'kirtans' ? parts.slice(0, 3).join('/') : section;
+  const viewKey = viewKeyFor(location.hash);
+  const enter = viewKey !== lastViewKey && lastViewKey !== null ? ' page-enter' : '';
+  view.innerHTML = `<div class="page${enter}">${offline}${html}</div>`;
+
   if (viewKey !== lastViewKey) window.scrollTo(0, 0);
   lastViewKey = viewKey;
   $('.chips [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -850,9 +840,19 @@ function openPlayer() {
   $('#player').hidden = false;
   document.body.style.overflow = 'hidden';
 }
-function closePlayer() {
-  $('#player').hidden = true;
-  document.body.style.overflow = '';
+// Slides the player down (unless it was already swiped away, or motion is reduced).
+function closePlayer({ instant = false } = {}) {
+  const player = $('#player');
+  if (player.hidden || player.classList.contains('closing')) return;
+  const done = () => {
+    player.classList.remove('closing');
+    player.hidden = true;
+    $('.player-inner').style.transform = '';
+    document.body.style.overflow = '';
+  };
+  if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+  player.classList.add('closing');
+  setTimeout(done, 260);
 }
 
 async function sourceFor(t) {
@@ -892,7 +892,6 @@ async function load(id, { autoplay = true } = {}) {
   }, { once: true });
 
   if (autoplay) audio.play().catch(() => {});
-  keepArt(t);
   updateNowPlaying();
   if (prev) refreshTrack(prev);
   refreshTrack(id);
@@ -1242,8 +1241,13 @@ scrub.addEventListener('pointercancel', () => {
     if (y0 === null) return;
     y0 = null;
     sheet.style.transition = 'transform .2s ease-out';
-    sheet.style.transform = '';
-    if (dy > 110) closePlayer();
+    if (dy <= 110) sheet.style.transform = '';
+    if (dy > 110) {
+      // Carry on down from where the finger left it, then close.
+      sheet.style.transition = 'transform .2s ease-in';
+      sheet.style.transform = 'translateY(100%)';
+      setTimeout(() => closePlayer({ instant: true }), 200);
+    }
   };
   head.addEventListener('pointerup', end);
   head.addEventListener('pointercancel', end);
@@ -1531,7 +1535,6 @@ async function download(id) {
   const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'audio/mpeg' });
   const cache = await caches.open(AUDIO_CACHE);
   await cache.put(t.src, new Response(blob, { headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) } }));
-  await keepArt(t);
   S.saved.add(id);
   S.downloads.delete(id);
   refreshTrack(id);
@@ -1673,7 +1676,6 @@ document.addEventListener('click', async e => {
     case 'remove-all': {
       if (!(await ask('Remove all saved recordings from this device?', 'Remove all'))) return;
       await caches.delete(AUDIO_CACHE);
-      await caches.delete(ART_CACHE);
       S.saved.clear();
       route();
       break;
