@@ -59,6 +59,8 @@ const S = {
   playlists: store.get('playlists', []), // [{ id, name, ids: [track ids], created, at }]
   // For merging with an account: when each favourite last changed, and deleted playlists.
   favAt: store.get('favAt', {}),
+  posAt: store.get('posAt', {}), // when each listening position last changed, for merging
+  lastAt: store.get('lastAt', 0),
   plDeleted: store.get('plDeleted', {}),
   user: store.get('user', null), // { email, name } when signed in
   played: new Set(store.get('played', [])),
@@ -66,7 +68,8 @@ const S = {
   history: store.get('history', []),
   stats: store.get('stats', { seconds: 0, since: Date.now() }),
   speed: store.get('speed', 1),
-  loop: store.get('loop', false),
+  // Repeat: 'off', 'all' (start the list again at the end) or 'one' (this recording).
+  repeat: store.get('repeat', store.get('loop', false) ? 'one' : 'off'),
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
   dlQueue: [],
@@ -483,7 +486,7 @@ function homeView() {
         <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
-        <li><b>Chanting japa:</b> open the player and tap <b>Loop</b> to repeat one kirtan while you chant your rounds.</li>
+        <li><b>Chanting japa:</b> open the player and tap <b>Repeat</b> until it says <b>Repeat one</b>, so one kirtan plays again and again while you chant your rounds.</li>
         <li><b>Sleep timer</b> in the player stops playback after 15 minutes to an hour.</li>
         <li><b>Find something:</b> use Search for a title, place or year, such as “Vrindavan” or “2019”.</li>
       </ul>
@@ -682,13 +685,23 @@ function searchSuggestions() {
   return [...places, ...years, ...extra, ...(japaCollections().length ? ['Guided Japa'] : [])];
 }
 
+// Searches you've made, newest first, so you can repeat one with a tap.
+function rememberSearch(q) {
+  q = q.trim();
+  if (q.length < 2) return;
+  const recent = store.get('searches', []).filter(x => norm(x) !== norm(q));
+  store.set('searches', [q, ...recent].slice(0, 8));
+}
+
 function searchResults() {
   const q = norm(S.query.trim());
   if (!q) {
     const sugg = searchSuggestions();
     if (!S.tracks.length && !S.videos.length) return emptyCatalog();
-    return sugg.length ? `<div class="suggest"><h2>Try</h2><div class="chips wrap">${sugg.map(s =>
-      `<button class="chip" data-action="suggest" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>` : '';
+    const recent = store.get('searches', []);
+    const chips = list => `<div class="chips wrap">${list.map(s => `<button class="chip" data-action="suggest" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>`;
+    return (recent.length ? `<div class="suggest"><h2>Recent searches <button class="text-btn" data-action="clear-searches">Clear</button></h2>${chips(recent)}</div>` : '')
+      + (sugg.length ? `<div class="suggest"><h2>Try</h2>${chips(sugg)}</div>` : '');
   }
   const words = q.split(/\s+/);
   const match = text => { const hay = norm(text); return words.every(w => hay.includes(w)); };
@@ -714,7 +727,8 @@ function libraryView(tab = 'favourites', sub) {
   let body = '';
 
   if (tab === 'favourites') {
-    const list = [...S.favs].map(id => S.byId.get(id)).filter(Boolean);
+    // Newest first, like Spotify's Liked Songs.
+    const list = [...S.favs].sort((a, b) => (S.favAt[b] || 0) - (S.favAt[a] || 0)).map(id => S.byId.get(id)).filter(Boolean);
     body = list.length ? `<div class="group">${trackList(list, 'favs', { source: true, year: true })}</div>`
       : `<p class="empty">Tap <b>Favourite</b> in the player to keep a kirtan here.</p>`;
   }
@@ -737,6 +751,7 @@ function libraryView(tab = 'favourites', sub) {
     const size = sum(list, t => t.size);
     body = list.length ? `<p class="page-sub" style="margin-top:16px">${plural(list.length, 'recording')} · ${fmtMB(size)} on this device
         · <button class="text-btn" data-action="remove-all">Remove all</button></p>
+        <p class="note" id="storage-note"></p>
         <div class="group" style="margin-top:12px">${trackList(list, 'saved', { source: true, year: true })}</div>`
       : `<p class="empty">Nothing saved yet. Tap ${icon('download')} next to any kirtan, or <b>Save all offline</b> on a year, to listen without internet.</p>`;
     body += installNote();
@@ -758,8 +773,6 @@ function libraryView(tab = 'favourites', sub) {
   return `<h1 class="page-title">Library</h1>${accountCard()}${tabs(tabItems, tab)}${body}${appearance()}`;
 }
 
-// One playlist: play or shuffle it, save it offline, rename or delete it. Each
-// kirtan's "⋯" menu here can also move it up or down, or take it out.
 // One playlist: its cover, Play / Shuffle, Add kirtans (search and tick them),
 // Edit (move up or down, remove, all on the page), save offline, rename, delete.
 function playlistView(id) {
@@ -887,15 +900,21 @@ function route() {
   view.innerHTML = `<div class="page${enter}">${offline}${html}</div>`;
 
   if (viewKey !== lastViewKey) window.scrollTo(0, 0);
+  if ($('#storage-note')) showStorage();
   lastViewKey = viewKey;
   $('.chips [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 
   const q = $('#q');
   if (q) {
+    let remember;
     q.addEventListener('input', () => {
       S.query = q.value;
       $('#results').innerHTML = searchResults();
+      // A search counts as made once you stop typing for a moment.
+      clearTimeout(remember);
+      remember = setTimeout(() => rememberSearch(q.value), 1500);
     });
+    q.addEventListener('keydown', e => { if (e.key === 'Enter') { rememberSearch(q.value); q.blur(); } });
     if (matchMedia('(hover: hover)').matches) q.focus();
   }
 
@@ -906,6 +925,15 @@ function route() {
     load(a, { autoplay: false });
     openPlayer();
   }
+}
+
+// How much room is left for saving kirtans on this device (Saved offline tab).
+async function showStorage() {
+  try {
+    const { usage, quota } = await navigator.storage.estimate();
+    const note = $('#storage-note');
+    if (note && quota) note.textContent = `Room for about ${fmtMB(Math.max(0, quota - usage))} more on this device.`;
+  } catch {}
 }
 
 // Re-draw the rows for one track wherever it appears, without re-rendering the page.
@@ -925,14 +953,22 @@ function refreshTrack(id) {
 
 /* ---------------- player ---------------- */
 
+// The player is a step in the browser's history, so the phone's back button (or
+// back gesture) closes it, as in Spotify, instead of leaving the page.
 function openPlayer() {
+  if (!$('#player').hidden) return;
   $('#player').hidden = false;
   document.body.style.overflow = 'hidden';
+  if (!history.state?.player) history.pushState({ player: true }, '');
 }
+window.addEventListener('popstate', () => {
+  if (!$('#player').hidden) closePlayer({ fromHistory: true });
+});
 // Slides the player down (unless it was already swiped away, or motion is reduced).
-function closePlayer({ instant = false } = {}) {
+function closePlayer({ instant = false, fromHistory = false } = {}) {
   const player = $('#player');
   if (player.hidden || player.classList.contains('closing')) return;
+  if (!fromHistory && history.state?.player) history.back(); // take the player's step back out of history
   const done = () => {
     player.classList.remove('closing');
     player.hidden = true;
@@ -959,39 +995,65 @@ async function sourceFor(t) {
   return t.src;
 }
 
-async function load(id, { autoplay = true } = {}) {
+// Only the latest load counts: skipping quickly through recordings (or swiping)
+// must never leave an earlier one playing, or start one at another's position.
+let loadSeq = 0;
+async function load(id, { autoplay = true, at } = {}) {
   const t = S.byId.get(id);
   if (!t) return;
-  if (!isOnline() && !S.saved.has(id)) {
+  if (!playable(id)) {
     toast('You’re offline and this one isn’t saved');
     return;
   }
+  const seq = ++loadSeq;
   const prev = S.current;
   S.current = id;
   S.sessionListened = 0;
   S.counted = false;
+  recovery.tries = 0;
   store.set('last', id);
-  audio.src = await sourceFor(t);
-  audio.loop = S.loop;
+  S.lastAt = Date.now();
+  store.set('lastAt', S.lastAt);
+  saveQueue();
+  updateNowPlaying();
+  if (prev && prev !== id) refreshTrack(prev);
+  refreshTrack(id);
+  const src = await sourceFor(t);
+  if (seq !== loadSeq) return; // a newer load started meanwhile
+  setBuffering(autoplay);
+  audio.src = src;
+  audio.loop = S.repeat === 'one';
   audio.defaultPlaybackRate = audio.playbackRate = S.speed;
 
-  const resumeAt = S.positions[id];
+  const resumeAt = at ?? S.positions[id];
   audio.addEventListener('loadedmetadata', () => {
+    if (seq !== loadSeq) return;
     audio.playbackRate = S.speed;
     if (resumeAt && resumeAt > 10 && resumeAt < (t.duration || audio.duration) - 10) audio.currentTime = resumeAt;
   }, { once: true });
 
-  if (autoplay) audio.play().catch(() => {});
+  if (autoplay) audio.play().catch(() => setBuffering(false));
   keepArt(t);
-  updateNowPlaying();
-  if (prev) refreshTrack(prev);
-  refreshTrack(id);
+}
+
+// Offline, only recordings saved on this device can play.
+const playable = id => S.saved.has(id) || isOnline();
+
+// The queue and where you are in it survive closing the app, like Spotify.
+function saveQueue() {
+  store.set('queue', { ids: S.queue.slice(0, 500), qi: S.qi });
+}
+
+// A spinner on the play buttons while a recording is loading or buffering.
+function setBuffering(on) {
+  document.body.classList.toggle('is-buffering', !!on);
 }
 
 function playFrom(listKey, id) {
   const list = S.lists[listKey] || [id];
   S.queue = list.slice();
   S.qi = Math.max(0, S.queue.indexOf(id));
+  saveQueue();
   if (S.current === id && audio.src) return togglePlay();
   load(id);
 }
@@ -1006,20 +1068,37 @@ function togglePlay() {
   }
 }
 
-function next() {
-  if (S.qi < S.queue.length - 1) {
-    S.qi++;
-    load(S.queue[S.qi]);
+// The next (or previous) recording that can play: offline, ones that aren't saved
+// are skipped. With Repeat all, the end of the list wraps to the start.
+function stepIndex(dir) {
+  const n = S.queue.length;
+  for (let k = 1; k <= n; k++) {
+    let i = S.qi + dir * k;
+    if (i < 0 || i >= n) {
+      if (S.repeat !== 'all' || dir < 0) return -1;
+      i = (i + n) % n;
+    }
+    if (playable(S.queue[i])) return i;
   }
+  return -1;
+}
+
+function next() {
+  const i = stepIndex(1);
+  if (i < 0) return false;
+  S.qi = i;
+  load(S.queue[i]);
+  return true;
 }
 
 function prev({ restart = true } = {}) {
-  if ((restart && audio.currentTime > 5) || S.qi <= 0) {
+  const i = stepIndex(-1);
+  if ((restart && audio.currentTime > 5) || i < 0) {
     audio.currentTime = 0;
     return;
   }
-  S.qi--;
-  load(S.queue[S.qi]);
+  S.qi = i;
+  load(S.queue[i]);
 }
 
 /* ---------------- swipe between recordings ---------------- */
@@ -1028,7 +1107,7 @@ function prev({ restart = true } = {}) {
 // and right for the previous one. Short or mostly vertical drags spring back.
 function swipeable(el) {
   let start = null, dx = 0, sideways = null, swiped = false;
-  const canGo = d => (d < 0 ? S.qi < S.queue.length - 1 : S.qi > 0);
+  const canGo = d => stepIndex(d < 0 ? 1 : -1) >= 0;
   const reset = () => { el.style.transition = ''; el.style.transform = ''; el.style.opacity = ''; };
 
   el.addEventListener('pointerdown', e => {
@@ -1180,16 +1259,17 @@ function updatePlayerButtons() {
   dl.querySelector('use').setAttribute('href', S.saved.has(t.id) ? '#i-check' : '#i-download');
   dl.querySelector('span').textContent = S.saved.has(t.id) ? 'Saved' : d ? `Saving ${Math.round(d.progress * 100)}%` : 'Save offline';
 
-  const loop = $('#loop-btn');
-  loop.classList.toggle('on', S.loop);
-  loop.setAttribute('aria-pressed', S.loop);
-  loop.querySelector('span').textContent = S.loop ? 'Looping' : 'Loop';
+  const rep = $('#loop-btn');
+  rep.classList.toggle('on', S.repeat !== 'off');
+  rep.classList.toggle('one', S.repeat === 'one');
+  rep.setAttribute('aria-label', `Repeat: ${S.repeat === 'off' ? 'off' : S.repeat === 'all' ? 'all' : 'this recording'}`);
+  rep.querySelector('span').textContent = S.repeat === 'off' ? 'Repeat' : S.repeat === 'all' ? 'Repeat all' : 'Repeat one';
 
   $('#speed-label').textContent = `${S.speed}× speed`;
 
   const upNext = $('#up-next');
-  const nextTrack = S.byId.get(S.queue[S.qi + 1]);
-  upNext.hidden = !nextTrack || S.loop;
+  const nextTrack = S.byId.get(S.queue[stepIndex(1)]);
+  upNext.hidden = !nextTrack || S.repeat === 'one';
   if (nextTrack) $('#up-next-title').textContent = nextTrack.title;
 }
 
@@ -1209,8 +1289,14 @@ function markPlayed(id) {
 
 let lastTick = null;
 let lastSave = 0;
-audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); });
-audio.addEventListener('pause', () => { lastTick = null; savePosition(); setPlayingClass(); });
+audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); setMediaState(); });
+audio.addEventListener('pause', () => { lastTick = null; savePosition(); setPlayingClass(); setBuffering(false); setMediaState(); if (syncDirty) syncNow(); });
+audio.addEventListener('waiting', () => { if (!audio.paused) setBuffering(true); });
+audio.addEventListener('playing', () => { setBuffering(false); recovery.tries = 0; });
+audio.addEventListener('canplay', () => { if (audio.paused) setBuffering(false); });
+function setMediaState() {
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+}
 audio.addEventListener('timeupdate', () => {
   const t = S.byId.get(S.current);
   if (!t) return;
@@ -1235,6 +1321,12 @@ audio.addEventListener('timeupdate', () => {
   }
   if (dur > 60 && cur / dur > 0.95) markPlayed(t.id);
   if (Date.now() - lastSave > 5000) savePosition();
+  if (cur > 0) recovery.at = cur;
+  // The sleep timer is checked here too: timers can be slowed while the phone is locked.
+  if (S.sleep?.until && Date.now() >= S.sleep.until) {
+    setSleep('off');
+    fadeOutAndPause();
+  }
 
   const pct = dur ? (cur / dur) * 100 : 0;
   $('#mini-bar').style.width = `${pct}%`;
@@ -1246,17 +1338,43 @@ audio.addEventListener('timeupdate', () => {
 audio.addEventListener('ended', () => {
   markPlayed(S.current);
   delete S.positions[S.current];
+  S.posAt[S.current] = Date.now();
   store.set('positions', S.positions);
+  store.set('posAt', S.posAt);
+  syncLater();
   refreshTrack(S.current);
   if (S.sleep?.end) {
     setSleep('off');
     return;
   }
-  next();
+  if (!next()) setBuffering(false);
 });
+
+// When the connection drops mid-recording (a tunnel, a lift, the Underground),
+// carry on from the same moment once it's back, instead of stopping for good.
+const recovery = { tries: 0, at: 0, waiting: false };
 audio.addEventListener('error', () => {
-  if (S.current) toast(isOnline() || S.saved.has(S.current) ? 'Couldn’t play this recording' : 'You’re offline and this one isn’t saved');
+  const t = S.byId.get(S.current);
+  if (!t || audio.error?.code === 1 /* aborted on purpose */) return;
+  setBuffering(false);
+  if (S.saved.has(t.id) || recovery.tries >= 4) {
+    toast('Couldn’t play this recording');
+    return;
+  }
+  recovery.tries++;
+  if (!isOnline()) {
+    recovery.waiting = true;
+    toast('Connection lost. It will carry on when you’re back online.');
+    return;
+  }
+  setTimeout(resumeAfterDrop, 1500 * recovery.tries);
 });
+function resumeAfterDrop() {
+  recovery.waiting = false;
+  if (!S.current) return;
+  load(S.current, { at: recovery.at || audio.currentTime });
+}
+window.addEventListener('online', () => { if (recovery.waiting) resumeAfterDrop(); });
 
 function savePosition() {
   lastSave = Date.now();
@@ -1264,8 +1382,14 @@ function savePosition() {
   const t = S.byId.get(S.current);
   if (!t || !audio.currentTime) return;
   const dur = audio.duration || t.duration;
+  const before = S.positions[t.id];
   if (audio.currentTime > 10 && audio.currentTime < dur - 20) S.positions[t.id] = Math.floor(audio.currentTime);
   else delete S.positions[t.id];
+  if (S.positions[t.id] !== before) {
+    S.posAt[t.id] = Date.now();
+    store.set('posAt', S.posAt);
+    syncLater();
+  }
   store.set('positions', S.positions);
 }
 
@@ -1362,8 +1486,9 @@ scrub.addEventListener('pointercancel', () => {
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
   const handlers = {
-    play: () => audio.play(),
+    play: () => (audio.src ? audio.play() : S.current && load(S.current)),
     pause: () => audio.pause(),
+    stop: () => audio.pause(),
     previoustrack: prev,
     nexttrack: next,
     seekbackward: () => seekBy(-15),
@@ -1378,7 +1503,8 @@ if ('mediaSession' in navigator) {
 async function shareTrack(id = S.current) {
   const t = S.byId.get(id);
   if (!t) return;
-  const url = `${location.origin}${location.pathname}#/play/${t.id}`;
+  // /k/<id> shows the kirtan's title and picture when shared in WhatsApp and the like.
+  const url = `${location.origin}/k/${t.id}`;
   if (navigator.share) {
     try {
       await navigator.share({ title: t.title, text: `${t.title} · ${collectionName(t)}`, url });
@@ -1545,12 +1671,14 @@ $('#add-dialog').addEventListener('close', () => { if (location.hash.startsWith(
 function playNext(id) {
   if (!S.current) return playOnly(id);
   S.queue.splice(S.qi + 1, 0, id);
+  saveQueue();
   updatePlayerButtons();
   toast('Plays next');
 }
 function addToQueue(id) {
   if (!S.current) return playOnly(id);
   S.queue.push(id);
+  saveQueue();
   updatePlayerButtons();
   toast('Added to the queue');
 }
@@ -1568,6 +1696,7 @@ function jumpTo(qi) {
 function removeFromQueue(qi) {
   if (qi <= S.qi) return;
   S.queue.splice(qi, 1);
+  saveQueue();
   renderQueue();
   updatePlayerButtons();
 }
@@ -1601,10 +1730,14 @@ function localLibrary() {
   const playlists = {};
   for (const [id, at] of Object.entries(S.plDeleted)) playlists[id] = { deleted: true, at };
   for (const p of S.playlists) playlists[p.id] = { name: p.name, ids: p.ids, created: p.created || 0, at: p.at || 0 };
-  return { favs, playlists };
+  const positions = {};
+  for (const id of new Set([...Object.keys(S.posAt), ...Object.keys(S.positions)])) positions[id] = { pos: S.positions[id] || 0, at: S.posAt[id] || 0 };
+  const last = store.get('last') ? { id: store.get('last'), at: S.lastAt || 0 } : null;
+  return { favs, playlists, positions, last };
 }
 // Makes this device show a merged library, and keeps it.
 function applyLibrary(lib) {
+  const before = JSON.stringify(localLibrary());
   S.favs = new Set(Object.entries(lib.favs).filter(([, f]) => f.on).map(([id]) => id));
   S.favAt = Object.fromEntries(Object.entries(lib.favs).map(([id, f]) => [id, f.at]));
   S.plDeleted = Object.fromEntries(Object.entries(lib.playlists).filter(([, p]) => p.deleted).map(([id, p]) => [id, p.at]));
@@ -1619,7 +1752,31 @@ function applyLibrary(lib) {
   store.set('favAt', S.favAt);
   store.set('playlists', S.playlists);
   store.set('plDeleted', S.plDeleted);
+  // Listening positions, so a kirtan started on one device continues on another.
+  if (lib.positions) {
+    for (const [id, p] of Object.entries(lib.positions)) {
+      if ((p.at || 0) < (S.posAt[id] || 0) || id === S.current && !audio.paused) continue;
+      S.posAt[id] = p.at;
+      if (p.pos > 0) S.positions[id] = p.pos; else delete S.positions[id];
+    }
+    store.set('positions', S.positions);
+    store.set('posAt', S.posAt);
+  }
+  // What was playing last, anywhere: shown in the mini player when nothing has played here yet.
+  if (lib.last && lib.last.at > (S.lastAt || 0) && S.byId.has(lib.last.id)) {
+    S.lastAt = lib.last.at;
+    store.set('lastAt', S.lastAt);
+    store.set('last', lib.last.id);
+    if (!audio.src) {
+      S.current = lib.last.id;
+      if (!S.queue.includes(S.current)) S.queue = [S.current];
+      S.qi = S.queue.indexOf(S.current);
+      updateNowPlaying();
+    }
+  }
   if (S.current) updatePlayerButtons();
+  // Only redraw when something actually changed, so syncing never flickers the page.
+  if (JSON.stringify(localLibrary()) === before) return;
   if (location.hash.startsWith('#/library') || location.hash === '' || location.hash === '#/') route();
 }
 
@@ -1647,8 +1804,17 @@ function scheduleSync() {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(syncNow, 800);
 }
+// Listening positions change all the time: send them within a minute, or straight
+// away when playback pauses or the app is put away (see the listeners below).
+function syncLater() {
+  if (!S.user) return;
+  syncDirty = true;
+  store.set('syncDirty', true);
+  if (!syncTimer) syncTimer = setTimeout(syncNow, 60000);
+}
 async function syncNow() {
   clearTimeout(syncTimer);
+  syncTimer = null;
   if (!S.user || !isOnline()) return;
   const sentAt = changes;
   try {
@@ -1956,7 +2122,13 @@ document.addEventListener('click', async e => {
   const { action, id, list } = el.dataset;
   switch (action) {
     case 'play': playFrom(list, id); break;
-    case 'resume': S.queue = [id]; S.qi = 0; load(id); break;
+    case 'resume': {
+      // Continue listening keeps the list it was playing from, if it's still there.
+      if (!S.queue.includes(id)) S.queue = [id];
+      S.qi = S.queue.indexOf(id);
+      load(id);
+      break;
+    }
     case 'play-list': {
       const ids = S.lists[list] || [];
       if (ids.length) { S.queue = ids.slice(); S.qi = 0; load(ids[0]); }
@@ -1992,11 +2164,11 @@ document.addEventListener('click', async e => {
     }
     case 'fav-current': if (S.current) toggleFav(S.current); break;
     case 'loop': {
-      S.loop = !S.loop;
-      audio.loop = S.loop;
-      store.set('loop', S.loop);
+      S.repeat = { off: 'all', all: 'one', one: 'off' }[S.repeat] || 'off';
+      audio.loop = S.repeat === 'one';
+      store.set('repeat', S.repeat);
       updatePlayerButtons();
-      toast(S.loop ? 'This recording will repeat' : 'Loop off');
+      toast({ off: 'Repeat off', all: 'Repeating the whole list', one: 'Repeating this recording' }[S.repeat]);
       break;
     }
     case 'speed': {
@@ -2071,6 +2243,7 @@ document.addEventListener('click', async e => {
     }
     case 'lyrics': openLyrics(); break;
     case 'sleep-menu': $('#sleep-dialog').showModal(); break;
+    case 'clear-searches': store.set('searches', []); $('#results').innerHTML = searchResults(); break;
     case 'suggest': {
       S.query = el.dataset.q;
       $('#q').value = S.query;
@@ -2138,16 +2311,22 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 /* ---------------- start ---------------- */
 
 (async function start() {
+  // A shared link (/k/<id>) opens that kirtan in the player.
+  const shared = /^\/k\/([A-Za-z0-9_-]+)/.exec(location.pathname);
+  if (shared) history.replaceState(null, '', `/#/play/${shared[1]}`);
   await loadData();
   plShape = new Map(S.playlists.map(p => [p.id, shapeOf(p)])); // so the next save only marks real changes
   $('.offline-pill').hidden = isOnline();
 
-  // Show the last recording in the mini player, ready to resume.
+  // Show the last recording in the mini player, ready to resume, with the rest
+  // of the queue it was playing from.
   const last = store.get('last');
   if (S.byId.has(last) && !location.hash.startsWith('#/play/')) {
+    const saved = store.get('queue', null);
+    const ids = (saved?.ids || []).filter(id => S.byId.has(id));
     S.current = last;
-    S.queue = [last];
-    S.qi = 0;
+    S.queue = ids.includes(last) ? ids : [last];
+    S.qi = S.queue.indexOf(last);
     updateNowPlaying();
   }
   route();
