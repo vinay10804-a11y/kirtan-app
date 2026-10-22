@@ -15,6 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classify, isSpeech } from './classify.mjs';
+import { applySheet, writeSheet } from './sheet.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Recordings: the argument, else a "Kirtans" folder beside the project, else ~/Desktop/KC/Kirtans.
@@ -263,9 +264,12 @@ async function main() {
   }
 
   const tracks = [...reused, ...kept].map(refresh).filter(Boolean).concat(added);
+  // The owner's "Kirtans list.xlsx": edits, thumbnails, hidden kirtans.
+  await applySheet(tracks);
   const totalMB = tracks.reduce((s, t) => s + t.size, 0) / 1e6;
   await fs.writeFile(CATALOG, JSON.stringify({ generated: new Date().toISOString(), tracks }));
   await stampServiceWorker();
+  await writeSheet(tracks);
   const brandNew = added.filter(t => !online.has(t.id)).length;
   console.log(`Catalog: ${tracks.length} tracks (${brandNew} new), ${(totalMB / 1000).toFixed(2)} GB → site/catalog.json`);
 

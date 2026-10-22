@@ -117,6 +117,17 @@ app.js/styles.css with a new index.html after a deploy. Cover pictures of saved 
 is played, are kept in the `kirtan-art` cache (`keepArt` in app.js); a picture that can't load falls back
 to the initials tile.
 
+## The owner's kirtan list (Excel) and thumbnails (22 Oct 2026)
+`~/Desktop/SNS Kirtan Platform/Kirtans list.xlsx` (outside the repo) lists every kirtan with a stable
+number (`no` in the catalog), a picture preview, and editable Kirtan / Artist / Type / Year / Place /
+Thumbnail / Show in app columns; the ID column links rows to recordings. `tools/sheet.mjs` runs inside
+the build: `applySheet` reads the sheet (edits are stored as `over` on each catalog entry, so they
+survive without the sheet), makes thumbnails from `~/Desktop/SNS Kirtan Platform/Thumbnails` (a file
+named after the number, e.g. `12.jpg`, or the name typed in the Thumbnail cell) into
+`site/covers/u-<id>-<hash>.jpg`, and `writeSheet` rewrites the sheet, adding new kirtans at the end.
+Clearing a Thumbnail cell returns the recording's own art (`ownCover`). "Show in app: No" sets
+`hidden`; app.js filters those out. The owner should save and close Excel before publishing.
+
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
 font, offline covers, fresh styling/code). `tools/check.mjs` lists each fix the owner asked for; it

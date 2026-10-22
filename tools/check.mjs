@@ -35,6 +35,8 @@ const checks = [
   ['Playlists: Add kirtans sheet, Edit order, multi-select picker', app.includes('function openAddKirtans') && app.includes("case 'pl-edit'") && app.includes('function renderPicker')],
   ['Playlist name box stays clear of the iPhone keyboard', css.includes('dialog.menu.name-menu')],
   ['Swipe down anywhere on the player closes it', app.includes("player.addEventListener('touchmove'")],
+  ['Kirtans list.xlsx: build reads and rewrites the sheet (edits, thumbnails, hidden)', read('tools/build.mjs').includes('applySheet(tracks)') && read('tools/build.mjs').includes('writeSheet(tracks)')],
+  ['Kirtans hidden in the sheet stay out of the app', app.includes('.filter(t => !t.hidden)')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
 ];

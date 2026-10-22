@@ -7,10 +7,10 @@ Tick items off (or delete them) as they're done.
 
 - **Places for 42 kirtans.** They show no place until we know where they were recorded
   (list under "What I need from you").
-- **Artwork for each recording.** Today a kirtan shows its own embedded cover art, else a photo
-  of the artist. When the images arrive, the build needs to pick up an image saved next to a
-  recording with the same name (e.g. `Sacinandana Swami | Damodarastakam | Govardhan | 2025.jpg`).
-  That isn't built yet.
+- **Thumbnails and details: use "Kirtans list.xlsx"** in the SNS Kirtan Platform folder (built
+  22 Oct). Put a picture in the Thumbnails folder named after the kirtan's number (e.g. `12.jpg`),
+  or type its file name in the Thumbnail column. Places, titles, types and years can be typed in
+  too. Save, close Excel, and ask Claude to publish. The sheet's "How to use" tab explains it.
 - **Lyrics inside the app.** Done for 14 bhajans: the lyrics card opens that song's kksongs.org
   page in a panel inside the app (it needs internet, and looks like the KKSongs site). To show the
   words in the app's own style and offline instead, add `verses` to the song in `site/lyrics.json`,
