@@ -407,6 +407,13 @@ function homeView() {
   return `${topbar()}
     <div class="hero"><img src="art/card-1.webp" alt="The Hare Kṛṣṇa mahāmantra written into a wave"></div>
     <p class="intro">Kirtan and japa with Sacinandana Swami and Gour Krishna. Listen here, or save recordings to play without internet.</p>
+    <button class="install-cta" data-action="show-install">
+      <span class="install-cta-icon">${icon('download')}</span>
+      <span class="install-cta-text">${isInstalled()
+        ? '<b>Install on another device</b><small>Steps for iPhone and laptop, in Safari or Chrome</small>'
+        : '<b>Install the app</b><small>On your iPhone or laptop: opens from its own icon and works offline</small>'}</span>
+      ${icon('right')}
+    </button>
     ${last && lastPos ? `<section class="section"><h2>Continue listening</h2><div class="rows">
       <button class="row" data-action="resume" data-id="${last.id}">
         ${artHTML(last)}<span class="row-text"><span class="row-title">${esc(last.title)}</span>
@@ -429,6 +436,7 @@ function homeView() {
     <details class="howto">
       <summary>How to use this site</summary>
       <ul>
+        <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
         <li><b>Chanting japa:</b> open the player and tap <b>Loop</b> to repeat one kirtan while you chant your rounds.</li>
@@ -721,18 +729,22 @@ function playlistView(id) {
     ${list.length ? `<div class="group">${tracks}</div>` : `<p class="empty">Nothing here yet. Tap ${icon('more')} next to any kirtan, or in the player, and choose <b>Add to playlist</b>.</p>`}`;
 }
 
+const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
 // Home page: how to install the site as an app on an iPhone or a laptop, in Safari
-// or Chrome. Hidden when it's already open as an installed app.
+// or Chrome. The "Install the app" button near the top of Home scrolls here.
+// Inside the installed app it stays, for installing on another device.
 function installSection() {
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  if (standalone) return '';
   const steps = list => `<ol>${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
   const share = `<b>Share</b> ${icon('share')}`;
   const quick = S.installEvent
     ? `<p class="install-now"><button class="btn" data-action="install">${icon('download')}Install the app now</button></p>` : '';
-  return `<section class="section install">
+  const why = isInstalled()
+    ? 'You’re already using the app. To install it on another phone or computer, open this site there and follow these steps.'
+    : 'Install it once and it opens from its own icon, like any app. Kirtans you save there play with no internet, even on the Underground.';
+  return `<section class="section install" id="install">
     <h2>Use it as an app</h2>
-    <p class="install-why">Install it once and it opens from its own icon, like any app. Kirtans you save there play with no internet, even on the Underground.</p>
+    <p class="install-why">${why}</p>
     ${quick}
     <div class="install-grid">
       <div class="install-card">
@@ -1706,6 +1718,15 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'install': S.installEvent?.prompt(); S.installEvent = null; break;
+    case 'show-install': {
+      const box = $('#install');
+      if (!box) { location.hash = '#/'; break; }
+      box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      box.classList.remove('flash');
+      void box.offsetWidth;
+      box.classList.add('flash');
+      break;
+    }
   }
 });
 

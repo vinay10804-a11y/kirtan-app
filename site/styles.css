@@ -410,6 +410,20 @@ dialog.video-sheet::backdrop { background: #000; }
 .howto[open] summary::after { content: "−"; }
 .howto ul { margin: 0 0 16px; padding-left: 18px; display: grid; gap: 8px; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
 .howto li svg { width: 15px; height: 15px; vertical-align: -2px; }
+/* Home: the "Install the app" button near the top, and the steps further down */
+.install-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; color: var(--ink); transition: var(--press); }
+.install-cta:active { transform: scale(.98); }
+.install-cta:hover { border-color: var(--teal); }
+.install-cta-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--teal-deep); color: var(--bg); }
+.install-cta-icon svg { width: 20px; height: 20px; }
+.install-cta-text { flex: 1; min-width: 0; }
+.install-cta-text b { display: block; font: 500 18px/1.2 var(--serif); }
+.install-cta-text small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
+.install-cta > svg { flex: none; width: 18px; height: 18px; color: var(--ink-3); }
+.install { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.install.flash .install-card { animation: install-flash 1.2s ease-out; }
+@keyframes install-flash { 20% { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft, rgba(58, 132, 135, .2)); } }
+.howto li .text-btn { font-size: inherit; text-decoration: underline; text-underline-offset: 2px; }
 /* Home: how to install the site as an app */
 .install-why { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); }
 .install-now { margin: 14px 0 0; }
