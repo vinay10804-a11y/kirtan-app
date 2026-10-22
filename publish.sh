@@ -59,6 +59,9 @@ node tools/photos.mjs
 echo "== Preparing audio"
 node tools/build.mjs "$SRC" ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}
 
+echo "== Checking earlier fixes are still in place"
+node tools/check.mjs
+
 echo "== Cloudflare"
 if $W whoami 2>&1 | grep -qi "not authenticated"; then
   echo "A browser window will open: log in to Cloudflare and click Allow."

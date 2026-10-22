@@ -1,3 +1,10 @@
+/* EB Garamond (SIL Open Font License, fonts/OFL.txt) is stored with the app, so it
+   looks the same with no internet. Variable fonts: one file covers every weight. */
+@font-face { font-family: 'EB Garamond'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'EB Garamond'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'EB Garamond'; font-style: italic; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-italic-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'EB Garamond'; font-style: italic; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-italic-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 /* Quiet paper-and-teal palette taken from the watercolour artwork. */
 :root {
   --bg: #f1efe2;
@@ -175,6 +182,28 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track .more { color: var(--ink-3); }
 .track .more svg { width: 20px; height: 20px; }
 .pl-tools { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; }
+.pl-tools .danger { color: #b0503c; }
+.pl-header { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
+.pl-header .page-title { margin: 0; }
+.pl-cover { flex: none; width: 96px; height: 96px; border-radius: 12px; overflow: hidden; background: var(--surface-2); box-shadow: 0 6px 18px rgba(20, 50, 52, .14); }
+.pl-cover img, .pl-cover .tile { width: 100%; height: 100%; object-fit: cover; display: grid; place-items: center; }
+.pl-cover .tile svg { width: 36px; height: 36px; color: var(--teal-deep); }
+.pl-edit .track-main { cursor: default; }
+.pl-edit .icon-btn[disabled] { opacity: .25; }
+.btn.small { padding: 7px 14px; font-size: 14px; }
+.add-search { position: relative; margin: 12px 22px 4px; }
+.add-search svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); color: var(--ink-3); }
+.add-search input { width: 100%; padding: 11px 12px 11px 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 16px var(--sans); outline: none; }
+.add-row .track-main { padding: 10px 0; }
+.add-toggle { border: 1px solid var(--line); }
+.add-toggle.in { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--bg); }
+dialog.menu .menu-done { text-align: center; justify-content: center; font-weight: 600; color: var(--teal-deep); }
+/* Typing a playlist name: keep the box near the top on phones, clear of the keyboard. */
+@media (max-width: 640px) {
+  dialog.menu.name-menu { width: calc(100% - 24px); margin: calc(env(safe-area-inset-top, 0px) + 14vh) auto auto; border-radius: 20px; padding: 12px 10px 10px; }
+  dialog.menu.name-menu::before { display: none; }
+  dialog.menu.name-menu[open] { animation: menu-pop .18s var(--ease-out); }
+}
 .queue-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
 .queue-row .track-main { padding: 10px 0; }
 .dl svg { width: 19px; height: 19px; }

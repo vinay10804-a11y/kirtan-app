@@ -19,10 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=9eb4662c87">
 </head>
 <body>
   <div class="app">
@@ -135,13 +132,23 @@
   <dialog id="playlist-dialog" class="menu"><form method="dialog" id="playlist-menu"></form></dialog>
 
   <!-- Naming a new playlist, or renaming one -->
-  <dialog id="name-dialog" class="menu">
+  <dialog id="name-dialog" class="menu name-menu">
     <form method="dialog">
       <h3 id="name-title"></h3>
       <input id="name-input" class="name-input" type="text" maxlength="60" autocomplete="off" enterkeyhint="done">
       <button value="save" id="name-save">Save</button>
       <button value="cancel" class="muted">Cancel</button>
     </form>
+  </dialog>
+
+  <!-- Adding kirtans to a playlist from the playlist itself -->
+  <dialog id="add-dialog" class="sheet" aria-labelledby="add-title">
+    <header class="sheet-head">
+      <div><h3 id="add-title">Add kirtans</h3><p id="add-sub"></p></div>
+      <form method="dialog"><button class="btn small">Done</button></form>
+    </header>
+    <div class="add-search"><svg><use href="#i-search"/></svg><input id="add-q" type="search" placeholder="Search kirtans" autocomplete="off" enterkeyhint="search" aria-label="Search kirtans"></div>
+    <div id="add-body" class="lyrics-body"></div>
   </dialog>
 
   <!-- The queue: what plays next -->
@@ -201,6 +208,7 @@
     </defs>
   </svg>
 
-  <script src="app.js" type="module"></script>
+  <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
+  <script src="app.js?v=9eb4662c87" type="module"></script>
 </body>
 </html>
