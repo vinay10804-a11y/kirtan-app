@@ -20,8 +20,10 @@ R2 bucket `kirtans` at `/audio/*`.
   section; "Radhanath"/"Gopal" paths map to Gour Krishna). Anything else is skipped and listed.
 - Kirtan types are **Mahamantra** (not "Hare Kṛṣṇa") and **Bhajans**.
 - Kirtans page: artist switch → Mahamantra/Bhajans tabs → browse by Year / Place / Length chips.
-- Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa are YouTube video cards
-  (thumbnail opens YouTube) whose "Listen here" plays the YouTube video in place. Japa Inspirations
+- Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa are YouTube video cards with
+  no extra buttons: tapping the picture or title opens the in-app YouTube player (`#video-dialog`), full
+  screen on phones and as large as fits elsewhere, since YouTube picks quality from player size; it asks
+  for `vq=hd1080` and allows full screen (owner: "high quality", 22 Oct 2026). Japa Inspirations
   (the SoundCloud set "japa-inspirations", owner's choice 22 Oct 2026) and Living Name Meditations are
   SoundCloud tracks, each row with its artwork, that open SoundCloud's player under the title.
   `tools/videos.mjs` writes the list to `site/videos.json`. Guided Japa videos are listed in
