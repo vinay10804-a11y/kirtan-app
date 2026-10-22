@@ -9,9 +9,11 @@ const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations
 const JAPA_TABS = { 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
 const JAPA_ABOUT = {
   'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap Listen here to play one on this page, or the picture to open it on YouTube.',
-  'Japa Inspirations': 'Talks and reflections from Sacinandana Swami to bring fresh attention to your chanting.',
+  'Japa Inspirations': 'Short talks and reflections from Sacinandana Swami to bring fresh attention to your chanting. They play here from SoundCloud.',
   'Living Name Meditations': 'Guided meditations from The Living Name, Sacinandana Swami’s book on chanting with attention and feeling. They play here from SoundCloud.',
 };
+// What one item of a SoundCloud japa collection is called ("25 meditations").
+const JAPA_UNIT = { 'Living Name Meditations': 'meditation', 'Japa Inspirations': 'talk' };
 // Short labels for the plain tiles shown when a recording has no cover art.
 const INITIALS = { 'Sacinandana Swami': 'SS', 'Gour Krishna': 'GK' };
 const SPEEDS = [1, 1.25, 1.5, 0.75];
@@ -49,6 +51,8 @@ const S = {
   videos: [],
   lyrics: [],
   favs: new Set(store.get('favs', [])),
+  theme: store.get('theme', 'auto'), // 'auto' follows the device; or 'light' / 'dark'
+  playlists: store.get('playlists', []), // [{ id, name, ids: [track ids] }], kept on this device
   played: new Set(store.get('played', [])),
   positions: store.get('positions', {}),
   history: store.get('history', []),
@@ -287,6 +291,7 @@ function trackRow(t, i, listKey, opts = {}) {
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
     ${dlButton(t)}
+    <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
   </li>`;
 }
 
@@ -335,7 +340,35 @@ function playActions(listKey) {
 }
 
 function topbar() {
-  return `<header class="topbar"><a class="topbar-title" href="#/">Sacinandana Swami and Gour Krishna <b>Kirtans</b></a></header>`;
+  return `<header class="topbar"><a class="topbar-title" href="#/">Sacinandana Swami and Gour Krishna <b>Kirtans</b></a>
+    <button class="icon-btn theme-toggle" data-action="theme-toggle" aria-label="Switch between light and dark">${icon('moon', 'show-light')}${icon('sun', 'show-dark')}</button></header>`;
+}
+
+/* ---------------- light and dark ---------------- */
+
+const isDark = () => S.theme === 'dark' || (S.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme() {
+  const root = document.documentElement;
+  if (S.theme === 'light' || S.theme === 'dark') root.dataset.theme = S.theme;
+  else delete root.dataset.theme;
+  root.classList.toggle('is-dark', isDark());
+  // The phone's status bar matches the app.
+  for (const m of $$('meta[name="theme-color"]')) m.content = isDark() ? '#0e2427' : '#eeecd9';
+}
+function setTheme(theme) {
+  S.theme = theme;
+  store.set('theme', theme);
+  applyTheme();
+  for (const b of $$('[data-action="theme"]')) b.setAttribute('aria-current', b.dataset.theme === theme);
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+applyTheme();
+
+function appearance() {
+  const opt = (key, label) => `<button class="chip" data-action="theme" data-theme="${key}" aria-current="${S.theme === key}">${label}</button>`;
+  return `<section class="appearance"><h3>Appearance</h3>
+    <div class="chips">${opt('auto', 'Automatic')}${opt('light', 'Light')}${opt('dark', 'Dark')}</div>
+    <p class="note">Automatic follows your phone or computer.</p></section>`;
 }
 
 function tabs(items, active) {
@@ -368,7 +401,7 @@ function homeView() {
     const n = vids || allJapa.filter(t => t.type === c).length;
     const art = `<span class="tile" aria-hidden="true">${icon(vids ? 'play' : 'beads')}</span>`;
     const sc = S.videos.some(v => v.collection === c && isSC(v));
-    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, sc ? 'meditation' : vids ? 'video' : 'session'));
+    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, sc ? JAPA_UNIT[c] || 'recording' : vids ? 'video' : 'session'));
   }).join('');
 
   return `${topbar()}
@@ -387,11 +420,12 @@ function homeView() {
       </div>
       <div class="entry">
         <a class="entry-head" href="#/japa"><h2>Japa</h2>${icon('right')}</a>
-        <p>Chant your rounds with Sacinandana Swami. Guided japa sessions open on YouTube or play here as audio, alongside Japa Inspirations and Living Name meditations.</p>
+        <p>Chant your rounds with Sacinandana Swami. Guided japa sessions play here from YouTube; Japa Inspirations and Living Name meditations play here from SoundCloud.</p>
         <div class="entry-links">${japaLinks || '<p class="muted">Japa sessions appear here once they’re published.</p>'}</div>
       </div>
     </section>
     ${recent.length ? `<section class="section"><h2>Recently added</h2>${trackList(recent, 'recent', { source: true, year: true })}</section>` : ''}
+    ${installSection()}
     <details class="howto">
       <summary>How to use this site</summary>
       <ul>
@@ -400,7 +434,6 @@ function homeView() {
         <li><b>Chanting japa:</b> open the player and tap <b>Loop</b> to repeat one kirtan while you chant your rounds.</li>
         <li><b>Sleep timer</b> in the player stops playback after 15 minutes to an hour.</li>
         <li><b>Find something:</b> use Search for a title, place or year, such as “Vrindavan” or “2019”.</li>
-        <li><b>On your phone:</b> tap Share, then <b>Add to Home Screen</b>. It opens like an app and keeps your saved kirtans.</li>
       </ul>
     </details>`;
 }
@@ -456,10 +489,10 @@ function japaView(colSlug) {
   const videos = S.videos.filter(v => v.collection === col);
 
   if (videos.some(isSC)) {
-    // SoundCloud meditations: one list in the order of the set, each playing in place.
+    // SoundCloud tracks: one list in the order of the set, each playing in place.
     const list = videos.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     return `${header}${tabBar}${about}
-      <div class="list-head"><p class="page-sub">${plural(list.length, 'meditation')} · ${fmtHours(sum(list, v => v.duration))}</p></div>
+      <div class="list-head"><p class="page-sub">${plural(list.length, JAPA_UNIT[col] || 'recording')} · ${fmtHours(sum(list, v => v.duration))}</p></div>
       <ul class="tracks sc-list">${list.map(scRow).join('')}</ul>`;
   }
 
@@ -519,11 +552,13 @@ function videoCard(v, track, listKey) {
   </article>`;
 }
 
-// A Living Name meditation: tapping it opens SoundCloud's player under the title.
+// A SoundCloud track (a Living Name meditation or a Japa Inspiration): tapping it
+// opens SoundCloud's player under the title. Its artwork, when it has one, is the thumbnail.
 function scRow(v) {
+  const thumb = v.thumb ? `<img class="sc-thumb" src="${esc(v.thumb.replace('-t300x300.', '-large.'))}" alt="" loading="lazy" onerror="this.remove()">` : '';
   return `<li class="sc-item">
     <button class="track sc-track embed-btn" data-action="embed" data-vid="${esc(v.id)}">
-      <span class="track-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${fmtDur(v.duration)}</span></span>
+      ${thumb}<span class="track-text"><span class="track-title">${esc(v.title)}</span><span class="track-meta">${fmtDur(v.duration)}</span></span>
       <span class="sc-play" aria-hidden="true"><span class="when-closed">${icon('play')}</span><span class="when-open">${icon('x')}</span></span>
     </button>
     <div class="embed-slot sc-slot" data-embed="${esc(v.id)}"></div>
@@ -602,9 +637,10 @@ function searchResults() {
   ].join('');
 }
 
-function libraryView(tab = 'favourites') {
+function libraryView(tab = 'favourites', sub) {
   const tabItems = [
     { key: 'favourites', label: 'Favourites', href: '#/library/favourites' },
+    { key: 'playlists', label: 'Playlists', href: '#/library/playlists' },
     { key: 'saved', label: 'Saved offline', href: '#/library/saved' },
     { key: 'history', label: 'History', href: '#/library/history' },
   ];
@@ -614,6 +650,19 @@ function libraryView(tab = 'favourites') {
     const list = [...S.favs].map(id => S.byId.get(id)).filter(Boolean);
     body = list.length ? `<div class="group">${trackList(list, 'favs', { source: true, year: true })}</div>`
       : `<p class="empty">Tap <b>Favourite</b> in the player to keep a kirtan here.</p>`;
+  }
+
+  if (tab === 'playlists' && sub) return playlistView(sub);
+  if (tab === 'playlists') {
+    const rows = S.playlists.map(p => {
+      const list = p.ids.map(id => S.byId.get(id)).filter(Boolean);
+      const art = list[0] ? artHTML(list[0]) : tile('');
+      return entryLink(`#/library/playlists/${p.id}`, art, p.name,
+        `${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}`);
+    }).join('');
+    body = `<div class="actions" style="margin-top:16px"><button class="btn" data-action="pl-new">${icon('plus')}New playlist</button></div>
+      ${rows ? `<div class="rows" style="margin-top:16px">${rows}</div>`
+        : `<p class="empty">Make your own playlists, for japa, for the morning, for travelling. Tap <b>New playlist</b>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
   }
 
   if (tab === 'saved') {
@@ -639,7 +688,60 @@ function libraryView(tab = 'favourites') {
     }
   }
 
-  return `<h1 class="page-title">Library</h1>${tabs(tabItems, tab)}${body}`;
+  return `<h1 class="page-title">Library</h1>${tabs(tabItems, tab)}${body}${appearance()}`;
+}
+
+// One playlist: play or shuffle it, save it offline, rename or delete it. Each
+// kirtan's "⋯" menu here can also move it up or down, or take it out.
+function playlistView(id) {
+  const p = playlistById(id);
+  if (!p) return `<h1 class="page-title">Playlist</h1><p class="empty">This playlist isn’t on this device. <a href="#/library/playlists">See your playlists</a></p>`;
+  const list = p.ids.map(x => S.byId.get(x)).filter(Boolean);
+  const key = `pl:${p.id}`;
+  const tracks = trackList(list, key, { source: true, year: true, pl: p.id });
+  return `<a class="back" href="#/library/playlists">${icon('left')}Playlists</a>
+    <h1 class="page-title">${esc(p.name)}</h1>
+    <div class="list-head"><p class="page-sub">${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p>${playActions(key)}</div>
+    <p class="pl-tools">${saveListButton(key)}<button class="text-btn" data-action="pl-rename" data-pl="${p.id}">Rename</button><button class="text-btn" data-action="pl-delete" data-pl="${p.id}">Delete playlist</button></p>
+    ${list.length ? `<div class="group">${tracks}</div>` : `<p class="empty">Nothing here yet. Tap ${icon('more')} next to any kirtan, or in the player, and choose <b>Add to playlist</b>.</p>`}`;
+}
+
+// Home page: how to install the site as an app on an iPhone or a laptop, in Safari
+// or Chrome. Hidden when it's already open as an installed app.
+function installSection() {
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone) return '';
+  const steps = list => `<ol>${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
+  const share = `<b>Share</b> ${icon('share')}`;
+  const quick = S.installEvent
+    ? `<p class="install-now"><button class="btn" data-action="install">${icon('download')}Install the app now</button></p>` : '';
+  return `<section class="section install">
+    <h2>Use it as an app</h2>
+    <p class="install-why">Install it once and it opens from its own icon, like any app. Kirtans you save there play with no internet, even on the Underground.</p>
+    ${quick}
+    <div class="install-grid">
+      <div class="install-card">
+        <h3>iPhone</h3>
+        <h4>Safari</h4>
+        ${steps([`Tap ${share} (the square with an arrow). If you can’t see it, tap <b>⋯</b> first.`,
+          'Scroll down and tap <b>Add to Home Screen</b>.',
+          'Make sure <b>Open as Web App</b> is on, then tap <b>Add</b>.'])}
+        <h4>Chrome</h4>
+        ${steps([`Tap ${share} at the right of the address bar.`,
+          'Tap <b>Add to Home Screen</b>, then <b>Add</b>.'])}
+      </div>
+      <div class="install-card">
+        <h3>Laptop</h3>
+        <h4>Chrome (Mac or Windows)</h4>
+        ${steps(['Click the install icon at the right end of the address bar (a screen with a small arrow), then <b>Install</b>.',
+          'No icon? Click <b>⋮</b> at the top right, then <b>Cast, save and share</b> → <b>Install page as app</b>.'])}
+        <h4>Safari (Mac)</h4>
+        ${steps(['In the menu bar, click <b>File</b> → <b>Add to Dock</b>.',
+          'Click <b>Add</b>. The app is now in your Dock and Applications folder.'])}
+      </div>
+    </div>
+    <p class="install-tip">Then open the app from its new icon and save your kirtans there: things saved in the browser stay in the browser.</p>
+  </section>`;
 }
 
 function installNote() {
@@ -672,7 +774,7 @@ function route() {
     case 'kirtans': html = kirtansView(a, b, c, d); break;
     case 'japa': html = japaView(a); break;
     case 'search': html = searchView(); break;
-    case 'library': html = libraryView(a); break;
+    case 'library': html = libraryView(a, b); break;
     case 'play': html = homeView(); break;
     default: html = notFound();
   }
@@ -1026,14 +1128,7 @@ audio.addEventListener('timeupdate', () => {
 
   const pct = dur ? (cur / dur) * 100 : 0;
   $('#mini-bar').style.width = `${pct}%`;
-  if (!scrubbing) {
-    const scrub = $('#scrub');
-    scrub.max = Math.floor(dur) || 100;
-    scrub.value = Math.floor(cur);
-    scrub.style.setProperty('--pct', `${pct}%`);
-    $('#t-cur').textContent = fmtClock(cur);
-    $('#t-left').textContent = `-${fmtClock(dur - cur)}`;
-  }
+  if (!scrubbing) showPosition(cur, dur);
   if ('mediaSession' in navigator && dur && navigator.mediaSession.setPositionState) {
     try { navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(cur, dur), playbackRate: audio.playbackRate }); } catch {}
   }
@@ -1064,19 +1159,75 @@ function savePosition() {
   store.set('positions', S.positions);
 }
 
+// The progress bar, like Spotify's: tap anywhere on it to jump there, or press
+// and drag. The bar thickens and the times follow your finger; the recording
+// only moves when you let go. The touch area is much taller than the line.
 let scrubbing = false;
+let scrubTo = 0;
 const scrub = $('#scrub');
-scrub.addEventListener('input', () => {
+const scrubDur = () => audio.duration || S.byId.get(S.current)?.duration || 0;
+function showPosition(cur, dur) {
+  const pct = dur ? Math.min(100, (cur / dur) * 100) : 0;
+  scrub.style.setProperty('--pct', `${pct}%`);
+  scrub.setAttribute('aria-valuemax', Math.floor(dur));
+  scrub.setAttribute('aria-valuenow', Math.floor(cur));
+  scrub.setAttribute('aria-valuetext', `${fmtClock(cur)} of ${fmtClock(dur)}`);
+  $('#t-cur').textContent = fmtClock(cur);
+  $('#t-left').textContent = `-${fmtClock(dur - cur)}`;
+}
+function scrubAt(e) {
+  const r = scrub.getBoundingClientRect();
+  scrubTo = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * scrubDur();
+  showPosition(scrubTo, scrubDur());
+}
+scrub.addEventListener('pointerdown', e => {
+  if (!S.current || !scrubDur()) return;
   scrubbing = true;
-  const dur = Number(scrub.max) || 1;
-  scrub.style.setProperty('--pct', `${(scrub.value / dur) * 100}%`);
-  $('#t-cur').textContent = fmtClock(scrub.value);
-  $('#t-left').textContent = `-${fmtClock(dur - scrub.value)}`;
+  try { scrub.setPointerCapture(e.pointerId); } catch {} // keep following the finger off the bar
+  scrub.classList.add('dragging');
+  scrubAt(e);
 });
-scrub.addEventListener('change', () => {
-  audio.currentTime = Number(scrub.value);
+scrub.addEventListener('pointermove', e => { if (scrubbing) scrubAt(e); });
+scrub.addEventListener('pointerup', e => {
+  if (!scrubbing) return;
+  scrubAt(e);
+  audio.currentTime = scrubTo;
   scrubbing = false;
+  scrub.classList.remove('dragging');
 });
+scrub.addEventListener('pointercancel', () => {
+  scrubbing = false;
+  scrub.classList.remove('dragging');
+  showPosition(audio.currentTime, scrubDur());
+});
+
+// Swipe down on the top of the player to close it, like Spotify.
+(function swipeDownToClose() {
+  const head = $('#player-head');
+  const sheet = $('.player-inner');
+  let y0 = null, dy = 0;
+  head.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
+    y0 = e.clientY;
+    dy = 0;
+    try { head.setPointerCapture(e.pointerId); } catch {}
+    sheet.style.transition = 'none';
+  });
+  head.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    dy = Math.max(0, e.clientY - y0);
+    sheet.style.transform = `translateY(${dy}px)`;
+  });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null;
+    sheet.style.transition = 'transform .2s ease-out';
+    sheet.style.transform = '';
+    if (dy > 110) closePlayer();
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+})();
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
@@ -1094,8 +1245,8 @@ if ('mediaSession' in navigator) {
   }
 }
 
-async function shareCurrent() {
-  const t = S.byId.get(S.current);
+async function shareTrack(id = S.current) {
+  const t = S.byId.get(id);
   if (!t) return;
   const url = `${location.origin}${location.pathname}#/play/${t.id}`;
   if (navigator.share) {
@@ -1112,6 +1263,146 @@ async function shareCurrent() {
   } catch {
     toast('Couldn’t copy the link on this device');
   }
+}
+
+/* ---------------- favourites, playlists and the queue ---------------- */
+
+function toggleFav(id) {
+  const on = !S.favs.has(id);
+  on ? S.favs.add(id) : S.favs.delete(id);
+  store.set('favs', [...S.favs]);
+  if (id === S.current) updatePlayerButtons();
+  toast(on ? 'Added to Favourites' : 'Removed from Favourites');
+  if (location.hash.startsWith('#/library/favourites') || location.hash === '#/library') route();
+}
+
+const playlistById = id => S.playlists.find(p => p.id === id);
+function savePlaylists() { store.set('playlists', S.playlists); }
+function newPlaylist(name) {
+  const p = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, ids: [] };
+  S.playlists.push(p);
+  savePlaylists();
+  return p;
+}
+function addToPlaylist(p, id) {
+  if (!p.ids.includes(id)) p.ids.push(id);
+  savePlaylists();
+  toast(`Added to ${p.name}`);
+  if (location.hash.startsWith('#/library/playlists')) route();
+}
+function removeFromPlaylist(p, id) {
+  if (!p) return;
+  p.ids = p.ids.filter(x => x !== id);
+  savePlaylists();
+  toast(`Removed from ${p.name}`);
+  if (location.hash.startsWith('#/library/playlists')) route();
+}
+function movePlaylistItem(p, id, dir) {
+  const i = p ? p.ids.indexOf(id) : -1;
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= p.ids.length) return;
+  [p.ids[i], p.ids[j]] = [p.ids[j], p.ids[i]];
+  savePlaylists();
+  route();
+}
+
+// In-page prompt for a playlist name; resolves to the trimmed name, or null.
+function askName(title, value, save) {
+  const dlg = $('#name-dialog');
+  const input = $('#name-input');
+  $('#name-title').textContent = title;
+  $('#name-save').textContent = save;
+  input.value = value;
+  input.placeholder = 'For example: Morning japa';
+  dlg.returnValue = '';
+  dlg.showModal();
+  input.focus();
+  return new Promise(resolve => dlg.addEventListener('close', () =>
+    resolve(dlg.returnValue === 'save' && input.value.trim() ? input.value.trim().slice(0, 60) : null), { once: true }));
+}
+
+// The "⋯" menu for a kirtan, like Spotify's. Inside a playlist it can also move
+// the kirtan or take it out of that playlist.
+function openTrackMenu(id, row) {
+  const t = S.byId.get(id);
+  if (!t) return;
+  const pl = row ? JSON.parse(row.dataset.opts || '{}').pl : null;
+  const p = pl && playlistById(pl);
+  const item = (action, ic, label, extra = '') => `<button value="${action}" data-action="${action}" data-id="${t.id}" ${extra}>${icon(ic)}<span>${label}</span></button>`;
+  const i = p ? p.ids.indexOf(id) : -1;
+  $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(t.title)}<small>${esc(collectionName(t))}</small></h3>
+    ${S.current && S.current !== id ? item('play-next', 'next', 'Play next') + item('add-queue', 'queue', 'Add to queue') : ''}
+    ${item('add-to-playlist', 'playlist', 'Add to playlist')}
+    ${item('toggle-fav', 'heart', S.favs.has(id) ? 'Remove from Favourites' : 'Add to Favourites')}
+    ${'caches' in window ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
+    ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
+    ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
+    ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
+    ${item('share-track', 'share', 'Share')}
+    <button value="cancel" class="muted">Cancel</button>`;
+  $('#track-dialog').showModal();
+}
+
+function openPlaylistPicker(id) {
+  const t = S.byId.get(id);
+  if (!t) return;
+  $('#playlist-menu').innerHTML = `<h3 class="menu-title">Add to playlist<small>${esc(t.title)}</small></h3>
+    <button value="new" data-action="pl-create-add" data-id="${id}">${icon('plus')}<span>New playlist</span></button>
+    ${S.playlists.map(p => `<button value="pl" data-action="pl-toggle" data-pl="${p.id}" data-id="${id}" class="${p.ids.includes(id) ? 'in' : ''}">
+      ${icon(p.ids.includes(id) ? 'check' : 'playlist')}<span>${esc(p.name)}</span><small>${p.ids.length}</small></button>`).join('')}
+    <button value="cancel" class="muted">Cancel</button>`;
+  $('#playlist-dialog').showModal();
+}
+
+// Play next: straight after the current recording. Add to queue: at the end.
+function playNext(id) {
+  if (!S.current) return playOnly(id);
+  S.queue.splice(S.qi + 1, 0, id);
+  updatePlayerButtons();
+  toast('Plays next');
+}
+function addToQueue(id) {
+  if (!S.current) return playOnly(id);
+  S.queue.push(id);
+  updatePlayerButtons();
+  toast('Added to the queue');
+}
+function playOnly(id) {
+  S.queue = [id];
+  S.qi = 0;
+  load(id);
+}
+function jumpTo(qi) {
+  if (!S.queue[qi]) return;
+  S.qi = qi;
+  load(S.queue[qi]);
+  renderQueue();
+}
+function removeFromQueue(qi) {
+  if (qi <= S.qi) return;
+  S.queue.splice(qi, 1);
+  renderQueue();
+  updatePlayerButtons();
+}
+
+function openQueue() {
+  renderQueue();
+  $('#queue-dialog').showModal();
+}
+function renderQueue() {
+  const now = S.byId.get(S.current);
+  const upcoming = S.queue.map((id, qi) => ({ t: S.byId.get(id), qi })).filter(x => x.t && x.qi > S.qi);
+  $('#queue-sub').textContent = upcoming.length ? `${plural(upcoming.length, 'kirtan')} up next · ${fmtHours(sum(upcoming, x => x.t.duration))}` : 'Nothing else queued';
+  const row = ({ t, qi }) => `<li class="track queue-row">
+      <button class="track-main" data-action="queue-jump" data-qi="${qi}">
+        <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${esc(collectionName(t))} · ${fmtDur(t.duration)}</span></span>
+      </button>
+      <button class="icon-btn" data-action="queue-remove" data-qi="${qi}" aria-label="Remove from the queue">${icon('x')}</button>
+    </li>`;
+  $('#queue-body').innerHTML = (now ? `<h4 class="queue-head">Now playing</h4><ul class="tracks"><li class="track playing"><span class="track-main"><span class="track-text">
+      <span class="track-title">${esc(now.title)}</span><span class="track-meta">${esc(collectionName(now))}</span></span></span></li></ul>` : '')
+    + (upcoming.length ? `<h4 class="queue-head">Next</h4><ul class="tracks">${upcoming.map(row).join('')}</ul>`
+      : `<p class="empty">When this one ends, playback stops. Tap ${icon('more')} next to any kirtan and choose <b>Play next</b> or <b>Add to queue</b>.</p>`);
 }
 
 /* ---------------- sleep timer ---------------- */
@@ -1291,13 +1582,7 @@ document.addEventListener('click', async e => {
       toast(`Saving ${plural(ids.length, 'recording')} (${fmtMB(mb)})`);
       break;
     }
-    case 'fav-current': {
-      if (!S.current) return;
-      S.favs.has(S.current) ? S.favs.delete(S.current) : S.favs.add(S.current);
-      store.set('favs', [...S.favs]);
-      updatePlayerButtons();
-      break;
-    }
+    case 'fav-current': if (S.current) toggleFav(S.current); break;
     case 'loop': {
       S.loop = !S.loop;
       audio.loop = S.loop;
@@ -1313,7 +1598,49 @@ document.addEventListener('click', async e => {
       updatePlayerButtons();
       break;
     }
-    case 'share': shareCurrent(); break;
+    case 'share': shareTrack(); break;
+    case 'theme': setTheme(el.dataset.theme); break;
+    case 'theme-toggle': setTheme(isDark() ? 'light' : 'dark'); break;
+    case 'share-track': shareTrack(id); break;
+    case 'track-menu': openTrackMenu(el.dataset.current ? S.current : id, el.closest('.track')); break;
+    case 'play-next': playNext(id); break;
+    case 'add-queue': addToQueue(id); break;
+    case 'add-to-playlist': setTimeout(() => openPlaylistPicker(id)); break;
+    case 'toggle-fav': toggleFav(id); break;
+    case 'queue': openQueue(); break;
+    case 'queue-jump': jumpTo(Number(el.dataset.qi)); break;
+    case 'queue-remove': removeFromQueue(Number(el.dataset.qi)); break;
+    case 'pl-new': {
+      const name = await askName('New playlist', '', 'Create');
+      if (name) { const p = newPlaylist(name); location.hash = `#/library/playlists/${p.id}`; }
+      break;
+    }
+    case 'pl-create-add': {
+      const name = await askName('New playlist', '', 'Create');
+      if (name) addToPlaylist(newPlaylist(name), id);
+      break;
+    }
+    case 'pl-toggle': {
+      const p = playlistById(el.dataset.pl);
+      if (p?.ids.includes(id)) removeFromPlaylist(p, id); else if (p) addToPlaylist(p, id);
+      break;
+    }
+    case 'pl-remove': removeFromPlaylist(playlistById(el.dataset.pl), id); break;
+    case 'pl-move': movePlaylistItem(playlistById(el.dataset.pl), id, Number(el.dataset.dir)); break;
+    case 'pl-rename': {
+      const p = playlistById(el.dataset.pl);
+      const name = p && await askName('Rename playlist', p.name, 'Save');
+      if (name) { p.name = name; savePlaylists(); route(); }
+      break;
+    }
+    case 'pl-delete': {
+      const p = playlistById(el.dataset.pl);
+      if (!p || !(await ask(`Delete the playlist “${p.name}”? The kirtans stay in the app.`, 'Delete'))) return;
+      S.playlists = S.playlists.filter(x => x !== p);
+      savePlaylists();
+      location.hash = '#/library/playlists';
+      break;
+    }
     case 'lyrics': openLyrics(); break;
     case 'sleep-menu': $('#sleep-dialog').showModal(); break;
     case 'suggest': {

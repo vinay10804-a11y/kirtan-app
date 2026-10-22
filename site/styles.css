@@ -1,10 +1,3 @@
-/* EB Garamond (SIL Open Font License, fonts/OFL.txt) is stored with the app, so it
-   looks the same with no internet. Variable fonts: one file covers every weight. */
-@font-face { font-family: 'EB Garamond'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: 'EB Garamond'; font-style: normal; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'EB Garamond'; font-style: italic; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-italic-latin-ext.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: 'EB Garamond'; font-style: italic; font-weight: 400 800; font-display: swap; src: url(fonts/eb-garamond-italic-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-
 /* Quiet paper-and-teal palette taken from the watercolour artwork. */
 :root {
   --bg: #f1efe2;
@@ -90,6 +83,19 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0 6px; }
 .topbar-title { font: 500 15px/1.2 var(--serif); color: var(--ink-2); text-decoration: none; }
 .topbar-title b { display: block; font-weight: 500; font-size: 25px; color: var(--teal-deep); }
+/* Light/dark switch: shows a moon in light mode and a sun in dark mode */
+.is-dark .show-light, :root:not(.is-dark) .show-dark { display: none; }
+.theme-toggle svg { width: 21px; height: 21px; }
+.theme-toggle.side { display: none; }
+@media (min-width: 960px) {
+  .theme-toggle.side { display: flex; align-items: center; gap: 12px; margin-top: auto; padding: 10px 12px; border-radius: 10px; font-size: 15px; color: var(--ink-2); }
+  .theme-toggle.side:hover { background: var(--surface-2); }
+  .offline-pill:not([hidden]) + .theme-toggle.side { margin-top: 0; }
+}
+.appearance { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); }
+.appearance h3 { margin: 0 0 10px; font: 500 19px var(--serif); }
+.appearance .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; padding: 0; }
+.appearance .chip { cursor: pointer; font: inherit; font-size: 13.5px; }
 
 @media (min-width: 960px) {
   .sidebar {
@@ -166,6 +172,11 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track.playing .track-title { color: var(--teal-deep); }
 .track-main:hover .track-title { color: var(--teal-deep); }
 .dl { color: var(--ink-3); }
+.track .more { color: var(--ink-3); }
+.track .more svg { width: 20px; height: 20px; }
+.pl-tools { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; }
+.queue-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
+.queue-row .track-main { padding: 10px 0; }
 .dl svg { width: 19px; height: 19px; }
 .dl.saved { color: var(--teal); }
 .ring { width: 20px; height: 20px; transform: rotate(-90deg); }
@@ -210,16 +221,21 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .player[hidden] { display: none; }
 @keyframes rise { from { transform: translateY(16px); opacity: 0; } }
 .player-inner { max-width: 440px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 8px) 24px calc(var(--safe-b) + 24px); }
-.player-head { display: flex; align-items: center; }
+.player-head { position: relative; display: flex; align-items: center; touch-action: none; }
+.grabber { position: absolute; top: 2px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line); }
+@media (min-width: 960px) { .grabber { display: none; } }
 .player-context { flex: 1; text-align: center; font-size: 13px; color: var(--ink-3); }
 .player-title { font-size: 26px; line-height: 1.2; }
 .player-sub { margin: 4px 0 0; color: var(--ink-3); font-size: 14px; }
 .scrub { margin-top: 18px; }
-.scrub input { width: 100%; height: 26px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; --pct: 0%; }
-.scrub input::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--teal) var(--pct), var(--line) var(--pct)); }
-.scrub input::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--teal) var(--pct), var(--line) var(--pct)); }
-.scrub input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: var(--teal-deep); }
-.scrub input::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--teal-deep); }
+/* Progress bar: a 4px line in a 36px-tall touch area; thicker while dragging */
+.scrub-bar { position: relative; height: 36px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; --pct: 0%; outline-offset: 2px; }
+.scrub-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 3px; background: var(--line); overflow: hidden; transition: height .15s; }
+.scrub-fill { width: var(--pct); height: 100%; background: var(--teal); }
+.scrub-knob { position: absolute; top: 50%; left: var(--pct); width: 13px; height: 13px; border-radius: 50%; background: var(--teal-deep); transform: translate(-50%, -50%); transition: width .15s, height .15s; box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+.scrub-bar.dragging .scrub-track, .scrub-bar:hover .scrub-track { height: 6px; }
+.scrub-bar.dragging .scrub-knob { width: 18px; height: 18px; }
+.scrub-bar.dragging + .scrub-times { color: var(--teal-deep); }
 .scrub-times { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .controls { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 4px; }
 .controls .icon-btn { width: 48px; height: 48px; color: var(--ink); }
@@ -241,6 +257,16 @@ dialog.menu h3 { font-size: 20px; padding: 10px 12px 6px; }
 dialog.menu button { text-align: left; padding: 12px; border-radius: 10px; font-size: 16px; }
 dialog.menu button:hover { background: var(--surface-2); }
 dialog.menu button.muted { color: var(--ink-3); }
+/* Menus with icons: the "⋯" menu and the playlist picker */
+dialog.menu button:has(svg) { display: flex; align-items: center; gap: 14px; }
+dialog.menu button svg { width: 20px; height: 20px; flex: none; color: var(--ink-3); }
+dialog.menu button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+dialog.menu button small { color: var(--ink-3); font-size: 13px; }
+dialog.menu button.in svg { color: var(--teal); }
+dialog.menu h3.menu-title { font: 500 19px/1.25 var(--serif); padding: 10px 12px 8px; margin: 0 0 4px; border-bottom: 1px solid var(--line); }
+dialog.menu h3.menu-title small { display: block; margin-top: 2px; font: 13px var(--sans); color: var(--ink-3); }
+.name-input { margin: 4px 12px 10px; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: 16px var(--sans); outline: none; }
+.name-input:focus { border-color: var(--teal); }
 #confirm-yes { color: var(--teal-deep); font-weight: 600; }
 dialog.menu h3#confirm-text { font-size: 19px; line-height: 1.3; padding-bottom: 10px; }
 .toast {
@@ -289,6 +315,7 @@ dialog.menu h3#confirm-text { font-size: 19px; line-height: 1.3; padding-bottom:
 .sc-track .track-text { flex: 1; }
 .sc-play { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); color: var(--teal-deep); }
 .sc-play svg { width: 15px; height: 15px; }
+.sc-thumb { flex: none; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--surface-2); }
 .sc-track:hover .track-title { color: var(--teal-deep); }
 .sc-item:has(.sc-slot.playing) .track-title { color: var(--teal-deep); }
 .sc-slot.playing { padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
@@ -320,6 +347,17 @@ dialog.menu h3#confirm-text { font-size: 19px; line-height: 1.3; padding-bottom:
 .howto[open] summary::after { content: "−"; }
 .howto ul { margin: 0 0 16px; padding-left: 18px; display: grid; gap: 8px; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
 .howto li svg { width: 15px; height: 15px; vertical-align: -2px; }
+/* Home: how to install the site as an app */
+.install-why { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+.install-now { margin: 14px 0 0; }
+.install-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; margin-top: 16px; }
+.install-card { padding: 16px 18px 6px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.install-card h3 { margin: 0; font: 500 20px var(--serif); }
+.install-card h4 { margin: 14px 0 4px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
+.install-card ol { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 6px; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.install-card b { color: var(--ink); font-weight: 600; }
+.install-card svg { width: 15px; height: 15px; vertical-align: -2px; }
+.install-tip { margin: 12px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-3); }
 
 /* ---------- Kirtans browsing ---------- */
 .switch { display: flex; gap: 4px; padding: 4px; margin-top: 16px; background: var(--surface-2); border-radius: 999px; }

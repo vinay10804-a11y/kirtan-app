@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Sacinandana Swami and Gour Krishna Kirtans</title>
   <meta name="description" content="Kirtans, bhajans and guided japa with Sacinandana Swami and Gour Krishna. Listen online or save for offline.">
+  <script>
+    // Light or dark chosen in the app wins over the device setting; applied before
+    // anything is drawn so the page doesn't flash the other theme.
+    try { const t = JSON.parse(localStorage.getItem('kk.theme')); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+  </script>
   <meta name="theme-color" content="#eeecd9" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0e2427" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +19,9 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -28,6 +36,7 @@
         <a href="#/library" data-nav="library"><svg><use href="#i-library"/></svg><span>Library</span></a>
       </nav>
       <p class="offline-pill" hidden>You're offline. Saved kirtans still play.</p>
+      <button class="theme-toggle side" data-action="theme-toggle" aria-label="Switch between light and dark"><svg class="show-light"><use href="#i-moon"/></svg><svg class="show-dark"><use href="#i-sun"/></svg><span class="show-light">Dark mode</span><span class="show-dark">Light mode</span></button>
     </aside>
 
     <main id="view" class="view" tabindex="-1"></main>
@@ -47,10 +56,11 @@
   <!-- Full player -->
   <section class="player" id="player" hidden aria-label="Now playing">
     <div class="player-inner">
-      <header class="player-head">
+      <header class="player-head" id="player-head">
+        <span class="grabber" aria-hidden="true"></span>
         <button class="icon-btn" data-action="close-player" aria-label="Close player"><svg><use href="#i-down"/></svg></button>
         <span class="player-context" id="player-context"></span>
-        <button class="icon-btn" data-action="share" aria-label="Share this recording"><svg><use href="#i-share"/></svg></button>
+        <button class="icon-btn" data-action="track-menu" data-current="1" aria-label="More options"><svg><use href="#i-more"/></svg></button>
       </header>
       <div class="swipe" id="player-swipe">
         <div id="player-art" class="player-art"></div>
@@ -59,7 +69,10 @@
       </div>
       <div id="player-lyrics" class="lyrics" hidden></div>
       <div class="scrub">
-        <input type="range" id="scrub" min="0" max="100" step="1" value="0" aria-label="Seek">
+        <div class="scrub-bar" id="scrub" role="slider" tabindex="0" aria-label="Position in recording" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00">
+          <div class="scrub-track"><div class="scrub-fill"></div></div>
+          <div class="scrub-knob"></div>
+        </div>
         <div class="scrub-times"><span id="t-cur">0:00</span><span id="t-left">0:00</span></div>
       </div>
       <div class="controls">
@@ -69,7 +82,7 @@
         <button class="icon-btn" data-action="fwd30" aria-label="Forward 30 seconds"><svg><use href="#i-fwd"/></svg></button>
         <button class="icon-btn" data-action="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
       </div>
-      <button class="up-next" id="up-next" data-action="next" hidden><span>Up next</span><b id="up-next-title"></b><svg><use href="#i-next"/></svg></button>
+      <button class="up-next" id="up-next" data-action="queue" hidden><span>Up next</span><b id="up-next-title"></b><svg><use href="#i-queue"/></svg></button>
       <div class="extras">
         <button data-action="fav-current" id="player-fav" aria-pressed="false"><svg><use href="#i-heart"/></svg><span>Favourite</span></button>
         <button data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
@@ -98,6 +111,31 @@
       <form method="dialog"><button class="icon-btn" aria-label="Close lyrics"><svg><use href="#i-x"/></svg></button></form>
     </header>
     <div id="lyrics-body" class="lyrics-body"></div>
+  </dialog>
+
+  <!-- A kirtan's "⋯" menu, filled in by app.js -->
+  <dialog id="track-dialog" class="menu"><form method="dialog" id="track-menu"></form></dialog>
+
+  <!-- Choosing a playlist to add a kirtan to -->
+  <dialog id="playlist-dialog" class="menu"><form method="dialog" id="playlist-menu"></form></dialog>
+
+  <!-- Naming a new playlist, or renaming one -->
+  <dialog id="name-dialog" class="menu">
+    <form method="dialog">
+      <h3 id="name-title"></h3>
+      <input id="name-input" class="name-input" type="text" maxlength="60" autocomplete="off" enterkeyhint="done">
+      <button value="save" id="name-save">Save</button>
+      <button value="cancel" class="muted">Cancel</button>
+    </form>
+  </dialog>
+
+  <!-- The queue: what plays next -->
+  <dialog id="queue-dialog" class="sheet" aria-labelledby="queue-title">
+    <header class="sheet-head">
+      <div><h3 id="queue-title">Queue</h3><p id="queue-sub"></p></div>
+      <form method="dialog"><button class="icon-btn" aria-label="Close queue"><svg><use href="#i-x"/></svg></button></form>
+    </header>
+    <div id="queue-body" class="lyrics-body"></div>
   </dialog>
 
   <dialog id="confirm-dialog" class="menu">
@@ -138,6 +176,12 @@
       <symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
       <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
       <symbol id="i-speed" viewBox="0 0 24 24"><path d="M3.5 18a9 9 0 1 1 17 0"/><path d="m12 14 4.5-5"/><circle cx="12" cy="14" r="1.2" class="fill"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" class="fill"/><circle cx="12" cy="12" r="1.6" class="fill"/><circle cx="19" cy="12" r="1.6" class="fill"/></symbol>
+      <symbol id="i-queue" viewBox="0 0 24 24"><path d="M3 6h13M3 12h13M3 18h9"/><path d="m17 15 4 3-4 3z" class="fill"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-playlist" viewBox="0 0 24 24"><path d="M3 6h12M3 12h12M3 18h7"/><path d="M18 13v8M14 17h8"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
     </defs>
   </svg>

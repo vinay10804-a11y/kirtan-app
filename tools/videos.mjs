@@ -1,6 +1,6 @@
 // Writes site/videos.json (title, date, length) for the japa collections, so
 // the Japa tab can list them and play them inside the page: YouTube videos for
-// Guided Japa and Japa Inspirations, SoundCloud tracks for Living Name.
+// Guided Japa, SoundCloud tracks for Japa Inspirations and Living Name.
 // Keeps the previous list if YouTube or SoundCloud can't be reached.
 
 import { spawn } from 'node:child_process';
@@ -12,7 +12,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'site/videos.json');
 const SOURCES = [
   { collection: 'Guided Japa', args: ['--batch-file', path.join(ROOT, 'tools/guided-japa.txt')] },
-  { collection: 'Japa Inspirations', args: ['--batch-file', path.join(ROOT, 'tools/japa-inspirations.txt')] },
+  { collection: 'Japa Inspirations', source: 'soundcloud', args: ['https://soundcloud.com/sacinandanaswami/sets/japa-inspirations'],
+    // "JI 5 - The Lord_s Appearance" → "The Lord’s Appearance" (the number is the order in the list).
+    title: t => t.replace(/^JI\s*\d+\s*[-–]\s*/i, '').replace(/_s\b/g, '’s') },
   { collection: 'Living Name Meditations', source: 'soundcloud', args: ['https://soundcloud.com/sacinandanaswami/sets/meditations-from-the-living'] },
 ];
 
@@ -32,7 +34,7 @@ let previous = [];
 try { previous = JSON.parse(await fs.readFile(OUT, 'utf8')); } catch {}
 
 const videos = [];
-for (const { collection, source, args } of SOURCES) {
+for (const { collection, source, args, title } of SOURCES) {
   const found = await details(args);
   if (!found.length) {
     const kept = previous.filter(v => v.collection === collection);
@@ -44,7 +46,7 @@ for (const { collection, source, args } of SOURCES) {
     const d = v.upload_date;
     videos.push({
       id: String(v.id),
-      title: v.title,
+      title: title ? title(v.title) : v.title,
       collection,
       date: d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : null,
       duration: Math.round(v.duration || 0),

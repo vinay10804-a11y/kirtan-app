@@ -30,9 +30,8 @@ echo "→ Guided Japa: audio, then MP4 video (each session is roughly 1 GB at 72
 audio "Guided Japa" --batch-file "$HERE/guided-japa.txt"
 video "Guided Japa" --batch-file "$HERE/guided-japa.txt"
 
-echo "→ Japa Inspirations: audio, then MP4 video"
-audio "Japa Inspirations" --batch-file "$HERE/japa-inspirations.txt"
-video "Japa Inspirations" --batch-file "$HERE/japa-inspirations.txt"
+echo "→ Japa Inspirations (SoundCloud, audio only)"
+audio "Japa Inspirations" "https://soundcloud.com/sacinandanaswami/sets/japa-inspirations"
 
 echo "→ Living Name Meditations (SoundCloud, audio only)"
 audio "Living Name Meditations" "https://soundcloud.com/sacinandanaswami/sets/meditations-from-the-living"

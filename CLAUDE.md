@@ -20,9 +20,10 @@ R2 bucket `kirtans` at `/audio/*`.
   section; "Radhanath"/"Gopal" paths map to Gour Krishna). Anything else is skipped and listed.
 - Kirtan types are **Mahamantra** (not "Hare Kṛṣṇa") and **Bhajans**.
 - Kirtans page: artist switch → Mahamantra/Bhajans tabs → browse by Year / Place / Length chips.
-- Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa and Japa Inspirations are
-  YouTube video cards (thumbnail opens YouTube) whose "Listen here" plays the YouTube video in place;
-  Living Name Meditations are SoundCloud tracks that open SoundCloud's player under the title.
+- Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa are YouTube video cards
+  (thumbnail opens YouTube) whose "Listen here" plays the YouTube video in place. Japa Inspirations
+  (the SoundCloud set "japa-inspirations", owner's choice 22 Oct 2026) and Living Name Meditations are
+  SoundCloud tracks, each row with its artwork, that open SoundCloud's player under the title.
   `tools/videos.mjs` writes the list to `site/videos.json`. Guided Japa videos are listed in
   `tools/guided-japa.txt`. If audio copies are ever added (Kirtans/Japa), "Listen here" uses them instead.
 - Home: the wave image (`site/art/card-1.webp`), a one-line intro, Kirtans and Japa cards with short
@@ -36,7 +37,17 @@ R2 bucket `kirtans` at `/audio/*`.
   card opens the kksongs.org page in an in-app panel (an iframe). Words and translations in the app's own
   style (`verses`) must come from the owner or a source we may use; never copy them from websites or
   write them from memory.
-- Swipe the player artwork or mini player left/right to change recordings.
+- Swipe the player artwork or mini player left/right to change recordings; swipe down on the player's
+  top bar to close it. The progress bar works like Spotify's (tap to jump, drag, seek on release).
+- Spotify-inspired (22 Oct 2026): every kirtan has a "⋯" menu (Play next, Add to queue, Add to playlist,
+  Favourite, Save offline, Share; inside a playlist also Move up/down and Remove). "Up next" in the
+  player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists live in
+  the browser's storage on each device (no accounts).
+- Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
+  (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
+  applies it before first paint.
+- Home has a "Use it as an app" section with install steps for iPhone and laptop, Safari and Chrome
+  (hidden when already running as an installed app).
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.
 
