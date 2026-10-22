@@ -1,17 +1,23 @@
 // Offline support: the app shell is cached so the site opens without a
 // connection, and saved recordings (put in AUDIO_CACHE by app.js) are served
 // from the device, including the byte-range requests audio players make.
+// A slow or dead connection (e.g. on the Underground) falls back to the saved
+// copies after a few seconds instead of leaving the app blank.
 
-const VERSION = '610e58fe1d';
+const VERSION = '4c0aa58632';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
 
+// No 'index.html': it redirects to './', and browsers refuse a redirected
+// response when opening a page, which stopped the app opening offline.
 const SHELL = [
-  './', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest',
+  './', 'styles.css', 'app.js', 'manifest.webmanifest',
   'catalog.json', 'photos.json', 'videos.json', 'lyrics.json',
   'art/card-1.webp',
   'icons/icon-192.png', 'icons/favicon.png', 'apple-touch-icon.png',
+  'fonts/eb-garamond-latin.woff2', 'fonts/eb-garamond-latin-ext.woff2',
+  'fonts/eb-garamond-italic-latin.woff2', 'fonts/eb-garamond-italic-latin-ext.woff2',
 ];
 const DATA = /\/(catalog|photos|videos|lyrics)\.json$/;
 
@@ -38,7 +44,7 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('index.html')));
+    event.respondWith(openPage(req, url));
     return;
   }
   if (url.origin === location.origin && DATA.test(url.pathname)) {
@@ -50,9 +56,34 @@ self.addEventListener('fetch', event => {
   }
 });
 
+// Rejects if the network hasn't answered in time, so a dead connection
+// doesn't keep the app waiting.
+function quickly(promise, ms) {
+  return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+}
+
+// A cached response that came through a redirect can't open a page; copy it into a plain one.
+async function unredirected(res) {
+  if (!res.redirected) return res;
+  return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers: res.headers });
+}
+
+// Opening the app: the network if it answers within 3 seconds (and the saved
+// page is refreshed), otherwise the saved page, so the app opens with no signal.
+async function openPage(req, url) {
+  try {
+    const res = await quickly(fetch(req), 3000);
+    if (res.ok && url.pathname === '/') (await caches.open(SHELL_CACHE)).put('./', (await unredirected(res.clone())));
+    return res;
+  } catch {
+    const cached = await caches.match('./');
+    return cached ? unredirected(cached) : Response.error();
+  }
+}
+
 async function networkFirst(req) {
   try {
-    const res = await fetch(req);
+    const res = await quickly(fetch(req), 4000);
     if (res.ok) (await caches.open(SHELL_CACHE)).put(req, res.clone());
     return res;
   } catch {

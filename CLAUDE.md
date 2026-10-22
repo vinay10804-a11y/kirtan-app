@@ -87,6 +87,14 @@ npx wrangler deploy
 Show the owner the category summary before deploying. YouTube downloads often fail from cloud IPs;
 if `tools/fetch-japa.sh` is blocked, give the owner the Mac commands instead.
 
+## Offline start (fixed 22 Oct 2026)
+The app must open with no signal (e.g. on the Underground). `sw.js` opens pages network-first with a
+3-second timeout, falling back to the cached `./`; never cache or serve `index.html` (Cloudflare
+redirects it to `/`, and Safari refuses redirected responses for page loads, which stopped the app
+opening offline). Data JSON falls back to cache after 4 seconds. EB Garamond is self-hosted in
+`site/fonts/` (OFL) and pre-cached, so nothing render-blocking comes from another site. On iPhone the
+home-screen app has its own storage, separate from Safari: kirtans must be saved from inside it.
+
 ## Checking changes
 Serve `site/` locally (or `npx wrangler dev --local` with a few files put via
 `wrangler r2 object put --local`) and screenshot phone (iPhone 13) and desktop widths with
