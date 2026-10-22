@@ -212,7 +212,8 @@ async function loadData() {
     loadJSON('videos.json', []),
     loadJSON('lyrics.json', []),
   ]);
-  S.tracks = catalog.tracks || [];
+  // Kirtans set to "Show in app: No" in the owner's sheet stay out of the app.
+  S.tracks = (catalog.tracks || []).filter(t => !t.hidden);
   S.photos = photos;
   S.videos = videos;
   S.lyrics = lyrics.map(l => ({ ...l, re: new RegExp(l.match, 'i') }));
