@@ -43,6 +43,10 @@ R2 bucket `kirtans` at `/audio/*`.
   Favourite, Save offline, Share; inside a playlist also Move up/down and Remove). "Up next" in the
   player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists live in
   the browser's storage on each device (no accounts).
+- Feel (owner: "premium, like Spotify"): every button and row gives press feedback (shrink or dim), the
+  player and phone menus slide up as bottom sheets and slide down to close, and a new page is drawn at
+  once and fades up (`.page-enter`). No View Transitions API: its snapshot step delayed some page
+  changes by ~300 ms. Keep interactions instant; motion only decorates.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
