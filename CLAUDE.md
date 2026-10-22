@@ -105,6 +105,10 @@ redirects it to `/`, and Safari refuses redirected responses for page loads, whi
 opening offline). Data JSON falls back to cache after 4 seconds. EB Garamond is self-hosted in
 `site/fonts/` (OFL) and pre-cached, so nothing render-blocking comes from another site. On iPhone the
 home-screen app has its own storage, separate from Safari: kirtans must be saved from inside it.
+JS, CSS, the manifest and data JSON are network-first (4 s) too: serving stored copies first mixed an old
+app.js/styles.css with a new index.html after a deploy. Cover pictures of saved kirtans, and of whatever
+is played, are kept in the `kirtan-art` cache (`keepArt` in app.js); a picture that can't load falls back
+to the initials tile.
 
 ## Checking changes
 Serve `site/` locally (or `npx wrangler dev --local` with a few files put via

@@ -3,6 +3,8 @@
 // click handler drives everything through data-action attributes.
 
 const AUDIO_CACHE = 'kirtan-audio';
+// Cover pictures of saved and recently played kirtans, so they show offline too.
+const ART_CACHE = 'kirtan-art';
 const ARTIST_ORDER = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
@@ -144,14 +146,29 @@ function tile(label) {
 function initialsFor(name) {
   return INITIALS[name] || name.split(/\s+/).filter(w => /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 2);
 }
+// A picture that can't load (e.g. offline and never stored) becomes the plain
+// initials tile instead of a broken image; see the 'error' listener below.
 function artHTML(t) {
+  const label = t.section === 'japa' ? 'Japa' : initialsFor(t.artist);
   const src = artFor(t);
-  if (src) return `<img src="${esc(src)}" alt="">`;
-  return tile(t.section === 'japa' ? 'Japa' : initialsFor(t.artist));
+  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(label)}">` : tile(label);
 }
 function collectionArt(name) {
   const src = personPhoto(name);
-  return src ? `<img src="${esc(src)}" alt="">` : tile(initialsFor(name));
+  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(initialsFor(name))}">` : tile(initialsFor(name));
+}
+document.addEventListener('error', e => {
+  if (e.target.matches?.('img[data-fallback]')) e.target.outerHTML = tile(e.target.dataset.fallback);
+}, true);
+
+// Keeps a kirtan's cover picture on the device (no-op offline or if already kept).
+async function keepArt(t) {
+  const src = t && artFor(t);
+  if (!src || !('caches' in window) || !isOnline()) return;
+  try {
+    const cache = await caches.open(ART_CACHE);
+    if (!(await cache.match(src))) await cache.add(src);
+  } catch {}
 }
 function collectionName(t) {
   return t.section === 'japa' ? `${t.type} · Sacinandana Swami` : t.artist;
@@ -213,6 +230,8 @@ async function loadData() {
         else if (S.tracks.length) await cache.delete(req);
       }
     } catch {}
+    // Kirtans saved before covers were kept with them get their covers now.
+    for (const id of S.saved) keepArt(S.byId.get(id));
   }
 }
 
@@ -873,6 +892,7 @@ async function load(id, { autoplay = true } = {}) {
   }, { once: true });
 
   if (autoplay) audio.play().catch(() => {});
+  keepArt(t);
   updateNowPlaying();
   if (prev) refreshTrack(prev);
   refreshTrack(id);
@@ -1511,6 +1531,7 @@ async function download(id) {
   const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'audio/mpeg' });
   const cache = await caches.open(AUDIO_CACHE);
   await cache.put(t.src, new Response(blob, { headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) } }));
+  await keepArt(t);
   S.saved.add(id);
   S.downloads.delete(id);
   refreshTrack(id);
@@ -1652,6 +1673,7 @@ document.addEventListener('click', async e => {
     case 'remove-all': {
       if (!(await ask('Remove all saved recordings from this device?', 'Remove all'))) return;
       await caches.delete(AUDIO_CACHE);
+      await caches.delete(ART_CACHE);
       S.saved.clear();
       route();
       break;

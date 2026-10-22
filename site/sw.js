@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = '764ab32ed9';
+const VERSION = 'c284db3675';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -47,7 +47,10 @@ self.addEventListener('fetch', event => {
     event.respondWith(openPage(req, url));
     return;
   }
-  if (url.origin === location.origin && DATA.test(url.pathname)) {
+  // Data, code and styling come from the network when it answers, so a new
+  // version never mixes with stored copies of the old one; offline they come
+  // from the device.
+  if (url.origin === location.origin && (DATA.test(url.pathname) || /\.(js|css|webmanifest)$/.test(url.pathname))) {
     event.respondWith(networkFirst(req));
     return;
   }
