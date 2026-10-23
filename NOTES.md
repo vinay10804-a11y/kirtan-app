@@ -49,6 +49,18 @@ Tick items off (or delete them) as they're done.
 - **No backup of the originals** (your choice). The app's versions are the only copy once you delete
   your local files. Keep the Kirtans folder on an external drive if you ever want full quality again.
 
+- **46 kirtans added from your "Kirtans for app" Google Sheet** (23 Oct): 24 Sacinandana Swami
+  (incl. Kirtan Mela Mayapur 2012, 2013 and 2015 from ISKCON Desire Tree) and 22 Gour Krishna (incl. the
+  "Jay Krishna" recordings and two bhajans). Saved in the Kirtans folder and added to Kirtans list.xlsx
+  (numbers 110–155). One was left out because it's already in the app: "Bhakti retreat night kirtan,
+  26.07.25" is the same recording as "1am Kirtan" (Switzerland, 2025); rename that one in the sheet if
+  you prefer. Guesses made from the SoundCloud pages (correct them in the sheet if wrong): Holy Name
+  Immersion May 2025 = New Vrindaban (its artwork says "The Holy Name Experience, New Vrindaban");
+  "SPH" = Srila Prabhupada's House, Vrindavan; Brunel 24h = London; "Jay Krsna Mellows 2015" = Radhadesh
+  Mellows; Lila Kirtan = Pandava Sena Mentorship Trip, Feb 2024; Leicester 2014 = Leicester Kirtan Fest.
+- **Cloudflare storage is about 8.4 GB of the free 10 GB** after adding these. Before adding many more,
+  remove the unused older audio copies (`media/` folder, about 3.5 GB). Ask Claude to walk you through it.
+
 ## Safe to delete on your Mac
 
 Once a kirtan is published it stays on the website. You can delete (or move to an external drive):
@@ -73,6 +85,12 @@ Add new kirtans to an empty `Kirtans` folder next to `kirtan-app` and ask Claude
      Radharaman Kaho; Radhe Govinda · Mantra Lounge (2025); Rama Navami (2026); Sanga Mela;
      Siksastakam Parts 1 and 2; Sakhi He Bhajan (Smita Krsna); Sri Krishna Caitanya Prabhu Doya
      Koro; Srila Prabhupada's House; The Mood of Longing (2022).
+   - Added 23 Oct, place and/or year unknown: Sacinandana Swami: Lila Kirtan · Mentorship Trip (2024);
+     Gaura Meditation & Kirtan Parts 1 and 2 (Holy Name Immersion, May 2023); Kirtan Mela Germany 5
+     (2011). Gour Krishna: Aindra Prabhu Appearance Day (2014); Sena Getaway Retreat, Germany (2016);
+     Birmingham 24 Hour Kirtan · Night Shift (year?); Brunel 24 Hour Kirtan (year?); Hare Krishna Kirtan
+     with Arjun Raja; Kirtan at Audarya's House Programme; Kirtan at Radhadesh (year?); Saturday Kirtan;
+     Sunday Kirtan.
 2. **Track images**, whenever they're ready.
 3. **The four bhajans without a lyrics page:** which "He Govinda, He Gopal" it is, and a page for
    the others if you know one.

@@ -21,6 +21,12 @@ R2 bucket `kirtans` at `/stream/*`.
 - Only two artists: **Sacinandana Swami** and **Gour Krishna** (not "Gopal", and no Radhanath Swami
   section; "Radhanath"/"Gopal" paths map to Gour Krishna). Anything else is skipped and listed.
 - Kirtan types are **Mahamantra** (not "Hare Kṛṣṇa") and **Bhajans**.
+- "Jay Krishna" / "Jay Krsna" (Gadhvi) is Gour Krishna's earlier name: those recordings are his (owner's
+  list, 23 Oct 2026). Downloads are saved in the Kirtans folder as `<Artist folder>/<Artist> | <Title> |
+  <Place> | <dd-mm-yyyy or yyyy>.<ext>` (a `Bhajans/` subfolder makes them bhajans), with SoundCloud
+  artwork embedded only when it shows the kirtan, the leader or the Deities (not logos or unrelated
+  photos). Check new downloads against the app's recordings first: one SoundCloud upload was a copy of
+  a kirtan already in the app under another name.
 - Kirtans page: artist switch → Mahamantra/Bhajans tabs → browse by Year / Place / Length chips.
 - Japa (owner's choice, 19 Oct 2026): nothing is downloaded. Guided Japa are YouTube video cards with
   no extra buttons: tapping the picture or title opens the in-app YouTube player (`#video-dialog`), full
