@@ -171,7 +171,7 @@ function artHTML(t, lazy = false) {
 // The Home page's section pictures (owner's choice, 24 Oct 2026; square crops in art/sections).
 const SECTION_ART = {
   'Sacinandana Swami': 'art/sections/sacinandana-swami.jpg',
-  'Gour Krishna': 'art/sections/gour-krishna.jpg',
+  'Gour Krishna': 'art/sections/gour-krishna-2.jpg',
   'Guided Japa': 'art/sections/guided-japa.jpg',
   'Japa Inspirations': 'art/sections/japa-inspirations.jpg',
   'Living Name Meditations': 'art/sections/living-name-meditations.jpg',
