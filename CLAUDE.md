@@ -16,6 +16,10 @@ R2 bucket `kirtans` at `/stream/*`.
   `upload.mjs` (to R2), `fetch-japa.sh` + `videos.mjs` (YouTube/SoundCloud japa),
   `fetch-spotify.sh`, `photos.mjs`, `pull-source.mjs` (originals from R2 → `source/`).
 - `publish.sh`: the full pipeline on a Mac.
+- Beside the project (in ~/Desktop/SNS Kirtan Platform): `Kirtans/` (originals; never move or rename a
+  published one, its id comes from its path), `Kirtans list.xlsx`, `Thumbnails/` (SNS, GK, Bhajans,
+  Adjusted), `Photos of SNS/`, and "READ ME - what's in this folder.txt" for the owner. Keep these names:
+  the tools find things by them. `build/audio` holds only the current (aac96lv) copies.
 
 ## Decisions the owner has made (keep them)
 - Only two artists: **Sacinandana Swami** and **Gour Krishna** (not "Gopal", and no Radhanath Swami

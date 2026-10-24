@@ -71,13 +71,15 @@ Tick items off (or delete them) as they're done.
   To swap a picture you don't like, delete it in the Picture column of Kirtans list.xlsx (or type
   another file name in its Thumbnail cell), save, close Excel and publish.
 
-## Safe to delete on your Mac
+## Your SNS Kirtan Platform folder
 
-Once a kirtan is published it stays on the website. You can delete (or move to an external drive):
-- the recordings in `Kirtans` (keep any new ones until they've been published);
-- `kirtan-app/build` (4.6 GB of compressed copies);
-- the `Photos of SNS` folder (the photos are already in the app).
-Add new kirtans to an empty `Kirtans` folder next to `kirtan-app` and ask Claude to publish.
+Tidied on 24 Oct: "READ ME - what's in this folder.txt" at the top explains each folder. Old test
+clips, an empty Guided Japa folder, a broken "kirtan-app 2" copy and about 8 GB of old audio copies
+went to the Trash ("SNS Kirtan Platform clean-up (24 Oct 2026)"); empty the Trash to free 7.8 GB.
+
+If you need more space later: once a kirtan is published it stays on the website, so the recordings
+in `Kirtans` and the 5 GB of compressed copies in `kirtan-app/build/audio` could move to an external
+drive. Keep the folder names as they are; the app finds things by them.
 
 ## What I need from you
 
