@@ -176,7 +176,11 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track-title { display: block; font: 500 17px/1.3 var(--serif); }
 .track-meta { display: block; margin-top: 1px; font-size: 12.5px; color: var(--ink-3); }
 .track-meta .left { color: var(--teal); }
-.track.playing .track-title { color: var(--teal-deep); }
+/* The kirtan that's playing (or paused) stands out in every list: a tinted band,
+   its title in teal and moving bars in place of its number. */
+.track.playing { background: var(--teal-soft); border-radius: 12px; margin-inline: -10px; padding-inline: 10px; border-bottom-color: transparent; box-shadow: 0 -1px 0 var(--bg); }
+.track.playing .track-title { color: var(--teal-deep); font-weight: 600; }
+.track.playing .track-meta, .track.playing .dl, .track.playing .more { color: var(--teal-deep); }
 .track-main:hover .track-title { color: var(--teal-deep); }
 .dl { color: var(--ink-3); }
 .track .more { color: var(--ink-3); }
@@ -237,11 +241,11 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .ring .bg { stroke: var(--line); }
 .ring .fg { stroke: var(--teal); }
 
-.eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 13px; width: 22px; justify-content: flex-end; }
-.eq i { width: 3px; background: var(--teal); border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+.eq { display: inline-flex; gap: 2.5px; align-items: flex-end; height: 16px; width: 22px; justify-content: flex-end; }
+.eq i { width: 3.5px; height: 6px; background: var(--teal-deep); border-radius: 1.5px; animation: eq 1s ease-in-out infinite; }
 .eq i:nth-child(2) { animation-delay: -.4s; } .eq i:nth-child(3) { animation-delay: -.7s; }
 .is-paused .eq i { animation-play-state: paused; }
-@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 13px; } }
+@keyframes eq { 0%, 100% { height: 4px; } 50% { height: 16px; } }
 
 .empty { margin-top: 24px; padding: 24px 0; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
 .empty code { font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; }
@@ -585,5 +589,9 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 @keyframes spin { to { transform: rotate(360deg); } }
 /* Repeat one: a small 1 on the repeat icon. */
 #loop-btn { position: relative; }
+#repeat-menu button.one { position: relative; }
+#repeat-menu button.one::after { content: "1"; position: absolute; top: 10px; left: 29px; font: 700 8px/1 var(--sans); color: var(--ink-3); }
+#repeat-menu button.in svg { color: var(--teal-deep); }
+#repeat-menu button.in span { color: var(--teal-deep); font-weight: 600; }
 #loop-btn.one::after { content: "1"; position: absolute; top: 3px; left: calc(50% + 7px); font: 700 9px/1 var(--sans); color: var(--teal-deep); }
 .suggest h2 .text-btn { margin-left: 8px; font: 500 13px var(--sans); }

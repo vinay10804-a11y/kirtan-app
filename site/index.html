@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6a424cf971">
+  <link rel="stylesheet" href="styles.css?v=d971ea17a5">
 </head>
 <body>
   <div class="app">
@@ -83,7 +83,7 @@
       <div class="extras">
         <button data-action="fav-current" id="player-fav" aria-pressed="false"><svg><use href="#i-heart"/></svg><span>Favourite</span></button>
         <button data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
-        <button data-action="loop" id="loop-btn" aria-pressed="false"><svg><use href="#i-repeat"/></svg><span>Loop</span></button>
+        <button data-action="loop" id="loop-btn"><svg><use href="#i-next"/></svg><span>Play next</span></button>
         <button data-action="sleep-menu" id="sleep-btn"><svg><use href="#i-moon"/></svg><span id="sleep-label">Sleep timer</span></button>
         <button data-action="speed" id="speed-btn"><svg><use href="#i-speed"/></svg><span id="speed-label">1× speed</span></button>
       </div>
@@ -124,6 +124,9 @@
       <p class="video-tip">For the sharpest picture, tap full screen in the player, or choose the quality under its settings (⚙).</p>
     </div>
   </dialog>
+
+  <!-- What happens when a kirtan ends: play the next one, loop it, play once, loop the list -->
+  <dialog id="repeat-dialog" class="menu"><form method="dialog" id="repeat-menu"></form></dialog>
 
   <!-- A kirtan's "⋯" menu, filled in by app.js -->
   <dialog id="track-dialog" class="menu"><form method="dialog" id="track-menu"></form></dialog>
@@ -216,6 +219,7 @@
       <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
       <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></symbol>
       <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+      <symbol id="i-once" viewBox="0 0 24 24"><path d="M3 12h12"/><path d="m11 7 5 5-5 5"/><path d="M20 5v14"/></symbol>
       <symbol id="i-tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
       <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
       <symbol id="i-speed" viewBox="0 0 24 24"><path d="M3.5 18a9 9 0 1 1 17 0"/><path d="m12 14 4.5-5"/><circle cx="12" cy="14" r="1.2" class="fill"/></symbol>
@@ -230,6 +234,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=6a424cf971" type="module"></script>
+  <script src="app.js?v=d971ea17a5" type="module"></script>
 </body>
 </html>

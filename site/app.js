@@ -68,7 +68,8 @@ const S = {
   history: store.get('history', []),
   stats: store.get('stats', { seconds: 0, since: Date.now() }),
   speed: store.get('speed', 1),
-  // Repeat: 'off', 'all' (start the list again at the end) or 'one' (this recording).
+  // What happens when a kirtan ends: 'off' (play the next one), 'one' (loop it),
+  // 'once' (stop) or 'all' (play on, and start the list again at the end).
   repeat: store.get('repeat', store.get('loop', false) ? 'one' : 'off'),
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
@@ -332,7 +333,7 @@ function trackMeta(t, opts = {}) {
 function trackRow(t, i, listKey, opts = {}) {
   const current = S.current === t.id;
   const off = !isOnline() && !S.saved.has(t.id);
-  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}" data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
+  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${listKey}">
       <span class="track-num">${current ? '<span class="eq"><i></i><i></i><i></i></span>' : i + 1}</span>
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
@@ -486,7 +487,7 @@ function homeView() {
         <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
-        <li><b>Chanting japa:</b> open the player and tap <b>Repeat</b> until it says <b>Repeat one</b>, so one kirtan plays again and again while you chant your rounds.</li>
+        <li><b>Chanting japa:</b> open the player, tap <b>Play next</b> and choose <b>Loop this kirtan</b>, so one kirtan plays again and again while you chant your rounds. <b>Play once</b> stops when the kirtan ends.</li>
         <li><b>Sleep timer</b> in the player stops playback after 15 minutes to an hour.</li>
         <li><b>Find something:</b> use Search for a title, place or year, such as “Vrindavan” or “2019”.</li>
       </ul>
@@ -1260,10 +1261,12 @@ function updatePlayerButtons() {
   dl.querySelector('span').textContent = S.saved.has(t.id) ? 'Saved' : d ? `Saving ${Math.round(d.progress * 100)}%` : 'Save offline';
 
   const rep = $('#loop-btn');
+  const mode = REPEAT[S.repeat] || REPEAT.off;
   rep.classList.toggle('on', S.repeat !== 'off');
   rep.classList.toggle('one', S.repeat === 'one');
-  rep.setAttribute('aria-label', `Repeat: ${S.repeat === 'off' ? 'off' : S.repeat === 'all' ? 'all' : 'this recording'}`);
-  rep.querySelector('span').textContent = S.repeat === 'off' ? 'Repeat' : S.repeat === 'all' ? 'Repeat all' : 'Repeat one';
+  rep.setAttribute('aria-label', `When this kirtan ends: ${mode.label}`);
+  rep.querySelector('use').setAttribute('href', `#i-${mode.icon}`);
+  rep.querySelector('span').textContent = mode.short;
 
   $('#speed-label').textContent = `${S.speed}× speed`;
 
@@ -1271,6 +1274,31 @@ function updatePlayerButtons() {
   const nextTrack = S.byId.get(S.queue[stepIndex(1)]);
   upNext.hidden = !nextTrack || S.repeat === 'one';
   if (nextTrack) $('#up-next-title').textContent = nextTrack.title;
+}
+
+// The choices for when a kirtan ends, in the order the menu lists them.
+const REPEAT = {
+  off: { short: 'Play next', label: 'Play the next kirtan', icon: 'next', toast: 'The next kirtan plays when this one ends' },
+  one: { short: 'Loop', label: 'Loop this kirtan', icon: 'repeat', toast: 'This kirtan will play again and again' },
+  once: { short: 'Play once', label: 'Play once, then stop', icon: 'once', toast: 'Playback stops when this kirtan ends' },
+  all: { short: 'Loop list', label: 'Loop the whole list', icon: 'repeat', toast: 'The list starts again at the end' },
+};
+
+function openRepeatMenu() {
+  $('#repeat-menu').innerHTML = `<h3 class="menu-title">When this kirtan ends</h3>
+    ${Object.entries(REPEAT).map(([value, m]) => `<button value="${value}" class="${value === S.repeat ? 'in' : ''}${value === 'one' ? ' one' : ''}" aria-pressed="${value === S.repeat}">
+      ${icon(m.icon)}<span>${m.label}</span>${value === S.repeat ? icon('tick', 'tick') : ''}</button>`).join('')}
+    <button value="" class="muted">Cancel</button>`;
+  $('#repeat-dialog').showModal();
+}
+
+function setRepeat(value) {
+  if (!REPEAT[value]) return;
+  S.repeat = value;
+  audio.loop = value === 'one';
+  store.set('repeat', value);
+  updatePlayerButtons();
+  toast(REPEAT[value].toast);
 }
 
 function setPlayingClass() {
@@ -1347,7 +1375,7 @@ audio.addEventListener('ended', () => {
     setSleep('off');
     return;
   }
-  if (!next()) setBuffering(false);
+  if (S.repeat === 'once' || !next()) setBuffering(false);
 });
 
 // When the connection drops mid-recording (a tunnel, a lift, the Underground),
@@ -1489,10 +1517,10 @@ if ('mediaSession' in navigator) {
     play: () => (audio.src ? audio.play() : S.current && load(S.current)),
     pause: () => audio.pause(),
     stop: () => audio.pause(),
-    previoustrack: prev,
-    nexttrack: next,
-    seekbackward: () => seekBy(-15),
-    seekforward: () => seekBy(30),
+    // Previous/next kirtan on the lock screen and in Control Centre. No 15/30-second
+    // skip handlers: iPhones show those instead of next/previous when both are set.
+    previoustrack: () => prev(),
+    nexttrack: () => next(),
     seekto: e => { audio.currentTime = e.seekTime; },
   };
   for (const [action, fn] of Object.entries(handlers)) {
@@ -1612,6 +1640,7 @@ function openTrackMenu(id, row) {
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
+    ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) : ''}
     ${item('share-track', 'share', 'Share')}
     <button value="cancel" class="muted">Cancel</button>`;
   $('#track-dialog').showModal();
@@ -2163,14 +2192,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'fav-current': if (S.current) toggleFav(S.current); break;
-    case 'loop': {
-      S.repeat = { off: 'all', all: 'one', one: 'off' }[S.repeat] || 'off';
-      audio.loop = S.repeat === 'one';
-      store.set('repeat', S.repeat);
-      updatePlayerButtons();
-      toast({ off: 'Repeat off', all: 'Repeating the whole list', one: 'Repeating this recording' }[S.repeat]);
-      break;
-    }
+    case 'loop': openRepeatMenu(); break;
     case 'speed': {
       S.speed = SPEEDS[(SPEEDS.indexOf(S.speed) + 1) % SPEEDS.length];
       audio.defaultPlaybackRate = audio.playbackRate = S.speed;
@@ -2281,6 +2303,11 @@ document.addEventListener('click', async e => {
 });
 
 $('#lyrics-dialog').addEventListener('close', () => { $('#lyrics-body').innerHTML = ''; });
+
+$('#repeat-dialog').addEventListener('close', e => {
+  setRepeat(e.target.returnValue);
+  e.target.returnValue = '';
+});
 
 $('#sleep-dialog').addEventListener('close', e => {
   const v = e.target.returnValue;
