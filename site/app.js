@@ -162,10 +162,11 @@ function initialsFor(name) {
 }
 // A picture that can't load (e.g. offline and never stored) becomes the plain
 // initials tile instead of a broken image; see the 'error' listener below.
-function artHTML(t) {
+// Lists pass lazy, so a page of pictures loads as you scroll; the player loads at once.
+function artHTML(t, lazy = false) {
   const label = t.section === 'japa' ? 'Japa' : initialsFor(t.artist);
   const src = artFor(t);
-  return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(label)}">` : tile(label);
+  return src ? `<img src="${esc(src)}" alt=""${lazy ? ' loading="lazy" decoding="async"' : ''} data-fallback="${esc(label)}">` : tile(label);
 }
 function collectionArt(name) {
   const src = personPhoto(name);
@@ -339,11 +340,13 @@ function trackRow(t, i, listKey, opts = {}) {
   const current = S.current === t.id;
   const off = !isOnline() && !S.saved.has(t.id);
   const eq = '<span class="eq"><i></i><i></i><i></i></span>';
-  // Playlists and Favourites show each kirtan's picture, like Spotify; other lists a number.
-  const lead = opts.thumb ? `<span class="track-thumb">${artHTML(t)}${current ? eq : ''}</span>`
+  // Every kirtan shows its picture, like Spotify (owner, 24 Oct 2026: covers for all);
+  // a list can ask for numbers instead with thumb: false.
+  const thumb = opts.thumb ?? true;
+  const lead = thumb ? `<span class="track-thumb">${artHTML(t, true)}${current ? eq : ''}</span>`
     : `<span class="track-num">${current ? eq : i + 1}</span>`;
-  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${opts.thumb ? ' has-thumb' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
-    <button class="track-main" data-action="play" data-id="${t.id}" data-list="${listKey}">
+  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
+    <button class="track-main" data-action="play" data-id="${t.id}" data-list="${opts.playList || listKey}">
       ${lead}
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
@@ -378,7 +381,8 @@ function groupedList(tracks, keyPrefix, mode) {
     const list = groups.get(k).sort(mode.within);
     ordered.push(...list);
     const key = `${keyPrefix}:${slug(k)}`;
-    const body = trackList(list, key, mode.opts);
+    // A kirtan plays on into the next year's (or place's) kirtans, not just its own group.
+    const body = trackList(list, key, { ...mode.opts, playList: keyPrefix });
     return `<section class="group">
       <div class="group-head"><h3>${esc(k)}<small>${list.length}</small></h3>${saveListButton(key)}</div>
       ${body}
@@ -1027,6 +1031,9 @@ function closePlayer({ instant = false, fromHistory = false } = {}) {
 }
 
 async function sourceFor(t) {
+  if (S.saved.has(t.id) && navigator.serviceWorker?.controller && !/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    return `${t.src}?offline=1`; // served from the device by sw.js, a piece at a time
+  }
   if (S.saved.has(t.id) && 'caches' in window) {
     try {
       const res = await (await caches.open(AUDIO_CACHE)).match(t.src);
@@ -1053,6 +1060,8 @@ async function load(id, { autoplay = true, at } = {}) {
   const seq = ++loadSeq;
   // Pause before changing recordings: an iPhone keeps a web app's audio (and the lock
   // screen) through a pause, so the next one can start while the phone is locked.
+  // (S.switching keeps the play button from flicking to "play" meanwhile.)
+  S.switching = autoplay;
   if (!audio.paused) audio.pause();
   const prev = S.current;
   S.current = id;
@@ -1062,6 +1071,7 @@ async function load(id, { autoplay = true, at } = {}) {
   store.set('last', id);
   S.lastAt = Date.now();
   store.set('lastAt', S.lastAt);
+  keepListening();
   saveQueue();
   updateNowPlaying();
   if (prev && prev !== id) refreshTrack(prev);
@@ -1083,8 +1093,34 @@ async function load(id, { autoplay = true, at } = {}) {
     if (resumeAt && resumeAt > 10 && resumeAt < (t.duration || audio.duration) - 10) seekTo(resumeAt);
   }, { once: true });
 
-  if (autoplay) audio.play().catch(() => setBuffering(false));
+  if (autoplay) audio.play().catch(() => { S.switching = false; setBuffering(false); setPlayingClass(); });
   keepArt(t);
+}
+
+// Like Spotify's autoplay: when the queue runs out, the kirtans that follow this one
+// on its artist's page (same type, newest first) are added, so Next always works.
+function keepListening() {
+  const t = S.byId.get(S.current);
+  if (!t || S.repeat === 'all' || S.queue.slice(S.qi + 1).some(playable)) return;
+  const page = S.tracks.filter(x => x.section === t.section && x.artist === t.artist && x.type === t.type && !x.hidden)
+    .sort((a, b) => (b.year || 0) - (a.year || 0) || a.title.localeCompare(b.title, undefined, { numeric: true }));
+  const at = page.findIndex(x => x.id === t.id);
+  const queued = new Set(S.queue);
+  const more = [...page.slice(at + 1), ...page.slice(0, Math.max(0, at))].map(x => x.id).filter(id => !queued.has(id)).slice(0, 30);
+  S.queue.push(...more);
+}
+
+// The start of the next kirtan is fetched ahead, so Next starts at once (streamed
+// kirtans only; saved ones are on the device already).
+let prefetched = null;
+function prefetchNext() {
+  const id = S.queue[stepIndex(1)];
+  const t = S.byId.get(id);
+  if (!t || prefetched === id || S.saved.has(id) || !isOnline()) return;
+  prefetched = id;
+  fetch(t.src, { headers: { Range: 'bytes=0-393215' }, priority: 'low' }).then(r => r.arrayBuffer()).catch(() => {});
+  const art = artFor(t);
+  if (art) new Image().src = art;
 }
 
 // Offline, only recordings saved on this device can play.
@@ -1418,9 +1454,19 @@ function markPlayed(id) {
 let lastTick = null;
 let lastSave = 0;
 audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); setMediaState(); });
-audio.addEventListener('pause', () => { lastTick = null; savePosition(); setPlayingClass(); setBuffering(false); setMediaState(); if (syncDirty) syncNow(); });
+audio.addEventListener('pause', () => {
+  lastTick = null;
+  savePosition();
+  if (S.switching) return; // paused only to change recordings
+  setPlayingClass();
+  setBuffering(false);
+  setMediaState();
+  if (syncDirty) syncNow();
+});
 audio.addEventListener('waiting', () => { if (!audio.paused) setBuffering(true); });
 audio.addEventListener('playing', () => {
+  S.switching = false;
+  setPlayingClass();
   setBuffering(false);
   recovery.tries = 0;
   // iPhones only take the lock-screen buttons from a page that is already playing;
@@ -1459,6 +1505,7 @@ audio.addEventListener('timeupdate', () => {
     }
   }
   if (dur > 60 && cur / dur > 0.95) markPlayed(t.id);
+  if (cur > 15 && !audio.paused) prefetchNext();
   if (Date.now() - lastSave > 5000) savePosition();
   if (cur > 0) recovery.at = cur;
   // The sleep timer is checked here too: timers can be slowed while the phone is locked.
@@ -1521,6 +1568,8 @@ const recovery = { tries: 0, at: 0, waiting: false };
 audio.addEventListener('error', () => {
   const t = S.byId.get(S.current);
   if (!t || audio.error?.code === 1 /* aborted on purpose */) return;
+  S.switching = false;
+  setPlayingClass();
   setBuffering(false);
   if (S.saved.has(t.id) || recovery.tries >= 4) {
     toast('Couldn’t play this recording');
@@ -1905,7 +1954,7 @@ function renderQueue() {
   // Like Spotify's queue: pictures, the playing kirtan on top with a play/pause button.
   const text = (t, meta) => `<span class="q-text"><span class="q-title">${esc(t.title)}</span><span class="q-meta">${esc(meta)}</span></span>`;
   const row = ({ t, qi }) => `<li class="q-row">
-      <button class="q-main" data-action="queue-jump" data-qi="${qi}"><span class="q-art">${artHTML(t)}</span>${text(t, `${collectionName(t)} · ${fmtDur(t.duration)}`)}</button>
+      <button class="q-main" data-action="queue-jump" data-qi="${qi}"><span class="q-art">${artHTML(t, true)}</span>${text(t, `${collectionName(t)} · ${fmtDur(t.duration)}`)}</button>
       <button class="icon-btn" data-action="queue-remove" data-qi="${qi}" aria-label="Remove from the queue">${icon('x')}</button>
     </li>`;
   $('#queue-body').innerHTML = (now ? `<ul class="q-list"><li class="q-row now">

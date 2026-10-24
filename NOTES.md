@@ -61,6 +61,15 @@ Tick items off (or delete them) as they're done.
 - **Cloudflare storage is about 8.4 GB of the free 10 GB** after adding these. Before adding many more,
   remove the unused older audio copies (`media/` folder, about 3.5 GB). Ask Claude to walk you through it.
 
+- **9 more kirtans added** (24 Oct, from the "Kirtans for app" sheet, YouTube): Kirtan Rasa Dubai 2022
+  and 2025 and London Mellows 2026, for Sacinandana Swami (5) and Gour Krishna (4). In the Kirtans
+  folder and Kirtans list.xlsx (numbers 156–164).
+- **Covers:** every Sacinandana Swami kirtan now has a photo. **Gour Krishna has only 5 photos**, each
+  used on 3 kirtans (your limit), so **62 Gour Krishna kirtans still show "GK"**. Put about 20 more
+  Gour Krishna photos in Thumbnails/GK and ask Claude to publish; they're given out automatically.
+  To swap a picture you don't like, delete it in the Picture column of Kirtans list.xlsx (or type
+  another file name in its Thumbnail cell), save, close Excel and publish.
+
 ## Safe to delete on your Mac
 
 Once a kirtan is published it stays on the website. You can delete (or move to an external drive):

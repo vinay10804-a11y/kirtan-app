@@ -11,6 +11,11 @@
 //                 empty and name the picture after the kirtan's number (12.jpg)
 //   Show in app – "No" hides a kirtan without deleting it
 // The ID column links a row to its recording; sorting or reordering rows is fine.
+//
+// Kirtans with no picture (the sheet shows "SS" or "GK"), and kirtans whose picture
+// the owner deleted from the sheet, get one at random from the artist's folder in
+// Thumbnails ("SNS" or "GK"), each picture used at most MAX_USES times; the choice
+// is written into the Thumbnail column, so it can be changed there.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -30,6 +35,8 @@ const PHOTOS = path.join(ROOT, 'site/photos.json');
 const ARTISTS = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPES = ['Mahamantra', 'Bhajans'];
 const IMAGE = /\.(jpe?g|png|heic|heif|webp|tiff?)$/i;
+const FOLDERS = { 'Sacinandana Swami': 'SNS', 'Gour Krishna': 'GK' };
+const MAX_USES = 3; // owner, 24 Oct 2026: a picture on no more than three kirtans
 
 const COLUMNS = [
   { key: 'no', header: 'No.', width: 6 },
@@ -69,13 +76,15 @@ async function readSheet() {
     if (c) col[c.key] = n;
   });
   if (!col.id) throw new Error(`"${path.basename(SHEET)}" has no ID column, so its rows can't be matched to recordings.`);
+  // Rows whose picture preview is still there (the owner deletes the ones they don't like).
+  const pictured = new Set(ws.getImages().map(img => Math.round(img.range.tl.nativeRow) + 1));
   const rows = new Map();
   ws.eachRow((row, n) => {
     if (n === 1) return;
     const id = cellText(row.getCell(col.id));
     if (!id) return;
     const get = k => (col[k] ? cellText(row.getCell(col[k])) : '');
-    rows.set(id, { title: get('title'), artist: get('artist'), type: get('type'), year: get('year'), place: get('place'), thumbnail: get('thumbnail'), show: get('show') });
+    rows.set(id, { title: get('title'), artist: get('artist'), type: get('type'), year: get('year'), place: get('place'), thumbnail: get('thumbnail'), show: get('show'), pictured: pictured.has(n) });
   });
   return rows;
 }
@@ -106,9 +115,52 @@ function editsFrom(row, auto, warn) {
   return over;
 }
 
+// Pictures in the Thumbnails folder and its subfolders (SNS, GK), as relative paths.
 async function thumbnailFiles() {
   if (!existsSync(THUMBS)) return null;
-  return (await fs.readdir(THUMBS)).filter(f => IMAGE.test(f) && !f.startsWith('.'));
+  const out = [];
+  for (const e of await fs.readdir(THUMBS, { withFileTypes: true })) {
+    if (e.name.startsWith('.')) continue;
+    if (e.isDirectory()) {
+      for (const f of await fs.readdir(path.join(THUMBS, e.name))) if (IMAGE.test(f) && !f.startsWith('.')) out.push(`${e.name}/${f}`);
+    } else if (IMAGE.test(e.name)) out.push(e.name);
+  }
+  return out;
+}
+
+// Gives a picture to each kirtan that needs one (see the top of this file).
+// Pictures already chosen in the sheet count towards each one's uses.
+function allocatePictures(tracks, rows, files, notes) {
+  if (!files) return;
+  const chosen = t => (rows?.get(t.id) ? rows.get(t.id).thumbnail : t.thumbFile) || '';
+  const needs = t => {
+    if (t.section === 'japa' || !FOLDERS[t.artist] || chosen(t)) return 0;
+    const row = rows?.get(t.id);
+    if (row && t.cover && !t.custom && !row.pictured) return 1; // picture deleted from the sheet
+    if (!t.cover) return row ? 3 : 2; // no picture; new kirtans before older ones
+    return 0;
+  };
+  const uses = new Map();
+  for (const t of tracks) { const f = chosen(t); if (f) uses.set(f.toLowerCase(), (uses.get(f.toLowerCase()) || 0) + 1); }
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const left = {};
+  for (const artist of Object.keys(FOLDERS)) {
+    const pool = files.filter(f => f.startsWith(`${FOLDERS[artist]}/`));
+    const want = shuffle(tracks.filter(t => t.artist === artist && needs(t))).sort((a, b) => needs(a) - needs(b));
+    let previous = null;
+    for (const t of want) {
+      const open = pool.filter(f => (uses.get(f.toLowerCase()) || 0) < MAX_USES && f !== previous);
+      if (!open.length) { left[artist] = (left[artist] || 0) + 1; continue; }
+      const least = Math.min(...open.map(f => uses.get(f.toLowerCase()) || 0));
+      const f = shuffle(open.filter(x => (uses.get(x.toLowerCase()) || 0) === least))[0];
+      uses.set(f.toLowerCase(), least + 1);
+      previous = f;
+      if (rows?.get(t.id)) rows.get(t.id).thumbnail = f; else t.thumbFile = f;
+    }
+  }
+  for (const [artist, n] of Object.entries(left)) {
+    notes.push(`${n} ${artist} kirtans still have no picture: every picture in Thumbnails/${FOLDERS[artist]} is on ${MAX_USES} kirtans already. Add more there and publish.`);
+  }
 }
 
 // A picture from the Thumbnails folder, made square (600 px) for the app.
@@ -140,7 +192,9 @@ export async function applySheet(tracks) {
   const findFile = name => {
     if (!files || !name) return null;
     const n = name.toLowerCase();
-    return files.find(f => f.toLowerCase() === n) || files.find(f => f.toLowerCase().replace(IMAGE, '') === n.replace(IMAGE, '')) || null;
+    const base = f => f.toLowerCase().split('/').pop();
+    return files.find(f => f.toLowerCase() === n) || files.find(f => f.toLowerCase().replace(IMAGE, '') === n.replace(IMAGE, ''))
+      || files.find(f => base(f) === n) || null;
   };
 
   // Numbers stay with their kirtan; new kirtans get the next ones (the first time,
@@ -149,6 +203,7 @@ export async function applySheet(tracks) {
     || (a.year || 9999) - (b.year || 9999) || a.title.localeCompare(b.title, undefined, { numeric: true });
   let next = Math.max(0, ...tracks.map(t => t.no || 0)) + 1;
   for (const t of tracks.filter(t => !t.no).sort(order)) t.no = next++;
+  allocatePictures(tracks, rows, files, notes);
 
   let edited = 0, pictures = 0;
   for (const t of tracks) {
@@ -163,7 +218,7 @@ export async function applySheet(tracks) {
     // Thumbnail: the file named in the sheet, else one named after the number.
     if (t.ownCover === undefined) t.ownCover = t.custom ? null : (t.cover || null);
     const wanted = row ? row.thumbnail : t.thumbFile;
-    const file = findFile(wanted) || (!wanted && files ? files.find(f => f.replace(IMAGE, '') === String(t.no)) : null);
+    const file = findFile(wanted) || (!wanted && files ? files.find(f => !f.includes('/') && f.replace(IMAGE, '') === String(t.no)) : null);
     if (file) {
       t.cover = await makeCover(t, file);
       t.custom = true;
@@ -270,6 +325,7 @@ export async function writeSheet(tracks) {
     [`Put the picture in the "Thumbnails" folder next to this file (${THUMBS}).`, false],
     ['Either name the picture after the kirtan\'s number (for No. 12: 12.jpg, 12.png or 12.heic), or type the picture\'s file name in its Thumbnail cell.', false],
     ['Square pictures look best; others are trimmed to a square from the middle. To go back to the original picture, clear the Thumbnail cell (and remove a numbered file).', false],
+    ['Kirtans with no picture, and any whose picture you delete in this list, get one at random from the SNS or GK folder inside Thumbnails when you publish (each picture on at most 3 kirtans). The Thumbnail cell shows which; change it if you like.', false],
     ['', false],
     ['Add new kirtans', true],
     ['Put the recordings in the Kirtans folder and publish. They get the next numbers and appear at the bottom of this list.', false],
