@@ -51,6 +51,8 @@ const checks = [
   ['When a kirtan ends: Play next / Loop / Play once / Loop list (24 Oct)', app.includes('const REPEAT = {') && app.includes("once: { short: 'Play once'") && app.includes("S.repeat === 'once' || !next()") && html.includes('id="repeat-dialog"')],
   ['The home-screen app reloads itself when a new version is out (checkForUpdate), and a slow start still refreshes the saved page', app.includes('async function checkForUpdate') && sw.includes("url.searchParams.has('fresh')") && sw.includes('event.waitUntil(network.catch')],
   ['Lock screen shows next/previous kirtan, not 15/30-second skips (24 Oct)', app.includes('nexttrack: () => next()') && !app.includes('seekforward:') && !app.includes('seekbackward:')],
+  ['Lock-screen buttons are set again on every "playing" (iPhones ignore them set earlier)', /addEventListener\('playing'[\s\S]{0,400}setMediaHandlers\(\)/.test(app)],
+  ['Recordings loop and the jump back to the start counts as the end, so the next one starts on a locked iPhone', app.includes('audio.loop = true; // see recordingEnded') && app.includes('function recordingEnded') && app.includes("addEventListener('seeking'")],
   ['Spotify-style player: dark, blurred cover behind, shuffle/prev/play/next/repeat, queue with pictures and tiles (24 Oct)',
     html.includes('id="player-bg"') && html.includes('id="shuffle-btn"') && html.includes('class="queue-tiles"') && app.includes('function setShuffle') && css.includes('.player, #queue-dialog {')],
   ['Spotify-style playlists: rows with covers (four-picture mosaic), big cover and round play button, ⋯ menu, pictures beside kirtans (24 Oct)',

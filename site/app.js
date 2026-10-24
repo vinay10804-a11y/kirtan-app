@@ -1051,6 +1051,9 @@ async function load(id, { autoplay = true, at } = {}) {
     return;
   }
   const seq = ++loadSeq;
+  // Pause before changing recordings: an iPhone keeps a web app's audio (and the lock
+  // screen) through a pause, so the next one can start while the phone is locked.
+  if (!audio.paused) audio.pause();
   const prev = S.current;
   S.current = id;
   S.sessionListened = 0;
@@ -1063,18 +1066,21 @@ async function load(id, { autoplay = true, at } = {}) {
   updateNowPlaying();
   if (prev && prev !== id) refreshTrack(prev);
   refreshTrack(id);
-  const src = await sourceFor(t);
+  // Streamed recordings switch at once (no await), which keeps the switch inside the
+  // event that asked for it; that matters to iPhones when the screen is locked.
+  const src = S.saved.has(id) ? await sourceFor(t) : t.src;
   if (seq !== loadSeq) return; // a newer load started meanwhile
   setBuffering(autoplay);
+  lastPos = 0; // a new recording starts at 0: not a jump back from the end
   audio.src = src;
-  audio.loop = S.repeat === 'one';
+  audio.loop = true; // see recordingEnded
   audio.defaultPlaybackRate = audio.playbackRate = S.speed;
 
   const resumeAt = at ?? S.positions[id];
   audio.addEventListener('loadedmetadata', () => {
     if (seq !== loadSeq) return;
     audio.playbackRate = S.speed;
-    if (resumeAt && resumeAt > 10 && resumeAt < (t.duration || audio.duration) - 10) audio.currentTime = resumeAt;
+    if (resumeAt && resumeAt > 10 && resumeAt < (t.duration || audio.duration) - 10) seekTo(resumeAt);
   }, { once: true });
 
   if (autoplay) audio.play().catch(() => setBuffering(false));
@@ -1180,7 +1186,7 @@ function next() {
 function prev({ restart = true } = {}) {
   const i = stepIndex(-1);
   if ((restart && audio.currentTime > 5) || i < 0) {
-    audio.currentTime = 0;
+    seekTo(0);
     return;
   }
   S.qi = i;
@@ -1254,7 +1260,7 @@ swipeable($('.mini-open'));
 
 function seekBy(sec) {
   if (!S.current) return;
-  audio.currentTime = Math.max(0, Math.min((audio.duration || 0) - 1, audio.currentTime + sec));
+  seekTo(Math.max(0, Math.min((audio.duration || 0) - 1, audio.currentTime + sec)));
 }
 
 function updateNowPlaying() {
@@ -1277,14 +1283,17 @@ function updateNowPlaying() {
 
   updatePlayerButtons();
 
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: t.title,
-      artist: collectionName(t),
-      album: 'Sacinandana Swami and Gour Krishna Kirtans',
-      artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
-    });
-  }
+  setMediaMetadata(t);
+}
+
+function setMediaMetadata(t) {
+  if (!('mediaSession' in navigator) || !t) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: t.title,
+    artist: collectionName(t),
+    album: 'Sacinandana Swami and Gour Krishna Kirtans',
+    artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
+  });
 }
 
 /* ---------------- bhajan lyrics ---------------- */
@@ -1387,7 +1396,6 @@ function openRepeatMenu() {
 function setRepeat(value) {
   if (!REPEAT[value]) return;
   S.repeat = value;
-  audio.loop = value === 'one';
   store.set('repeat', value);
   updatePlayerButtons();
   toast(REPEAT[value].toast);
@@ -1412,7 +1420,14 @@ let lastSave = 0;
 audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); setMediaState(); });
 audio.addEventListener('pause', () => { lastTick = null; savePosition(); setPlayingClass(); setBuffering(false); setMediaState(); if (syncDirty) syncNow(); });
 audio.addEventListener('waiting', () => { if (!audio.paused) setBuffering(true); });
-audio.addEventListener('playing', () => { setBuffering(false); recovery.tries = 0; });
+audio.addEventListener('playing', () => {
+  setBuffering(false);
+  recovery.tries = 0;
+  // iPhones only take the lock-screen buttons from a page that is already playing;
+  // set earlier, they show 10-second skips instead of previous/next.
+  setMediaMetadata(S.byId.get(S.current));
+  setMediaHandlers();
+});
 audio.addEventListener('canplay', () => { if (audio.paused) setBuffering(false); });
 function setMediaState() {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
@@ -1422,6 +1437,10 @@ audio.addEventListener('timeupdate', () => {
   if (!t) return;
   const dur = audio.duration || t.duration || 0;
   const cur = audio.currentTime;
+  if (!audio.seeking) {
+    if (wrapped(lastPos, cur)) recordingEnded();
+    lastPos = cur;
+  }
 
   // Listening stats: count only real playback time, not seeks.
   if (lastTick !== null && !audio.paused) {
@@ -1455,7 +1474,27 @@ audio.addEventListener('timeupdate', () => {
     try { navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(cur, dur), playbackRate: audio.playbackRate }); } catch {}
   }
 });
-audio.addEventListener('ended', () => {
+// The end of a recording. An iPhone closes a web app's audio when a recording plays
+// to its natural end, and then the next one can't start while the phone is locked.
+// So recordings always loop (audio.loop) and the jump from the end back to the start
+// counts as the end; seeks we make ourselves (seekTo) are told apart from it.
+let lastPos = 0, seekedAt = 0, endedAt = 0;
+function seekTo(sec) {
+  seekedAt = Date.now();
+  lastPos = sec;
+  audio.currentTime = sec;
+}
+function wrapped(from, to) {
+  const dur = audio.duration || 0;
+  return dur > 10 && from > dur - 5 && to < 1.5 && Date.now() - seekedAt > 1500;
+}
+audio.addEventListener('seeking', () => {
+  if (wrapped(lastPos, audio.currentTime)) recordingEnded();
+  lastPos = audio.currentTime;
+});
+function recordingEnded() {
+  if (Date.now() - endedAt < 3000) return; // seen once already (seeking and timeupdate)
+  endedAt = Date.now();
   markPlayed(S.current);
   delete S.positions[S.current];
   S.posAt[S.current] = Date.now();
@@ -1465,10 +1504,16 @@ audio.addEventListener('ended', () => {
   refreshTrack(S.current);
   if (S.sleep?.end) {
     setSleep('off');
+    audio.pause();
     return;
   }
-  if (S.repeat === 'once' || !next()) setBuffering(false);
-});
+  if (S.repeat === 'one') return; // it's already playing again
+  if (S.repeat === 'once' || !next()) {
+    audio.pause();
+    setBuffering(false);
+  }
+}
+audio.addEventListener('ended', recordingEnded); // in case a browser ends anyway
 
 // When the connection drops mid-recording (a tunnel, a lift, the Underground),
 // carry on from the same moment once it's back, instead of stopping for good.
@@ -1545,7 +1590,7 @@ scrub.addEventListener('pointermove', e => { if (scrubbing) scrubAt(e); });
 scrub.addEventListener('pointerup', e => {
   if (!scrubbing) return;
   scrubAt(e);
-  audio.currentTime = scrubTo;
+  seekTo(scrubTo);
   scrubbing = false;
   scrub.classList.remove('dragging');
 });
@@ -1603,17 +1648,19 @@ scrub.addEventListener('pointercancel', () => {
   player.addEventListener('touchcancel', end);
 })();
 
-if ('mediaSession' in navigator) {
+// Lock screen and Control Centre: play/pause, previous/next kirtan and the position
+// bar. The 10-second skip actions are cleared, since iPhones show them instead of
+// previous/next. Set again on every 'playing' (iPhones ignore them set earlier).
+function setMediaHandlers() {
+  if (!('mediaSession' in navigator)) return;
   const ms = navigator.mediaSession;
   const handlers = {
     play: () => (audio.src ? audio.play() : S.current && load(S.current)),
     pause: () => audio.pause(),
     stop: () => audio.pause(),
-    // Previous/next kirtan on the lock screen and in Control Centre. No 15/30-second
-    // skip handlers: iPhones show those instead of next/previous when both are set.
     previoustrack: () => prev(),
     nexttrack: () => next(),
-    seekto: e => { audio.currentTime = e.seekTime; },
+    seekto: e => seekTo(e.seekTime),
   };
   for (const [action, fn] of Object.entries(handlers)) {
     try { ms.setActionHandler(action, fn); } catch {}
@@ -1622,6 +1669,9 @@ if ('mediaSession' in navigator) {
     try { ms.setActionHandler(action, null); } catch {}
   }
 }
+setMediaHandlers();
+// Plays like a music app: through the silent switch, and on with the screen locked.
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
 
 /* ---------------- updates ---------------- */
 

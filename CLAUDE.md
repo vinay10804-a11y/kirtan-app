@@ -68,6 +68,13 @@ R2 bucket `kirtans` at `/stream/*`.
   its name, + (add kirtans) and ⋯ (Add kirtans, Edit order, Save offline, Rename, Delete) on the left,
   shuffle and a round play button on the right; its kirtans (and Favourites) show pictures instead of
   numbers (`thumb` option of `trackRow`).
+- Lock screen on iPhone (24 Oct 2026): iPhones ignore Media Session handlers set before the page is
+  playing and then show ±10 s skips, so `setMediaHandlers()` runs again on every 'playing' (with the
+  metadata), and `seekbackward`/`seekforward` are set to null. An iPhone also closes a web app's audio
+  when a recording plays to its natural end, after which the next one can't start while the phone is
+  locked: recordings always loop (`audio.loop = true`) and the jump from the end back to the start is
+  treated as the end (`recordingEnded`); our own seeks go through `seekTo()` so they're never mistaken
+  for it. `load()` pauses before switching and sets a streamed source without awaiting.
 - Updates: iPhones keep the home-screen app in memory, so app.js checks `sw.js?fresh=` for a new
   VERSION when the app comes back to the screen (and 6 s after it opens) and reloads itself once per
   version if nothing is playing. sw.js stores the page when the network answers even after its 3-second
