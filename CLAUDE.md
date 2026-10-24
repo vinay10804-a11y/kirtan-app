@@ -45,7 +45,7 @@ R2 bucket `kirtans` at `/stream/*`.
   (owner, 24 Oct 2026). Change its file name when the icon changes, so installed apps pick it up.
 - Home section pictures (owner, 24 Oct 2026): the Kirtans and Japa cards' rows show square pictures from
   `site/art/sections/` (`SECTION_ART` in app.js): Sacinandana Swami (SNS42, face crop; the owner didn't like
-  the old photo), Gour Krishna (GK.png, the owner's pick), and the owner's Guided Japa, Japa Inspirations and Living Name
+  the old photo), Gour Krishna (the owner's pick: the cover of Radhadesh Mellows Day 1, covers/03231b3f1a82c918.jpg), and the owner's Guided Japa, Japa Inspirations and Living Name
   Meditations covers (from Thumbnails).
 - Home: the wave image (`site/art/card-1.webp`), a one-line intro, Kirtans and Japa cards with short
   explanations and links, Recently added, "How to use this site". No quote section, no photo strip.
