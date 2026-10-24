@@ -173,6 +173,15 @@ font, offline covers, fresh styling/code). `tools/check.mjs` lists each fix the 
 runs in `publish.sh` and stops a publish if one is missing. Re-read files from disk before editing,
 and add a line to `check.mjs` for every new fix.
 
+## Kept out of iCloud (22 Oct 2026)
+The Desktop syncs to iCloud ("Desktop & Documents"), which made conflict copies (`photo-01 2.jpg`,
+`.git/refs/heads/main 2`) and very likely brought back stale files that undid fixes. The project
+folder is therefore `~/Desktop/SNS Kirtan Platform/kirtan-app.nosync` (iCloud never syncs a name
+ending in `.nosync`), with a symlink `kirtan-app` → `kirtan-app.nosync` so old paths still work.
+Keep it beside `Kirtans`, `Thumbnails`, `Photos of SNS` and `Kirtans list.xlsx`: the tools find them
+at `ROOT/..`, and those stay in iCloud on purpose. Don't rename the folder back or move it elsewhere.
+If a `* 2.*` file appears in the project, it's an iCloud leftover: move it to the Trash.
+
 ## Checking changes
 Serve `site/` locally (or `npx wrangler dev --local` with a few files put via
 `wrangler r2 object put --local`) and screenshot phone (iPhone 13) and desktop widths with
