@@ -62,6 +62,16 @@ R2 bucket `kirtans` at `/stream/*`.
   the list's order); the list's Play button plays in order, its Shuffle button turns shuffle on. The
   mini player has a heart instead of back-15. Icons' solid parts carry `fill="currentColor"` on the
   symbol itself (Chrome ignores page CSS inside `<use>`).
+- Playlists (owner, 24 Oct 2026, Spotify screenshot): the Library tab lists playlists as rows with a
+  square cover (four kirtans' pictures when it has four, else one; empty → playlist icon) and
+  "Playlist · N kirtans · time", with a New playlist row first. A playlist's page has a big cover,
+  its name, + (add kirtans) and ⋯ (Add kirtans, Edit order, Save offline, Rename, Delete) on the left,
+  shuffle and a round play button on the right; its kirtans (and Favourites) show pictures instead of
+  numbers (`thumb` option of `trackRow`).
+- Updates: iPhones keep the home-screen app in memory, so app.js checks `sw.js?fresh=` for a new
+  VERSION when the app comes back to the screen (and 6 s after it opens) and reloads itself once per
+  version if nothing is playing. sw.js stores the page when the network answers even after its 3-second
+  timeout, so a slow start still gets the new version next time.
 - Feel (owner: "premium, like Spotify"): every button and row gives press feedback (shrink or dim), the
   player and phone menus slide up as bottom sheets and slide down to close, and a new page is drawn at
   once and fades up (`.page-enter`). No View Transitions API: its snapshot step delayed some page

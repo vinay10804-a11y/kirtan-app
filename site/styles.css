@@ -187,11 +187,42 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track .more svg { width: 20px; height: 20px; }
 .pl-tools { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; }
 .pl-tools .danger { color: #b0503c; }
-.pl-header { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
-.pl-header .page-title { margin: 0; }
-.pl-cover { flex: none; width: 96px; height: 96px; border-radius: 12px; overflow: hidden; background: var(--surface-2); box-shadow: 0 6px 18px rgba(20, 50, 52, .14); }
-.pl-cover img, .pl-cover .tile { width: 100%; height: 100%; object-fit: cover; display: grid; place-items: center; }
-.pl-cover .tile svg { width: 36px; height: 36px; color: var(--teal-deep); }
+/* Playlists, like Spotify's: rows with square covers in the Library; on a playlist's
+   page a big cover, the name, and a round play button. */
+.pl-rows { margin-top: 14px; }
+.pl-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 7px 0; color: inherit; text-decoration: none; text-align: left; transition: var(--press); }
+.pl-row:active { transform: scale(.985); opacity: .65; }
+.pl-thumb { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+.pl-thumb.new { color: var(--ink-2); }
+.pl-thumb.new svg { width: 26px; height: 26px; }
+.pl-thumb > img, .pl-thumb > .tile, .pl-cover > img, .pl-cover > .tile { width: 100%; height: 100%; border-radius: 0; object-fit: cover; }
+.pl-thumb > .tile { font-size: 20px; }
+.pl-mosaic { display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; }
+.pl-mosaic img, .pl-mosaic .tile { width: 100%; height: 100%; border-radius: 0; object-fit: cover; font-size: 12px; }
+.pl-text { min-width: 0; display: flex; flex-direction: column; }
+.pl-name { font: 500 19px/1.25 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-sub { margin-top: 2px; font-size: 13.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-row:hover .pl-name { color: var(--teal-deep); }
+.pl-hero { margin-top: 6px; }
+.pl-cover { display: grid; place-items: center; width: min(64vw, 240px); aspect-ratio: 1; margin: 6px auto 20px; border-radius: 6px; overflow: hidden; background: var(--surface-2); box-shadow: 0 14px 40px rgba(20, 40, 42, .28); }
+.pl-cover .tile { font-size: 64px; }
+.pl-cover .tile svg { width: 72px; height: 72px; color: var(--teal-deep); }
+.pl-thumb .tile svg { width: 26px; height: 26px; color: var(--teal-deep); }
+.pl-title { font: 600 28px/1.15 var(--serif); overflow-wrap: anywhere; }
+.pl-actions { display: flex; align-items: center; gap: 4px; margin: 10px 0 6px -10px; }
+.pl-actions .icon-btn { width: 44px; height: 44px; color: var(--ink-2); }
+.pl-actions .icon-btn svg { width: 24px; height: 24px; }
+.pl-actions .grow { flex: 1; }
+.pl-actions .mode-btn.on { color: var(--teal); }
+.pl-play { display: grid; place-items: center; width: 56px; height: 56px; margin-left: 6px; border-radius: 50%; background: var(--teal-deep); color: var(--bg); box-shadow: 0 6px 16px rgba(20, 40, 42, .2); transition: var(--press); }
+.pl-play:active { transform: scale(.9); }
+.pl-play svg { width: 24px; height: 24px; margin-left: 2px; }
+/* Pictures in place of numbers (playlists and Favourites); the playing one shows bars over it */
+.track-thumb { position: relative; flex: none; width: 48px; height: 48px; }
+.track-thumb > img, .track-thumb > .tile { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; font-size: 15px; }
+.track-thumb .eq { position: absolute; inset: 0; width: auto; height: auto; padding: 0 0 15px; justify-content: center; align-items: flex-end; border-radius: 6px; background: rgba(0, 0, 0, .45); }
+.track-thumb .eq i { background: #fff; }
+.track.has-thumb .track-main { gap: 13px; padding: 8px 0; }
 .pl-edit .track-main { cursor: default; }
 .pl-edit .icon-btn[disabled] { opacity: .25; }
 .btn.small { padding: 7px 14px; font-size: 14px; }

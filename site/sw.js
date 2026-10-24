@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = 'b6155cd583';
+const VERSION = 'b7f24ed6e8';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -45,8 +45,10 @@ self.addEventListener('fetch', event => {
   }
   // Accounts always go to the server, never to a stored copy.
   if (url.origin === location.origin && url.pathname.startsWith('/api/')) return;
+  // So does the app's check for a new version (sw.js?fresh=…).
+  if (url.origin === location.origin && url.searchParams.has('fresh')) return;
   if (req.mode === 'navigate') {
-    event.respondWith(openPage(req, url));
+    event.respondWith(openPage(event, url));
     return;
   }
   // Styling and code carry their version (?v=, stamped by the build into
@@ -79,13 +81,18 @@ async function unredirected(res) {
   return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers: res.headers });
 }
 
-// Opening the app: the network if it answers within 3 seconds (and the saved
-// page is refreshed), otherwise the saved page, so the app opens with no signal.
-async function openPage(req, url) {
-  try {
-    const res = await quickly(fetch(req), 3000);
-    if (res.ok && url.pathname === '/') (await caches.open(SHELL_CACHE)).put('./', (await unredirected(res.clone())));
+// Opening the app: the network if it answers within 3 seconds, otherwise the saved
+// page, so the app opens with no signal. Either way the saved page is refreshed
+// when the network does answer, so a slow connection still gets the new version
+// next time.
+async function openPage(event, url) {
+  const network = fetch(event.request).then(async res => {
+    if (res.ok && url.pathname === '/') (await caches.open(SHELL_CACHE)).put('./', await unredirected(res.clone()));
     return res;
+  });
+  event.waitUntil(network.catch(() => {}));
+  try {
+    return await quickly(network, 3000);
   } catch {
     const cached = await caches.match('./');
     return cached ? unredirected(cached) : Response.error();
