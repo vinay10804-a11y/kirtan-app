@@ -42,6 +42,7 @@ const PLACES = [
   ['Simhachalam', /simhachalam/i],
   ['Berlin', /\bberlin\b/i],
   ['Bahrain', /bahrain/i],
+  ['Dubai', /dubai/i],
   ['Switzerland', /switzerland/i],
   ['Goloka Dham', /goloka\s*dham/i],
   ['Gita Nagari', /gita\s*nagari/i],

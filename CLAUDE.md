@@ -75,6 +75,17 @@ R2 bucket `kirtans` at `/stream/*`.
   locked: recordings always loop (`audio.loop = true`) and the jump from the end back to the start is
   treated as the end (`recordingEnded`); our own seeks go through `seekTo()` so they're never mistaken
   for it. `load()` pauses before switching and sets a streamed source without awaiting.
+- Covers (owner, 24 Oct 2026): every kirtan should have a picture. `Thumbnails/SNS` and `Thumbnails/GK`
+  hold the owner's photos; publishing gives a random one (least used first, at most 3 kirtans each) to
+  any kirtan with no picture and any whose picture the owner deleted from the Excel list's Picture
+  column, and writes it into the Thumbnail column (`allocatePictures` in sheet.mjs). Every list shows
+  the pictures (`trackRow` thumbs by default, lazy-loaded).
+- Playback flow (audit, 24 Oct 2026): a kirtan tapped in a year/place group plays on through the whole
+  page (`playList`); when the queue runs out, `keepListening()` adds the artist's next kirtans (same
+  type, newest first), so Next always works. The next kirtan's first 384 KB is fetched ahead
+  (`prefetchNext`). Unsaved audio streams straight from the network: sw.js only serves audio asked for
+  with `?offline=1` (saved kirtans on Android/desktop; iPhones keep the blob URL). `S.switching` stops
+  the play button flicking to "play" while recordings change.
 - Updates: iPhones keep the home-screen app in memory, so app.js checks `sw.js?fresh=` for a new
   VERSION when the app comes back to the screen (and 6 s after it opens) and reloads itself once per
   version if nothing is playing. sw.js stores the page when the network answers even after its 3-second
