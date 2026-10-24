@@ -40,6 +40,13 @@ R2 bucket `kirtans` at `/stream/*`.
   SoundCloud tracks, each row with its artwork, that open SoundCloud's player under the title.
   `tools/videos.mjs` writes the list to `site/videos.json`. Guided Japa videos are listed in
   `tools/guided-japa.txt`. If audio copies are ever added (Kirtans/Japa), "Listen here" uses them instead.
+- App icon: the wave, edge to edge in every size. The maskable icon (`icons/maskable-full-512.png`) has no
+  border: Macs draw a maskable icon inside their rounded tile, and the old padded one looked small there
+  (owner, 24 Oct 2026). Change its file name when the icon changes, so installed apps pick it up.
+- Home section pictures (owner, 24 Oct 2026): the Kirtans and Japa cards' rows show square pictures from
+  `site/art/sections/` (`SECTION_ART` in app.js): Sacinandana Swami (SNS42, face crop; the owner didn't like
+  the old photo), Gour Krishna (GK.png, the owner's pick), and the owner's Guided Japa, Japa Inspirations and Living Name
+  Meditations covers (from Thumbnails).
 - Home: the wave image (`site/art/card-1.webp`), a one-line intro, Kirtans and Japa cards with short
   explanations and links, Recently added, "How to use this site". No quote section, no photo strip.
 - No watercolour images as track artwork. Tracks use embedded cover art, else a plain initials tile.
