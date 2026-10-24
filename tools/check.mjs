@@ -42,6 +42,8 @@ const checks = [
   ['Accounts: sign-in card in Library, and favourites/playlists sync', app.includes('function accountCard') && app.includes('async function syncNow')],
   ['Accounts: sync replies merge with newer local changes (no lost edits)', app.includes('applyLibrary(mergeLibrary(library, localLibrary()))')],
   ['Accounts: the service worker never caches /api/', sw.includes("url.pathname.startsWith('/api/')) return")],
+  ['Home page section pictures (Sacinandana Swami, Gour Krishna, the three Japa collections)', app.includes('const SECTION_ART = {') && sw.includes('art/sections/sacinandana-swami.jpg')],
+  ['App icon fills the Mac tile: the maskable icon is the edge-to-edge wave', read('site/manifest.webmanifest').includes('icons/maskable-full-512.png')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
   // Platform audit (22 Oct): smooth playback, as on SoundCloud and Spotify.

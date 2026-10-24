@@ -168,8 +168,16 @@ function artHTML(t, lazy = false) {
   const src = artFor(t);
   return src ? `<img src="${esc(src)}" alt=""${lazy ? ' loading="lazy" decoding="async"' : ''} data-fallback="${esc(label)}">` : tile(label);
 }
+// The Home page's section pictures (owner's choice, 24 Oct 2026; square crops in art/sections).
+const SECTION_ART = {
+  'Sacinandana Swami': 'art/sections/sacinandana-swami.jpg',
+  'Gour Krishna': 'art/sections/gour-krishna.jpg',
+  'Guided Japa': 'art/sections/guided-japa.jpg',
+  'Japa Inspirations': 'art/sections/japa-inspirations.jpg',
+  'Living Name Meditations': 'art/sections/living-name-meditations.jpg',
+};
 function collectionArt(name) {
-  const src = personPhoto(name);
+  const src = SECTION_ART[name] || personPhoto(name);
   return src ? `<img src="${esc(src)}" alt="" data-fallback="${esc(initialsFor(name))}">` : tile(initialsFor(name));
 }
 document.addEventListener('error', e => {
@@ -460,7 +468,7 @@ function homeView() {
   const japaLinks = japaCollections().map(c => {
     const vids = S.videos.filter(v => v.collection === c).length;
     const n = vids || allJapa.filter(t => t.type === c).length;
-    const art = `<span class="tile" aria-hidden="true">${icon(vids ? 'play' : 'beads')}</span>`;
+    const art = SECTION_ART[c] ? collectionArt(c) : `<span class="tile" aria-hidden="true">${icon(vids ? 'play' : 'beads')}</span>`;
     const sc = S.videos.some(v => v.collection === c && isSC(v));
     return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, sc ? JAPA_UNIT[c] || 'recording' : vids ? 'video' : 'session'));
   }).join('');

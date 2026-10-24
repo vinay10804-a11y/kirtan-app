@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = 'f6c303f48c';
+const VERSION = 'ca237beeae';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -15,6 +15,8 @@ const SHELL = [
   './', `styles.css?v=${VERSION}`, `app.js?v=${VERSION}`, 'manifest.webmanifest',
   'catalog.json', 'photos.json', 'videos.json', 'lyrics.json', 'library.js',
   'art/card-1.webp',
+  'art/sections/sacinandana-swami.jpg', 'art/sections/gour-krishna.jpg', 'art/sections/guided-japa.jpg',
+  'art/sections/japa-inspirations.jpg', 'art/sections/living-name-meditations.jpg',
   'icons/icon-192.png', 'icons/favicon.png', 'apple-touch-icon.png',
   'fonts/eb-garamond-latin.woff2', 'fonts/eb-garamond-latin-ext.woff2',
   'fonts/eb-garamond-italic-latin.woff2', 'fonts/eb-garamond-italic-latin-ext.woff2',
