@@ -338,9 +338,13 @@ function trackMeta(t, opts = {}) {
 function trackRow(t, i, listKey, opts = {}) {
   const current = S.current === t.id;
   const off = !isOnline() && !S.saved.has(t.id);
-  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
+  const eq = '<span class="eq"><i></i><i></i><i></i></span>';
+  // Playlists and Favourites show each kirtan's picture, like Spotify; other lists a number.
+  const lead = opts.thumb ? `<span class="track-thumb">${artHTML(t)}${current ? eq : ''}</span>`
+    : `<span class="track-num">${current ? eq : i + 1}</span>`;
+  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${opts.thumb ? ' has-thumb' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${listKey}">
-      <span class="track-num">${current ? '<span class="eq"><i></i><i></i><i></i></span>' : i + 1}</span>
+      ${lead}
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
     ${dlButton(t)}
@@ -735,21 +739,22 @@ function libraryView(tab = 'favourites', sub) {
   if (tab === 'favourites') {
     // Newest first, like Spotify's Liked Songs.
     const list = [...S.favs].sort((a, b) => (S.favAt[b] || 0) - (S.favAt[a] || 0)).map(id => S.byId.get(id)).filter(Boolean);
-    body = list.length ? `<div class="group">${trackList(list, 'favs', { source: true, year: true })}</div>`
+    body = list.length ? `<div class="group">${trackList(list, 'favs', { source: true, year: true, thumb: true })}</div>`
       : `<p class="empty">Tap <b>Favourite</b> in the player to keep a kirtan here.</p>`;
   }
 
   if (tab === 'playlists' && sub) return playlistView(sub);
   if (tab === 'playlists') {
+    // Like Spotify's library: a row per playlist with its cover, name and size.
     const rows = S.playlists.map(p => {
       const list = playlistTracks(p);
-      const art = list[0] ? artHTML(list[0]) : tile('');
-      return entryLink(`#/library/playlists/${p.id}`, art, p.name,
-        `${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}`);
+      return `<a class="pl-row" href="#/library/playlists/${p.id}"><span class="pl-thumb">${playlistCover(list)}</span>
+        <span class="pl-text"><span class="pl-name">${esc(p.name)}</span>
+        <span class="pl-sub">Playlist · ${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</span></span></a>`;
     }).join('');
-    body = `<div class="actions" style="margin-top:16px"><button class="btn" data-action="pl-new">${icon('plus')}New playlist</button></div>
-      ${rows ? `<div class="rows" style="margin-top:16px">${rows}</div>`
-        : `<p class="empty">Make your own playlists, for japa, for the morning, for travelling. Tap <b>New playlist</b>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
+    body = `<div class="pl-rows"><button class="pl-row" data-action="pl-new"><span class="pl-thumb new">${icon('plus')}</span>
+        <span class="pl-text"><span class="pl-name">New playlist</span></span></button>${rows}</div>
+      ${rows ? '' : `<p class="empty">Make your own playlists, for japa, for the morning, for travelling. Tap <b>New playlist</b>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
   }
 
   if (tab === 'saved') {
@@ -794,20 +799,54 @@ function playlistView(id) {
         <button class="icon-btn" data-action="pl-move" data-pl="${p.id}" data-id="${t.id}" data-dir="1" aria-label="Move down" ${i < list.length - 1 ? '' : 'disabled'}>${icon('down')}</button>
         <button class="icon-btn" data-action="pl-remove" data-pl="${p.id}" data-id="${t.id}" aria-label="Remove from playlist">${icon('x')}</button>
       </li>`).join('')}</ul>`
-    : trackList(list, key, { source: true, year: true, pl: p.id });
+    : trackList(list, key, { source: true, year: true, pl: p.id, thumb: true });
   if (editing) S.lists[key] = list.map(t => t.id);
+  // Like a Spotify playlist: a big cover, the name, then add / more on the left and
+  // shuffle / a round play button on the right. Rename, Edit order, Save offline and
+  // Delete are in the ⋯ menu.
+  const right = editing ? `<button class="btn" data-action="pl-edit" data-pl="${p.id}">Done</button>`
+    : list.length ? `<button class="icon-btn mode-btn${S.shuffle ? ' on' : ''}" data-action="shuffle" data-list="${key}" aria-label="Shuffle play">${icon('shuffle')}</button>
+      <button class="pl-play" data-action="play-list" data-list="${key}" aria-label="Play">${icon('play')}</button>` : '';
   return `<a class="back" href="#/library/playlists">${icon('left')}Playlists</a>
-    <div class="pl-header">
-      <span class="pl-cover">${list[0] ? artHTML(list[0]) : `<span class="tile" aria-hidden="true">${icon('playlist')}</span>`}</span>
-      <div><h1 class="page-title">${esc(p.name)}</h1>
-        <p class="page-sub">${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p></div>
+    <div class="pl-hero">
+      <span class="pl-cover">${playlistCover(list)}</span>
+      <h1 class="pl-title">${esc(p.name)}</h1>
+      <p class="page-sub">Playlist · ${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p>
     </div>
-    <div class="actions">${list.length ? `<button class="btn" data-action="play-list" data-list="${key}">${icon('play')}Play</button>
-      <button class="btn ghost" data-action="shuffle" data-list="${key}">${icon('shuffle')}Shuffle</button>` : ''}
-      <button class="btn ghost" data-action="pl-add" data-pl="${p.id}">${icon('plus')}Add kirtans</button></div>
-    <p class="pl-tools">${list.length ? `<button class="text-btn" data-action="pl-edit" data-pl="${p.id}">${editing ? 'Done editing' : 'Edit order'}</button>` : ''}${saveListButton(key)}<button class="text-btn" data-action="pl-rename" data-pl="${p.id}">Rename</button><button class="text-btn danger" data-action="pl-delete" data-pl="${p.id}">Delete playlist</button></p>
+    <div class="pl-actions">
+      <button class="icon-btn" data-action="pl-add" data-pl="${p.id}" aria-label="Add kirtans">${icon('plus')}</button>
+      <button class="icon-btn" data-action="pl-menu" data-pl="${p.id}" aria-label="More options for this playlist">${icon('more')}</button>
+      <span class="grow"></span>${right}
+    </div>
     ${list.length ? `<div class="group">${rows}</div>`
-      : `<p class="empty">Nothing here yet. Tap <b>Add kirtans</b> to choose some, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
+      : `<p class="empty">Nothing here yet. <button class="text-btn" data-action="pl-add" data-pl="${p.id}">Add kirtans</button>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
+}
+
+// A playlist's cover, as on Spotify: four of its kirtans' pictures in a square, or
+// one picture; an empty playlist gets the playlist icon.
+function playlistCover(list) {
+  const pics = [...new Set(list.map(artFor).filter(Boolean))];
+  if (pics.length >= 4) return `<span class="pl-mosaic">${pics.slice(0, 4).map(src => `<img src="${esc(src)}" alt="" data-fallback="">`).join('')}</span>`;
+  if (pics.length) return `<img src="${esc(pics[0])}" alt="" data-fallback="${esc(initialsFor(list[0].artist))}">`;
+  return list[0] ? artHTML(list[0]) : `<span class="tile" aria-hidden="true">${icon('playlist')}</span>`;
+}
+
+// The ⋯ menu on a playlist's page.
+function openPlaylistMenu(id) {
+  const p = playlistById(id);
+  if (!p) return;
+  const list = playlistTracks(p);
+  const key = `pl:${p.id}`;
+  const unsaved = list.filter(t => !S.saved.has(t.id)).length;
+  const item = (action, ic, label, extra = '') => `<button value="${action}" data-action="${action}" data-pl="${p.id}" ${extra}>${icon(ic)}<span>${label}</span></button>`;
+  $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(p.name)}<small>Playlist · ${plural(list.length, 'kirtan')}</small></h3>
+    ${item('pl-add', 'plus', 'Add kirtans')}
+    ${list.length > 1 ? item('pl-edit', 'queue', 'Edit order') : ''}
+    ${'caches' in window && unsaved ? item('save-list', 'download', `Save ${unsaved === list.length ? 'all' : unsaved} offline`, `data-list="${key}"`) : ''}
+    ${item('pl-rename', 'playlist', 'Rename')}
+    ${item('pl-delete', 'trash', 'Delete playlist', 'class="danger"')}
+    <button value="cancel" class="muted">Cancel</button>`;
+  $('#track-dialog').showModal();
 }
 
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -1579,7 +1618,29 @@ if ('mediaSession' in navigator) {
   for (const [action, fn] of Object.entries(handlers)) {
     try { ms.setActionHandler(action, fn); } catch {}
   }
+  for (const action of ['seekbackward', 'seekforward']) {
+    try { ms.setActionHandler(action, null); } catch {}
+  }
 }
+
+/* ---------------- updates ---------------- */
+
+// iPhones keep a home-screen app in memory for days, so it would go on running old
+// code after a new version is published. When you come back to the app with nothing
+// playing, it checks the version online and reloads itself (once per new version).
+const RUNNING = /app\.js\?v=(\w+)/.exec($('script[src*="app.js?v="]')?.src || '')?.[1];
+async function checkForUpdate() {
+  if (!RUNNING || !isOnline() || document.hidden || !audio.paused) return;
+  try {
+    const sw = await (await fetch(`sw.js?fresh=${Date.now()}`, { cache: 'no-store' })).text();
+    const latest = /const VERSION = '(\w+)'/.exec(sw)?.[1];
+    if (!latest || latest === RUNNING || sessionStorage.getItem('kk.updatedTo') === latest) return;
+    sessionStorage.setItem('kk.updatedTo', latest);
+    await navigator.serviceWorker?.getRegistration().then(r => r?.update()).catch(() => {});
+    location.reload();
+  } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
 
 async function shareTrack(id = S.current) {
   const t = S.byId.get(id);
@@ -2295,7 +2356,8 @@ document.addEventListener('click', async e => {
       if ($('#playlist-dialog').open) renderPicker(id);
       break;
     }
-    case 'pl-add': openAddKirtans(el.dataset.pl); break;
+    case 'pl-add': setTimeout(() => openAddKirtans(el.dataset.pl)); break;
+    case 'pl-menu': openPlaylistMenu(el.dataset.pl); break;
     case 'pl-add-toggle': {
       const p = playlistById(el.dataset.pl);
       if (!p) break;
@@ -2425,4 +2487,6 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
   accountStart();
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Opened from a stored copy (a slow connection)? Catch up once the network answers.
+  setTimeout(checkForUpdate, 6000);
 })();
