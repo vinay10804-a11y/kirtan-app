@@ -22,8 +22,9 @@ Tick items off (or delete them) as they're done.
   SoundCloud on 22 Oct). Downside: it stops when the
   phone screen locks or you leave the Japa page, there's no offline listening, and YouTube may show
   ads. If that gets annoying, switch to audio-only copies on Cloudflare (about 0.5 GB, free tier).
-- **Check five kirtan types.** Radhe Govinda, KKS Tune, Manu Tune, Adhivas and Meditation on
-  Krsna's Arrival are filed as Mahamantra. Move any that are bhajans.
+- **Check four kirtan types.** KKS Tune, Manu Tune, Adhivas and Meditation on Krsna's Arrival are
+  filed as Mahamantra. Move any that are bhajans (Radhe Govinda · Mantra Lounge moved to Bhajans,
+  24 Oct).
 - **Platform audit: done** (22 Oct). Compared with SoundCloud and Spotify and fixed: quick skips
   playing the wrong kirtan, playback stopping for good when the signal drops, offline next/previous
   stopping at unsaved kirtans, no loading indicator, the queue being lost on closing the app, the
