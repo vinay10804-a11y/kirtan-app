@@ -232,8 +232,35 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
   dialog.menu.name-menu::before { display: none; }
   dialog.menu.name-menu[open] { animation: menu-pop .18s var(--ease-out); }
 }
-.queue-head { margin: 18px 0 6px; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--teal); }
-.queue-row .track-main { padding: 10px 0; }
+/* The queue: a dark sheet like Spotify's, with pictures and four big tiles at the bottom */
+#queue-dialog { background: #142427; }
+#queue-dialog .sheet-head { border-bottom: 0; padding-bottom: 4px; }
+#queue-dialog .lyrics-body { padding-top: 6px; }
+.queue-head { margin: 16px 0 4px; font: 600 15px var(--sans); color: var(--ink); }
+.q-list { list-style: none; margin: 0; padding: 0; }
+.q-row { display: flex; align-items: center; gap: 6px; }
+.q-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 13px; padding: 7px 0; text-align: left; color: inherit; }
+.q-art { flex: none; width: 52px; height: 52px; }
+.q-art img, .q-art .tile { display: grid; width: 52px; height: 52px; border-radius: 6px; object-fit: cover; font-size: 17px; }
+.q-art .tile { background: linear-gradient(150deg, #2f6b6e, #173638); color: rgba(255, 255, 255, .85); }
+.q-text { min-width: 0; display: flex; flex-direction: column; }
+.q-title { display: block; font: 500 17px/1.25 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-meta { font-size: 13px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-row.now .q-title { color: var(--teal); font-weight: 600; }
+.q-row.now .eq { width: auto; height: 13px; margin-right: 7px; vertical-align: -1px; }
+.q-row.now .eq i { background: var(--teal); }
+@keyframes eq-q { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+.q-row.now .eq i { animation-name: eq-q; }
+.q-row .icon-btn { color: var(--ink-3); }
+.q-play { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #fff; color: #10191a; transition: var(--press); }
+.q-play:active { transform: scale(.9); }
+.q-play svg { width: 20px; height: 20px; }
+.q-main:active { opacity: .65; }
+.queue-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px 14px calc(var(--safe-b) + 14px); border-top: 1px solid var(--line); }
+.queue-tiles button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px 10px; border-radius: 12px; background: rgba(255, 255, 255, .08); color: var(--ink); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+.queue-tiles button svg { width: 24px; height: 24px; }
+.queue-tiles button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.queue-tiles button.on { color: var(--teal); }
 .dl svg { width: 19px; height: 19px; }
 .dl.saved { color: var(--teal); }
 .ring { width: 20px; height: 20px; transform: rotate(-90deg); }
@@ -264,6 +291,8 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .mini-text { min-width: 0; display: flex; flex-direction: column; }
 .mini-title { font: 500 16px/1.2 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mini-sub { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-fav { color: var(--ink-3); }
+.mini-fav svg { width: 22px; height: 22px; }
 .play-btn { color: var(--teal-deep); }
 .play-btn svg { width: 24px; height: 24px; }
 .i-pause { display: none; }
@@ -273,39 +302,75 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
   .mini { left: calc(248px + 48px); right: 48px; bottom: 18px; max-width: 760px; margin: 0 auto; }
 }
 
-/* ---------- Full player ---------- */
-.player { position: fixed; inset: 0; z-index: 50; overflow-y: auto; background: var(--bg); animation: sheet-up .38s var(--ease-out); }
+/* ---------- Full player ----------
+   Like Spotify's: dark in either theme, the cover blurred behind everything, one
+   row of controls (shuffle, previous, play, next, repeat) and a quiet row of extras.
+   The player redefines the colour variables, so everything inside it (and the queue
+   sheet) uses the dark palette. */
+.player, #queue-dialog {
+  --bg: #0f1d1f; --surface: #182a2d; --surface-2: rgba(255, 255, 255, .1);
+  --ink: #fff; --ink-2: rgba(255, 255, 255, .78); --ink-3: rgba(255, 255, 255, .58);
+  --teal: #7cc3bb; --teal-deep: #a9ddd5; --teal-soft: rgba(124, 195, 187, .2);
+  --line: rgba(255, 255, 255, .16);
+  color-scheme: dark;
+}
+.player { position: fixed; inset: 0; z-index: 50; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); color: var(--ink); animation: sheet-up .38s var(--ease-out); }
 .player.closing { animation: sheet-down .26s var(--ease-in) forwards; pointer-events: none; }
 .player[hidden] { display: none; }
 @keyframes rise { from { transform: translateY(16px); opacity: 0; } }
-.player-inner { max-width: 440px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 8px) 24px calc(var(--safe-b) + 24px); }
+.player-bg { position: fixed; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(120% 80% at 50% 0%, #2a5a5d 0%, #12282b 55%, #0b1517 100%); }
+.player-bg img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.35); filter: blur(42px) saturate(1.25) brightness(.62); }
+.player-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .12) 0%, rgba(0, 0, 0, .38) 45%, rgba(0, 0, 0, .78) 100%); }
+.player-inner { position: relative; max-width: 460px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 8px) 22px calc(var(--safe-b) + 22px); }
 .player-head { position: relative; display: flex; align-items: center; touch-action: none; }
-.grabber { position: absolute; top: 2px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line); }
+.player-head .icon-btn { color: var(--ink); }
+.grabber { position: absolute; top: 2px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: rgba(255, 255, 255, .3); }
 @media (min-width: 960px) { .grabber { display: none; } }
-.player-context { flex: 1; text-align: center; font-size: 13px; color: var(--ink-3); }
-.player-title { font-size: 26px; line-height: 1.2; }
-.player-sub { margin: 4px 0 0; color: var(--ink-3); font-size: 14px; }
-.scrub { margin-top: 18px; }
+.player-context { flex: 1; text-align: center; font: 600 14px var(--sans); color: var(--ink); letter-spacing: .01em; }
+.player-art { width: min(100%, max(220px, calc(100dvh - 430px))); aspect-ratio: 1; margin: 18px auto 26px; }
+.player-art img, .player-art .tile { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); }
+.player-art .tile { font-size: 72px; background: linear-gradient(150deg, #2f6b6e, #173638); color: rgba(255, 255, 255, .85); }
+.player-meta { display: flex; align-items: center; gap: 12px; }
+.player-text { flex: 1; min-width: 0; }
+.player-title { margin: 0; font: 600 26px/1.18 var(--serif); color: var(--ink); overflow-wrap: anywhere; }
+.player-sub { margin: 4px 0 0; color: var(--ink-3); font-size: 14.5px; }
+.fav-btn { flex: none; width: 44px; height: 44px; color: var(--ink); }
+.fav-btn svg { width: 27px; height: 27px; }
+.fav-btn.on, .mini-fav.on { color: var(--teal); }
+.fav-btn.on svg, .mini-fav.on svg { fill: currentColor; }
+.scrub { margin-top: 14px; }
 /* Progress bar: a 4px line in a 36px-tall touch area; thicker while dragging */
 .scrub-bar { position: relative; height: 36px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; --pct: 0%; outline-offset: 2px; }
-.scrub-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 3px; background: var(--line); overflow: hidden; transition: height .15s; }
-.scrub-fill { width: var(--pct); height: 100%; background: var(--teal); }
-.scrub-knob { position: absolute; top: 50%; left: var(--pct); width: 13px; height: 13px; border-radius: 50%; background: var(--teal-deep); transform: translate(-50%, -50%); transition: width .15s, height .15s; box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+.scrub-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 3px; background: rgba(255, 255, 255, .24); overflow: hidden; transition: height .15s; }
+.scrub-fill { width: var(--pct); height: 100%; background: #fff; }
+.scrub-knob { position: absolute; top: 50%; left: var(--pct); width: 13px; height: 13px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); transition: width .15s, height .15s; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
 .scrub-bar.dragging .scrub-track, .scrub-bar:hover .scrub-track { height: 6px; }
 .scrub-bar.dragging .scrub-knob { width: 18px; height: 18px; }
-.scrub-bar.dragging + .scrub-times { color: var(--teal-deep); }
-.scrub-times { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-.controls { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 4px; }
-.controls .icon-btn { width: 48px; height: 48px; color: var(--ink); }
-.controls .icon-btn svg { width: 26px; height: 26px; }
-.play-big { width: 68px; height: 68px; border-radius: 50%; background: var(--teal-deep); color: var(--bg); display: grid; place-items: center; }
-.play-big svg { width: 28px; height: 28px; }
-.extras { display: flex; justify-content: space-between; margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); }
-.extras button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-3); padding: 6px 0; white-space: nowrap; }
-.extras button svg { width: 21px; height: 21px; }
-.extras button.on { color: var(--teal-deep); }
-#player-fav.on svg { fill: currentColor; }
-.extras { gap: 2px; }
+.scrub-bar.dragging + .scrub-times { color: var(--ink); }
+.scrub-times { display: flex; justify-content: space-between; margin-top: -4px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.controls { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.controls .icon-btn { width: 52px; height: 52px; color: var(--ink); }
+.controls .icon-btn svg { width: 30px; height: 30px; }
+.controls .mode-btn { color: var(--ink-2); }
+.controls .mode-btn svg { width: 24px; height: 24px; }
+.mode-btn { position: relative; }
+.mode-btn.on { color: var(--teal); }
+.mode-btn.on::before { content: ""; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
+.play-big { width: 72px; height: 72px; border-radius: 50%; background: #fff; color: #10191a; display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); }
+.play-big svg { width: 30px; height: 30px; }
+.player-bar { display: flex; align-items: center; gap: 4px; margin-top: 18px; }
+.player-bar .icon-btn { width: 44px; height: 44px; color: var(--ink-2); }
+.player-bar .icon-btn svg { width: 22px; height: 22px; }
+.bar-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 10px 0; font-size: 13.5px; color: var(--ink-2); text-align: left; white-space: nowrap; }
+.bar-btn svg { width: 21px; height: 21px; flex: none; }
+.bar-btn span { overflow: hidden; text-overflow: ellipsis; }
+.bar-btn.on { color: var(--teal); }
+.bar-timer { position: relative; width: auto !important; min-width: 44px; padding: 0 6px; gap: 5px; display: inline-flex; align-items: center; justify-content: center; }
+.bar-timer.on { color: var(--teal) !important; }
+.bar-timer span { font-size: 12px; font-variant-numeric: tabular-nums; }
+.bar-timer span:empty { display: none; }
+.player .lyrics-card { margin-top: 22px; background: rgba(255, 255, 255, .1); }
+.player .lyrics-link { margin-top: 20px; }
 
 /* ---------- Dialogs & toast ---------- */
 dialog.menu { border: 0; padding: 8px; border-radius: 16px; background: var(--surface); color: var(--ink); width: min(320px, calc(100% - 32px)); }
@@ -346,10 +411,10 @@ dialog.menu h3#confirm-text { font-size: 19px; line-height: 1.3; padding-bottom:
 button, a, summary, [role="slider"] { touch-action: manipulation; }
 
 /* Everything you can tap answers your finger: buttons shrink a little, rows dim. */
-.btn, .icon-btn, .chip, .play-big, .extras button, .text-btn, .nav a, .tabs a, .lyrics-card, .up-next,
+.btn, .icon-btn, .chip, .play-big, .bar-btn, .queue-tiles button, .text-btn, .nav a, .tabs a, .lyrics-card,
 .entry-head, .back, .switch a, .theme-toggle, dialog.menu button, .video-actions .text-btn { transition: var(--press); }
-.btn:active, .chip:active, .extras button:active, .text-btn:active, .tabs a:active, .lyrics-card:active,
-.up-next:active, .entry-head:active, .back:active, .switch a:active, .theme-toggle.side:active { transform: scale(.95); }
+.btn:active, .chip:active, .bar-btn:active, .queue-tiles button:active, .text-btn:active, .tabs a:active, .lyrics-card:active,
+.entry-head:active, .back:active, .switch a:active, .theme-toggle.side:active { transform: scale(.95); }
 .icon-btn:active { transform: scale(.86); background-color: var(--surface-2); }
 .play-big:active { transform: scale(.9); }
 .nav a:active svg { transform: scale(.85); }
@@ -359,7 +424,7 @@ button, a, summary, [role="slider"] { touch-action: manipulation; }
 .track-main:active, .row:active, .vrow:active, .sc-track:active, .video .thumb:active { transform: scale(.985); opacity: .65; }
 .mini-open:active { opacity: .7; }
 dialog.menu button:active { background-color: var(--surface-2); transform: scale(.98); }
-.extras button.on svg, #player-fav.on svg { animation: icon-pop .32s var(--ease-out); }
+.mode-btn.on svg, .fav-btn.on svg, .mini-fav.on svg { animation: icon-pop .32s var(--ease-out); }
 
 /* Pages: drawn at once, then a quick fade-and-rise when you go somewhere new. */
 .page-enter { animation: page-in .24s var(--ease-out) both; }
@@ -383,8 +448,6 @@ dialog.menu[open] { animation: menu-pop .18s var(--ease-out); }
 .row img, .row .tile { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; flex: none; }
 .mini-art { display: block; width: 42px; height: 42px; flex: none; }
 .mini-art img, .mini-art .tile { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; font-size: 15px; }
-.player-art { width: 100%; aspect-ratio: 1; margin: 14px 0 22px; }
-.player-art img, .player-art .tile { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; font-size: 64px; }
 
 /* ---------- Japa videos ---------- */
 .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 22px 16px; margin-top: 18px; }
@@ -563,14 +626,6 @@ dialog.sheet.web iframe { flex: 1; width: 100%; border: 0; background: #fff; }
 /* Swipe areas: let the page scroll vertically while we handle sideways drags */
 .swipe, .mini-open { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .swipe { will-change: transform; }
-.up-next { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 18px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); text-align: left; font-size: 13px; color: var(--ink-3); }
-.up-next[hidden] { display: none; }
-.up-next b { flex: 1; min-width: 0; font: 500 15px var(--serif); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.up-next svg { width: 16px; height: 16px; }
-
-/* Placeholder tiles stay modest in the player; real cover art gets the full square. */
-.player-art:has(.tile) { aspect-ratio: auto; height: 132px; }
-.player-art .tile { font-size: 52px; }
 .tile svg { width: 45%; height: 45%; }
 .tile svg .fill, .tile svg.fill { fill: currentColor; }
 /* While the full player is open, notices appear at the top instead of over the controls. */
@@ -593,5 +648,7 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 #repeat-menu button.one::after { content: "1"; position: absolute; top: 10px; left: 29px; font: 700 8px/1 var(--sans); color: var(--ink-3); }
 #repeat-menu button.in svg { color: var(--teal-deep); }
 #repeat-menu button.in span { color: var(--teal-deep); font-weight: 600; }
-#loop-btn.one::after { content: "1"; position: absolute; top: 3px; left: calc(50% + 7px); font: 700 9px/1 var(--sans); color: var(--teal-deep); }
+.mode-btn.one::after, #q-repeat.one::after { content: "1"; position: absolute; top: 12px; left: calc(50% + 5px); font: 700 9px/1 var(--sans); color: currentColor; }
+#q-repeat { position: relative; }
+#q-repeat.one::after { top: 14px; left: calc(50% + 6px); }
 .suggest h2 .text-btn { margin-left: 8px; font: 500 13px var(--sans); }

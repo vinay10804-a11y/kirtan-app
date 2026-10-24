@@ -53,6 +53,15 @@ R2 bucket `kirtans` at `/stream/*`.
   Favourite, Save offline, Share; inside a playlist also Move up/down and Remove). "Up next" in the
   player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists and
   favourites live on the device, and in the person's account when they sign in (see Accounts).
+- Player (owner, 24 Oct 2026, from Spotify screenshots: "too clunky"): dark in either theme with the cover
+  blurred behind it (`#player-bg`; no cover → teal gradient and a teal initials tile), big cover, title
+  and heart, progress bar, one row of shuffle · previous · play (white circle) · next · repeat (opens
+  "When this kirtan ends"), then Save offline · share · sleep timer · queue. Speed is in the ⋯ menu.
+  The queue is a dark sheet with pictures, the playing kirtan on top with play/pause, and four tiles:
+  Shuffle, repeat choice, Timer, Speed. Shuffle is a mode like Spotify's (`S.shuffle`, `S.order` keeps
+  the list's order); the list's Play button plays in order, its Shuffle button turns shuffle on. The
+  mini player has a heart instead of back-15. Icons' solid parts carry `fill="currentColor"` on the
+  symbol itself (Chrome ignores page CSS inside `<use>`).
 - Feel (owner: "premium, like Spotify"): every button and row gives press feedback (shrink or dim), the
   player and phone menus slide up as bottom sheets and slide down to close, and a new page is drawn at
   once and fades up (`.page-enter`). No View Transitions API: its snapshot step delayed some page

@@ -71,6 +71,10 @@ const S = {
   // What happens when a kirtan ends: 'off' (play the next one), 'one' (loop it),
   // 'once' (stop) or 'all' (play on, and start the list again at the end).
   repeat: store.get('repeat', store.get('loop', false) ? 'one' : 'off'),
+  // Shuffle: the rest of the queue plays in a random order; `order` is the list's own
+  // order, to go back to when shuffle is turned off.
+  shuffle: store.get('shuffle', false),
+  order: null,
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
   dlQueue: [],
@@ -169,6 +173,7 @@ function collectionArt(name) {
 }
 document.addEventListener('error', e => {
   if (e.target.matches?.('img[data-fallback]')) e.target.outerHTML = tile(e.target.dataset.fallback);
+  else if (e.target.matches?.('img[data-bg]')) e.target.remove();
 }, true);
 
 // Keeps a kirtan's cover picture on the device (no-op offline or if already kept).
@@ -1042,7 +1047,51 @@ const playable = id => S.saved.has(id) || isOnline();
 
 // The queue and where you are in it survive closing the app, like Spotify.
 function saveQueue() {
-  store.set('queue', { ids: S.queue.slice(0, 500), qi: S.qi });
+  store.set('queue', { ids: S.queue.slice(0, 500), qi: S.qi, order: S.order?.slice(0, 500) || null });
+}
+
+function shuffled(ids) {
+  const a = ids.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Plays a list from one of its kirtans (or from the start), shuffled if Shuffle is on.
+function startList(ids, id = ids[0]) {
+  if (S.shuffle) {
+    S.order = ids.slice();
+    S.queue = [id, ...shuffled(ids.filter(x => x !== id))];
+    S.qi = 0;
+  } else {
+    S.order = null;
+    S.queue = ids.slice();
+    S.qi = Math.max(0, S.queue.indexOf(id));
+  }
+  saveQueue();
+}
+
+function setShuffle(on) {
+  S.shuffle = on;
+  store.set('shuffle', on);
+  if (on) {
+    S.order = S.queue.slice();
+    S.queue = [S.queue[S.qi], ...shuffled(S.queue.filter((_, i) => i !== S.qi))].filter(Boolean);
+    S.qi = 0;
+  } else if (S.order?.includes(S.current)) {
+    // Back to the list's order; kirtans added to the queue meanwhile stay up next.
+    const added = S.queue.filter(id => !S.order.includes(id));
+    S.queue = S.order;
+    S.qi = S.queue.indexOf(S.current);
+    S.queue.splice(S.qi + 1, 0, ...added);
+  }
+  if (!on) S.order = null;
+  saveQueue();
+  updatePlayerButtons();
+  if ($('#queue-dialog').open) renderQueue();
+  toast(on ? 'Shuffle on' : 'Shuffle off');
 }
 
 // A spinner on the play buttons while a recording is loading or buffering.
@@ -1051,11 +1100,8 @@ function setBuffering(on) {
 }
 
 function playFrom(listKey, id) {
-  const list = S.lists[listKey] || [id];
-  S.queue = list.slice();
-  S.qi = Math.max(0, S.queue.indexOf(id));
-  saveQueue();
   if (S.current === id && audio.src) return togglePlay();
+  startList(S.lists[listKey] || [id], id);
   load(id);
 }
 
@@ -1180,6 +1226,9 @@ function updateNowPlaying() {
   $('#mini-title').textContent = t.title;
   $('#mini-sub').textContent = collectionName(t);
   $('#player-art').innerHTML = artHTML(t);
+  const art = artFor(t);
+  $('#player-bg').innerHTML = art ? `<img src="${esc(art)}" alt="" data-bg>` : '';
+  $('#player').classList.toggle('no-art', !art);
   $('#player-swipe').style.transform = '';
   $('#player-title').textContent = t.title;
   $('#player-sub').textContent = [collectionName(t), t.year, t.section !== 'japa' && t.place].filter(Boolean).join(' · ');
@@ -1249,10 +1298,12 @@ function openLyrics() {
 function updatePlayerButtons() {
   const t = S.byId.get(S.current);
   if (!t) return;
-  const fav = $('#player-fav');
-  fav.classList.toggle('on', S.favs.has(t.id));
-  fav.setAttribute('aria-pressed', S.favs.has(t.id));
-  fav.querySelector('span').textContent = S.favs.has(t.id) ? 'Favourited' : 'Favourite';
+  const isFav = S.favs.has(t.id);
+  for (const fav of $$('#player-fav, #mini-fav')) {
+    fav.classList.toggle('on', isFav);
+    fav.setAttribute('aria-pressed', isFav);
+    fav.setAttribute('aria-label', isFav ? 'Remove from Favourites' : 'Add to Favourites');
+  }
 
   const dl = $('#player-dl');
   const d = S.downloads.get(t.id);
@@ -1260,25 +1311,27 @@ function updatePlayerButtons() {
   dl.querySelector('use').setAttribute('href', S.saved.has(t.id) ? '#i-check' : '#i-download');
   dl.querySelector('span').textContent = S.saved.has(t.id) ? 'Saved' : d ? `Saving ${Math.round(d.progress * 100)}%` : 'Save offline';
 
-  const rep = $('#loop-btn');
+  // The repeat button in the player and the queue's tile show what happens when this ends.
   const mode = REPEAT[S.repeat] || REPEAT.off;
-  rep.classList.toggle('on', S.repeat !== 'off');
-  rep.classList.toggle('one', S.repeat === 'one');
-  rep.setAttribute('aria-label', `When this kirtan ends: ${mode.label}`);
-  rep.querySelector('use').setAttribute('href', `#i-${mode.icon}`);
-  rep.querySelector('span').textContent = mode.short;
+  for (const rep of $$('#loop-btn, #q-repeat')) {
+    rep.classList.toggle('on', S.repeat !== 'off');
+    rep.classList.toggle('one', S.repeat === 'one');
+    rep.setAttribute('aria-label', `When this kirtan ends: ${mode.label}`);
+    rep.querySelector('use').setAttribute('href', `#i-${mode.btn || mode.icon}`);
+  }
+  $('#q-repeat span').textContent = mode.short;
 
-  $('#speed-label').textContent = `${S.speed}× speed`;
-
-  const upNext = $('#up-next');
-  const nextTrack = S.byId.get(S.queue[stepIndex(1)]);
-  upNext.hidden = !nextTrack || S.repeat === 'one';
-  if (nextTrack) $('#up-next-title').textContent = nextTrack.title;
+  for (const b of $$('#shuffle-btn, #q-shuffle')) {
+    b.classList.toggle('on', S.shuffle);
+    b.setAttribute('aria-pressed', S.shuffle);
+  }
+  $('#q-speed').classList.toggle('on', S.speed !== 1);
+  $('#q-speed span').textContent = `${S.speed}× speed`;
 }
 
 // The choices for when a kirtan ends, in the order the menu lists them.
 const REPEAT = {
-  off: { short: 'Play next', label: 'Play the next kirtan', icon: 'next', toast: 'The next kirtan plays when this one ends' },
+  off: { short: 'Play next', label: 'Play the next kirtan', icon: 'next', btn: 'repeat', toast: 'The next kirtan plays when this one ends' },
   one: { short: 'Loop', label: 'Loop this kirtan', icon: 'repeat', toast: 'This kirtan will play again and again' },
   once: { short: 'Play once', label: 'Play once, then stop', icon: 'once', toast: 'Playback stops when this kirtan ends' },
   all: { short: 'Loop list', label: 'Loop the whole list', icon: 'repeat', toast: 'The list starts again at the end' },
@@ -1640,7 +1693,7 @@ function openTrackMenu(id, row) {
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
-    ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) : ''}
+    ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${S.speed}×`) : ''}
     ${item('share-track', 'share', 'Share')}
     <button value="cancel" class="muted">Cancel</button>`;
   $('#track-dialog').showModal();
@@ -1738,16 +1791,18 @@ function renderQueue() {
   const now = S.byId.get(S.current);
   const upcoming = S.queue.map((id, qi) => ({ t: S.byId.get(id), qi })).filter(x => x.t && x.qi > S.qi);
   $('#queue-sub').textContent = upcoming.length ? `${plural(upcoming.length, 'kirtan')} up next · ${fmtHours(sum(upcoming, x => x.t.duration))}` : 'Nothing else queued';
-  const row = ({ t, qi }) => `<li class="track queue-row">
-      <button class="track-main" data-action="queue-jump" data-qi="${qi}">
-        <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${esc(collectionName(t))} · ${fmtDur(t.duration)}</span></span>
-      </button>
+  // Like Spotify's queue: pictures, the playing kirtan on top with a play/pause button.
+  const text = (t, meta) => `<span class="q-text"><span class="q-title">${esc(t.title)}</span><span class="q-meta">${esc(meta)}</span></span>`;
+  const row = ({ t, qi }) => `<li class="q-row">
+      <button class="q-main" data-action="queue-jump" data-qi="${qi}"><span class="q-art">${artHTML(t)}</span>${text(t, `${collectionName(t)} · ${fmtDur(t.duration)}`)}</button>
       <button class="icon-btn" data-action="queue-remove" data-qi="${qi}" aria-label="Remove from the queue">${icon('x')}</button>
     </li>`;
-  $('#queue-body').innerHTML = (now ? `<h4 class="queue-head">Now playing</h4><ul class="tracks"><li class="track playing"><span class="track-main"><span class="track-text">
-      <span class="track-title">${esc(now.title)}</span><span class="track-meta">${esc(collectionName(now))}</span></span></span></li></ul>` : '')
-    + (upcoming.length ? `<h4 class="queue-head">Next</h4><ul class="tracks">${upcoming.map(row).join('')}</ul>`
-      : `<p class="empty">When this one ends, playback stops. Tap ${icon('more')} next to any kirtan and choose <b>Play next</b> or <b>Add to queue</b>.</p>`);
+  $('#queue-body').innerHTML = (now ? `<ul class="q-list"><li class="q-row now">
+      <span class="q-main"><span class="q-art">${artHTML(now)}</span><span class="q-text"><span class="q-title"><span class="eq"><i></i><i></i><i></i></span>${esc(now.title)}</span>
+      <span class="q-meta">${esc(collectionName(now))}</span></span></span>
+      <button class="q-play" data-action="toggle" aria-label="Play or pause">${icon('play', 'i-play')}${icon('pause', 'i-pause')}</button></li></ul>` : '')
+    + (upcoming.length ? `<h4 class="queue-head">Next up</h4><ul class="q-list">${upcoming.map(row).join('')}</ul>`
+      : `<p class="empty">${S.repeat === 'once' ? 'Playback stops when this kirtan ends.' : 'Nothing else is queued.'} Tap ${icon('more')} next to any kirtan and choose <b>Play next</b> or <b>Add to queue</b>.</p>`);
 }
 
 /* ---------------- accounts: favourites and playlists on every device ---------------- */
@@ -2016,12 +2071,13 @@ function setSleep(value) {
 }
 
 function updateSleepLabel() {
-  const btn = $('#sleep-btn');
-  const label = $('#sleep-label');
-  btn.classList.toggle('on', !!S.sleep);
-  if (!S.sleep) label.textContent = 'Sleep timer';
-  else if (S.sleep.end) label.textContent = 'End of track';
-  else label.textContent = `${fmtClock((S.sleep.until - Date.now()) / 1000)} left`;
+  const left = !S.sleep ? '' : S.sleep.end ? 'End of kirtan' : `${fmtClock((S.sleep.until - Date.now()) / 1000)} left`;
+  for (const btn of $$('#sleep-btn, #q-sleep')) {
+    btn.classList.toggle('on', !!S.sleep);
+    btn.setAttribute('aria-label', S.sleep ? `Sleep timer: ${left}` : 'Sleep timer');
+  }
+  $('#sleep-label').textContent = S.sleep?.end ? 'End' : left.replace(' left', '');
+  $('#q-sleep span').textContent = left || 'Timer';
 }
 
 setInterval(() => {
@@ -2159,19 +2215,25 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'play-list': {
+      // Play is in order (Shuffle next to it is the other way to start a list).
       const ids = S.lists[list] || [];
-      if (ids.length) { S.queue = ids.slice(); S.qi = 0; load(ids[0]); }
+      if (!ids.length) break;
+      S.shuffle = false;
+      store.set('shuffle', false);
+      startList(ids);
+      load(S.queue[0]);
       break;
     }
     case 'shuffle': {
-      const ids = (S.lists[list] || []).slice();
-      for (let i = ids.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [ids[i], ids[j]] = [ids[j], ids[i]];
-      }
-      if (ids.length) { S.queue = ids; S.qi = 0; load(ids[0]); }
+      const ids = S.lists[list] || [];
+      if (!ids.length) break;
+      S.shuffle = true;
+      store.set('shuffle', true);
+      startList(ids, ids[Math.floor(Math.random() * ids.length)]);
+      load(S.queue[0]);
       break;
     }
+    case 'shuffle-toggle': setShuffle(!S.shuffle); break;
     case 'embed': playEmbed(el.dataset.vid); break;
     case 'video': openVideo(el.dataset.vid); break;
     case 'toggle': togglePlay(); break;
@@ -2198,6 +2260,7 @@ document.addEventListener('click', async e => {
       audio.defaultPlaybackRate = audio.playbackRate = S.speed;
       store.set('speed', S.speed);
       updatePlayerButtons();
+      toast(`Playback speed ${S.speed}×`);
       break;
     }
     case 'share': shareTrack(); break;
@@ -2354,6 +2417,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
     S.current = last;
     S.queue = ids.includes(last) ? ids : [last];
     S.qi = S.queue.indexOf(last);
+    S.order = S.shuffle && saved?.order ? saved.order.filter(id => S.byId.has(id)) : null;
     updateNowPlaying();
   }
   route();
