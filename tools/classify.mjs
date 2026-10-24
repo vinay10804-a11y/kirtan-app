@@ -36,6 +36,8 @@ const PLACES = [
   ['Pune', /\bpune\b/i],
   ['Delhi', /\bdelhi\b/i],
   ['London', /london|bhaktivedanta\s*manor/i],
+  ['Birmingham', /birmingham/i],
+  ['Leicester', /leicester/i],
   ['Radhadesh', /radhadesh/i],
   ['Simhachalam', /simhachalam/i],
   ['Berlin', /\bberlin\b/i],
