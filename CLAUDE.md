@@ -166,6 +166,12 @@ with `wrangler dev --local` (localhost and 127.0.0.1 act as two devices).
 - Signed-in people continue listening on any device: positions and the last kirtan sync with the
   account (`positions`, `last` in library.js; later change wins).
 - Library shows recent searches and how much space saved kirtans use.
+- Owner's requests, 24 Oct 2026: the kirtan that's playing (or paused) stands out in every list (tinted
+  band, teal title, moving bars in place of its number); the lock screen and Control Centre show
+  previous/next kirtan buttons (no 15/30-second skip handlers in mediaSession: iPhones show those
+  instead of next/previous); the player's "Play next" button opens "When this kirtan ends": Play the
+  next kirtan, Loop this kirtan, Play once then stop, Loop the whole list (`REPEAT` in app.js; also in
+  the ⋯ menu of the kirtan that's playing).
 
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
