@@ -81,8 +81,10 @@ R2 bucket `kirtans` at `/stream/*`.
   column, and writes it into the Thumbnail column (`allocatePictures` in sheet.mjs). Every list shows
   the pictures (`trackRow` thumbs by default, lazy-loaded).
 - Covers the owner chose for particular kirtans (24 Oct 2026): pictures named after the song in
-  `Thumbnails/Needs adjusting` (originals, untouched) were cropped by hand to a square around the main
-  figure into `Thumbnails/Adjusted`, and set in the Thumbnail column. Both Damodarastakams share one.
+  `Thumbnails/Bhajans` (first called "Needs adjusting"; originals, untouched) are cropped by hand to a
+  square around the main figure into `Thumbnails/Adjusted` (same name, .jpg) and set in the Thumbnail
+  column. A picture there with no matching file in Adjusted is a new one to do. Both Damodarastakams
+  share one picture; Siksastakam parts 1 and 2 share one.
 - Playback flow (audit, 24 Oct 2026): a kirtan tapped in a year/place group plays on through the whole
   page (`playList`); when the queue runs out, `keepListening()` adds the artist's next kirtans (same
   type, newest first), so Next always works. The next kirtan's first 384 KB is fetched ahead
