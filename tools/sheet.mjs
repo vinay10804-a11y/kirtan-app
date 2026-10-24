@@ -37,6 +37,7 @@ const TYPES = ['Mahamantra', 'Bhajans'];
 const IMAGE = /\.(jpe?g|png|heic|heif|webp|tiff?)$/i;
 const FOLDERS = { 'Sacinandana Swami': 'SNS', 'Gour Krishna': 'GK' };
 const MAX_USES = 3; // owner, 24 Oct 2026: a picture on no more than three kirtans
+const GENERAL = /^(gk|sns)\s*\d*\.|^untitled design/i;
 
 const COLUMNS = [
   { key: 'no', header: 'No.', width: 6 },
@@ -145,7 +146,9 @@ function allocatePictures(tracks, rows, files, notes) {
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const left = {};
   for (const artist of Object.keys(FOLDERS)) {
-    const pool = files.filter(f => f.startsWith(`${FOLDERS[artist]}/`));
+    // Only general photos go out at random (GK2.png, SNS14.png, "Untitled design - 3.png");
+    // a picture named after a song or event is for that kirtan alone.
+    const pool = files.filter(f => f.startsWith(`${FOLDERS[artist]}/`) && GENERAL.test(f.split('/').pop()));
     const want = shuffle(tracks.filter(t => t.artist === artist && needs(t))).sort((a, b) => needs(a) - needs(b));
     let previous = null;
     for (const t of want) {
@@ -325,7 +328,7 @@ export async function writeSheet(tracks) {
     [`Put the picture in the "Thumbnails" folder next to this file (${THUMBS}).`, false],
     ['Either name the picture after the kirtan\'s number (for No. 12: 12.jpg, 12.png or 12.heic), or type the picture\'s file name in its Thumbnail cell.', false],
     ['Square pictures look best; others are trimmed to a square from the middle. To go back to the original picture, clear the Thumbnail cell (and remove a numbered file).', false],
-    ['Kirtans with no picture, and any whose picture you delete in this list, get one at random from the SNS or GK folder inside Thumbnails when you publish (each picture on at most 3 kirtans). The Thumbnail cell shows which; change it if you like.', false],
+    ['Kirtans with no picture, and any whose picture you delete in this list, get one at random from the SNS or GK folder inside Thumbnails when you publish (each picture on at most 3 kirtans). The Thumbnail cell shows which; change it if you like. Pictures named after a song (not "GK3" or "SNS12") are never given out at random.', false],
     ['', false],
     ['Add new kirtans', true],
     ['Put the recordings in the Kirtans folder and publish. They get the next numbers and appear at the bottom of this list.', false],

@@ -84,7 +84,10 @@ R2 bucket `kirtans` at `/stream/*`.
   `Thumbnails/Bhajans` (first called "Needs adjusting"; originals, untouched) are cropped by hand to a
   square around the main figure into `Thumbnails/Adjusted` (same name, .jpg) and set in the Thumbnail
   column. A picture there with no matching file in Adjusted is a new one to do. Both Damodarastakams
-  share one picture; Siksastakam parts 1 and 2 share one.
+  share one picture; Siksastakam parts 1 and 2 share one. The owner also puts pictures named after a
+  kirtan in `Thumbnails/GK` (e.g. "Radhadesh Mellows 2024" for every GK Mellows kirtan of 2024); they're
+  handled the same way, and only general photos ("GK3", "SNS12", "Untitled design …", `GENERAL` in
+  sheet.mjs) are given out at random.
 - Playback flow (audit, 24 Oct 2026): a kirtan tapped in a year/place group plays on through the whole
   page (`playList`); when the queue runs out, `keepListening()` adds the artist's next kirtans (same
   type, newest first), so Next always works. The next kirtan's first 384 KB is fetched ahead
