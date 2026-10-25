@@ -3,3 +3,4 @@ build/
 .wrangler/
 source/
 *.zip
+.dev.vars

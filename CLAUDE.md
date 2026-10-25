@@ -231,6 +231,20 @@ with `wrangler dev --local` (localhost and 127.0.0.1 act as two devices).
   next kirtan, Loop this kirtan, Play once then stop, Loop the whole list (`REPEAT` in app.js; also in
   the ⋯ menu of the kirtan that's playing).
 
+## Lectures (private test, 25 Oct 2026)
+The owner wants to try a Lectures section before deciding. It is deliberately separate from the app: its
+own page `site/lectures/` (index.html, lectures.js, lectures.css; storage keys `lect.*`), not linked from
+the app's menus, `noindex`. It lists Sacinandana Swami's lectures (speaker code starting "SSNS") from the
+Saranagati Library (https://www.saranagati-library.net, year folders 1985–2026, ~6,900 files) and plays
+them straight from the library; nothing is copied. `tools/lectures.mjs --upload` reads the library's
+folder listings into `build/lectures.json` and puts it in R2 at `lectures/catalog.json` (re-run it to pick
+up new lectures). `worker/lectures.js` hands the list out only with a cookie earned by the password
+(Worker secret `LECTURES_PASSWORD`; the owner's copy is in "Lectures password.txt" beside the project;
+`wrangler secret put LECTURES_PASSWORD` changes it and signs everyone out). Locally, `.dev.vars` (git-ignored)
+holds a test password for `wrangler dev`. The library says "All content copyright (c) by
+SacinandanaSwami.com": the owner was advised to get permission before making the section public. Place
+codes in file names are only shown when known (`PLACES` in lectures.mjs).
+
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
 font, offline covers, fresh styling/code). `tools/check.mjs` lists each fix the owner asked for; it

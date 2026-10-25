@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = 'c4d188695c';
+const VERSION = 'a1b4d960f6';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
