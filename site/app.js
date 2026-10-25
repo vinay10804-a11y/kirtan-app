@@ -21,6 +21,9 @@ const JAPA_UNIT = { 'Living Name Meditations': 'meditation', 'Japa Inspirations'
 // Short labels for the plain tiles shown when a recording has no cover art.
 const INITIALS = { 'Sacinandana Swami': 'SS', 'Gour Krishna': 'GK' };
 const SPEEDS = [1, 1.25, 1.5, 0.75];
+// Lectures have their own speed (often faster, as in Apple Podcasts), so kirtans keep theirs.
+const LECT_SPEEDS = [1, 1.25, 1.5, 1.75, 2, 0.75];
+const isLecture = t => t?.section === 'lecture';
 const LENGTHS = [
   { label: 'Under 20 min', max: 20 * 60 },
   { label: '20–45 min', max: 45 * 60 },
@@ -68,6 +71,7 @@ const S = {
   history: store.get('history', []),
   stats: store.get('stats', { seconds: 0, since: Date.now() }),
   speed: store.get('speed', 1),
+  lectSpeed: store.get('lectSpeed', 1),
   // What happens when a kirtan ends: 'off' (play the next one), 'one' (loop it),
   // 'once' (stop) or 'all' (play on, and start the list again at the end).
   repeat: store.get('repeat', store.get('loop', false) ? 'one' : 'off'),
@@ -78,7 +82,8 @@ const S = {
   // Lectures (password-protected section): 'unknown' until asked, then 'locked', 'loading', 'ready' or 'error'.
   lectState: 'unknown',
   lectures: [],
-  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60 },
+  lecturesOld: null, // the same, oldest first (lecturesOld())
+  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60, sort: store.get('lectSort', 'new') },
   lectDur: store.get('lectDur', {}), // lecture lengths, learnt the first time each is played
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
@@ -135,7 +140,15 @@ function fmtHours(sec) {
   return h < 1 ? fmtDur(sec) : `${h < 10 ? h.toFixed(1) : Math.round(h)} hours`;
 }
 function fmtDate(d) {
-  return new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  // "2026-10-09" is that day wherever you are (as a UTC midnight it was the 8th in America).
+  const ymd = typeof d === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  return (ymd ? new Date(ymd[1], ymd[2] - 1, ymd[3]) : new Date(d)).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+// A lecture's date: "Dec 2010" when the library gives no day, the year alone when no month.
+function lectDate(t) {
+  const [y, m, d] = (t.date || '').split('-').map(Number);
+  if (!m) return String(t.year || y || '');
+  return d ? fmtDate(t.date) : new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 function fmtWhen(ts) {
   const day = 86400000;
@@ -148,7 +161,7 @@ function fmtMB(bytes) {
   return bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`;
 }
 function plural(n, word, many = `${word}s`) {
-  return `${n} ${n === 1 ? word : many}`;
+  return `${n.toLocaleString()} ${n === 1 ? word : many}`; // "4,379 lectures"
 }
 
 // Cover art embedded in the file, else a photo tagged with the artist, else none.
@@ -342,8 +355,10 @@ function trackMeta(t, opts = {}) {
   const parts = [];
   if (t.section === 'lecture') {
     const pos = S.positions[t.id];
-    return [t.date && fmtDate(t.date), t.ref, esc(t.place), t.with && `with ${esc(t.with)}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language,
-      opts.when && fmtWhen(opts.when), pos && `<span class="left">${fmtClock(pos)} listened</span>`].filter(Boolean).join(' · ');
+    return [lectDate(t), !t.title.startsWith(t.ref) && esc(t.ref), esc(t.place), t.with && `with ${esc(t.with)}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language,
+      opts.when && fmtWhen(opts.when),
+      pos ? `<span class="left">${t.duration ? `${fmtDur(t.duration - pos)} left` : `${fmtClock(pos)} listened`}</span>` : t.duration && fmtDur(t.duration),
+      !pos && S.played.has(t.id) && `<span class="played">${icon('tick')}Played</span>`].filter(Boolean).join(' · ');
   }
   if (opts.source) parts.push(esc(t.section === 'japa' ? t.type : t.artist));
   if (opts.year && t.year) parts.push(t.year);
@@ -746,16 +761,19 @@ function searchResults() {
   const match = text => { const hay = norm(text); return words.every(w => hay.includes(w)); };
   const hits = S.tracks.filter(t => match(`${t.title} ${t.album || ''} ${t.place || ''} ${t.artist} ${t.type} ${t.year || ''} ${t.type === 'Mahamantra' ? 'hare krishna kirtan' : ''}`)).slice(0, 150);
   const vids = S.videos.filter(v => match(`${v.title} ${v.collection} ${(v.date || '').slice(0, 4)} japa`));
-  if (!hits.length && !vids.length) return `<p class="empty">Nothing found for “${esc(S.query)}”. Try a shorter word, a place or a year.</p>`;
   const k = hits.filter(t => t.section !== 'japa');
   const j = hits.filter(t => t.section === 'japa');
-  const l = S.lectures.filter(t => match(`${t.title} ${t.ref} ${t.place} ${t.year} ${t.date} lecture`)).slice(0, 60);
+  // Lectures, with the Lectures page's forgiving search; "See all" opens it there.
+  const lw = lectWords(S.query);
+  lectKeys(true);
+  const lAll = S.lectures.filter(t => lectHit(t, lw));
+  const l = lAll.slice(0, 20);
   if (!hits.length && !vids.length && !l.length) return `<p class="empty">Nothing found for “${esc(S.query)}”. Try a shorter word, a place or a year.</p>`;
   return [
     k.length ? `<section class="group"><div class="group-head"><h3>Kirtans<small>${k.length}</small></h3></div>${trackList(k, 'search:k', { source: true, year: true, place: true })}</section>` : '',
     vids.length ? `<section class="group"><div class="group-head"><h3>Japa videos<small>${vids.length}</small></h3></div><div class="vrows">${vids.map(videoRow).join('')}</div></section>` : '',
     j.length ? `<section class="group"><div class="group-head"><h3>Japa audio<small>${j.length}</small></h3></div>${trackList(j, 'search:j', { source: true, date: true })}</section>` : '',
-    l.length ? `<section class="group"><div class="group-head"><h3>Lectures<small>${l.length}</small></h3></div>${trackList(l, 'search:l', { thumb: false })}</section>` : '',
+    l.length ? `<section class="group"><div class="group-head"><h3>Lectures<small>${lAll.length.toLocaleString()}</small></h3>${lAll.length > l.length ? `<button class="text-btn" data-action="lect-search" data-q="${esc(S.query)}">See all</button>` : ''}</div>${trackList(l, 'search:l', { thumb: false })}</section>` : '',
   ].join('');
 }
 
@@ -942,6 +960,7 @@ function notFound() {
 /* ---------------- router ---------------- */
 
 let lastViewKey = null;
+let lectScroll = 0;
 
 // Which "page" a link is on: filters and tabs inside the Kirtans page count as the same page.
 function viewKeyFor(hash) {
@@ -974,10 +993,11 @@ function route() {
   const offline = isOnline() ? '' : `<p class="offline-note">You’re offline. Saved recordings still play.</p>`;
   // Changing a filter or tab within the same list keeps your place on the page.
   const viewKey = viewKeyFor(location.hash);
+  if (lastViewKey === 'lectures' && viewKey !== 'lectures') lectScroll = window.scrollY; // come back to the same place
   const enter = viewKey !== lastViewKey && lastViewKey !== null ? ' page-enter' : '';
   view.innerHTML = `<div class="page${enter}">${offline}${html}</div>`;
 
-  if (viewKey !== lastViewKey) window.scrollTo(0, 0);
+  if (viewKey !== lastViewKey) window.scrollTo(0, viewKey === 'lectures' ? lectScroll : 0);
   if ($('#storage-note')) showStorage();
   lastViewKey = viewKey;
   $('.chips [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -986,6 +1006,7 @@ function route() {
   if (lq) {
     let typing;
     lq.addEventListener('input', () => {
+      $('#lq-clear').hidden = !lq.value;
       clearTimeout(typing);
       typing = setTimeout(() => { S.lect.q = lq.value; S.lect.shown = LECT_PAGE; $('#lect-results').innerHTML = lectureResults(); watchLectureList(); }, 120);
     });
@@ -1129,12 +1150,12 @@ async function load(id, { autoplay = true, at } = {}) {
   lastPos = 0; // a new recording starts at 0: not a jump back from the end
   audio.src = src;
   audio.loop = true; // see recordingEnded
-  audio.defaultPlaybackRate = audio.playbackRate = S.speed;
+  audio.defaultPlaybackRate = audio.playbackRate = speedOf(t);
 
   const resumeAt = at ?? S.positions[id];
   audio.addEventListener('loadedmetadata', () => {
     if (seq !== loadSeq) return;
-    audio.playbackRate = S.speed;
+    audio.playbackRate = speedOf(t);
     // Lectures' lengths aren't in the list; learn each one when it's first played.
     if (t.section === 'lecture' && !t.duration && audio.duration > 60) {
       t.duration = S.lectDur[t.id] = Math.round(audio.duration);
@@ -1181,7 +1202,13 @@ const playable = id => S.saved.has(id) || isOnline();
 
 // The queue and where you are in it survive closing the app, like Spotify.
 function saveQueue() {
-  store.set('queue', { ids: S.queue.slice(0, 500), qi: S.qi, order: S.order?.slice(0, 500) || null });
+  // A long list (thousands of lectures) keeps the stretch around what's playing.
+  const from = Math.max(0, S.qi - 100);
+  store.set('queue', { ids: S.queue.slice(from, from + 500), qi: S.qi - from, order: S.order?.slice(0, 500) || null });
+}
+
+function speedOf(t = S.byId.get(S.current)) {
+  return isLecture(t) ? S.lectSpeed : S.speed;
 }
 
 function shuffled(ids) {
@@ -1365,7 +1392,9 @@ function updateNowPlaying() {
   $('#player').classList.toggle('no-art', !art);
   $('#player-swipe').style.transform = '';
   $('#player-title').textContent = t.title;
-  $('#player-sub').textContent = [collectionName(t), t.year, t.section !== 'japa' && t.place].filter(Boolean).join(' · ');
+  $('#player-sub').textContent = (isLecture(t) ? [collectionName(t), lectDate(t), t.ref, t.place]
+    : [collectionName(t), t.year, t.section !== 'japa' && t.place]).filter(Boolean).join(' · ');
+  $('#player').classList.toggle('lecture', isLecture(t)); // skip 15/30 and speed in place of shuffle and repeat
   $('#player-context').textContent = t.section === 'japa' ? 'Japa' : t.type;
 
   renderLyricsCard(t);
@@ -1380,7 +1409,7 @@ function setMediaMetadata(t) {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title,
     artist: collectionName(t),
-    album: 'Sacinandana Swami and Gour Krishna Kirtans',
+    album: isLecture(t) ? 'Lectures' : 'Sacinandana Swami and Gour Krishna Kirtans',
     artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
   });
 }
@@ -1444,6 +1473,10 @@ function updatePlayerButtons() {
 
   const dl = $('#player-dl');
   dl.hidden = !!t.external;
+  $('#player-share').hidden = !!t.external; // a lecture has no share page
+  $('#player-speed').hidden = !isLecture(t);
+  $('#player-speed span').textContent = `${speedOf(t)}×`;
+  $('#player-speed').setAttribute('aria-label', `Playback speed ${speedOf(t)}×`);
   const d = S.downloads.get(t.id);
   dl.classList.toggle('on', S.saved.has(t.id));
   dl.querySelector('use').setAttribute('href', S.saved.has(t.id) ? '#i-check' : '#i-download');
@@ -1463,8 +1496,8 @@ function updatePlayerButtons() {
     b.classList.toggle('on', S.shuffle);
     b.setAttribute('aria-pressed', S.shuffle);
   }
-  $('#q-speed').classList.toggle('on', S.speed !== 1);
-  $('#q-speed span').textContent = `${S.speed}× speed`;
+  $('#q-speed').classList.toggle('on', speedOf(t) !== 1);
+  $('#q-speed span').textContent = `${speedOf(t)}× speed`;
 }
 
 // The choices for when a kirtan ends, in the order the menu lists them.
@@ -1768,8 +1801,11 @@ function setMediaHandlers() {
   for (const [action, fn] of Object.entries(handlers)) {
     try { ms.setActionHandler(action, fn); } catch {}
   }
-  for (const action of ['seekbackward', 'seekforward']) {
-    try { ms.setActionHandler(action, null); } catch {}
+  // Kirtans show previous/next on the lock screen (owner, 24 Oct 2026: iPhones show skips
+  // instead whenever these are set). Lectures skip back and forward, as in Apple Podcasts.
+  const lecture = isLecture(S.byId.get(S.current));
+  for (const [action, sec] of [['seekbackward', -15], ['seekforward', 30]]) {
+    try { ms.setActionHandler(action, lecture ? e => seekBy(Math.sign(sec) * (e?.seekOffset || Math.abs(sec))) : null); } catch {}
   }
 }
 setMediaHandlers();
@@ -1907,7 +1943,8 @@ function openTrackMenu(id, row) {
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
-    ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${S.speed}×`) : ''}
+    ${isLecture(t) ? item('mark-played', 'tick', S.played.has(id) && !S.positions[id] ? 'Mark as unplayed' : 'Mark as played') : ''}
+    ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${speedOf(t)}×`) : ''}
     ${t.external ? '' : item('share-track', 'share', 'Share')}
     <button value="cancel" class="muted">Cancel</button>`;
   $('#track-dialog').showModal();
@@ -2004,7 +2041,8 @@ function openQueue() {
 function renderQueue() {
   const now = S.byId.get(S.current);
   const upcoming = S.queue.map((id, qi) => ({ t: S.byId.get(id), qi })).filter(x => x.t && x.qi > S.qi);
-  $('#queue-sub').textContent = upcoming.length ? `${plural(upcoming.length, 'kirtan')} up next · ${fmtHours(sum(upcoming, x => x.t.duration))}` : 'Nothing else queued';
+  const more = Math.max(0, upcoming.length - 100); // a list of thousands of lectures shows the next 100
+  $('#queue-sub').textContent = upcoming.length ? `${plural(upcoming.length, isLecture(now) ? 'lecture' : 'kirtan')} up next${more ? '' : ` · ${fmtHours(sum(upcoming, x => x.t.duration))}`}` : 'Nothing else queued';
   // Like Spotify's queue: pictures, the playing kirtan on top with a play/pause button.
   const text = (t, meta) => `<span class="q-text"><span class="q-title">${esc(t.title)}</span><span class="q-meta">${esc(meta)}</span></span>`;
   const row = ({ t, qi }) => `<li class="q-row">
@@ -2015,7 +2053,7 @@ function renderQueue() {
       <span class="q-main"><span class="q-art">${artHTML(now)}</span><span class="q-text"><span class="q-title"><span class="eq"><i></i><i></i><i></i></span>${esc(now.title)}</span>
       <span class="q-meta">${esc(collectionName(now))}</span></span></span>
       <button class="q-play" data-action="toggle" aria-label="Play or pause">${icon('play', 'i-play')}${icon('pause', 'i-pause')}</button></li></ul>` : '')
-    + (upcoming.length ? `<h4 class="queue-head">Next up</h4><ul class="q-list">${upcoming.map(row).join('')}</ul>`
+    + (upcoming.length ? `<h4 class="queue-head">Next up</h4><ul class="q-list">${upcoming.slice(0, 100).map(row).join('')}</ul>${more ? `<p class="q-more">and ${more.toLocaleString()} more</p>` : ''}`
       : `<p class="empty">${S.repeat === 'once' ? 'Playback stops when this kirtan ends.' : 'Nothing else is queued.'} Tap ${icon('more')} next to any kirtan and choose <b>Play next</b> or <b>Add to queue</b>.</p>`);
 }
 
@@ -2470,13 +2508,29 @@ document.addEventListener('click', async e => {
     case 'fav-current': if (S.current) toggleFav(S.current); break;
     case 'loop': openRepeatMenu(); break;
     case 'speed': {
-      S.speed = SPEEDS[(SPEEDS.indexOf(S.speed) + 1) % SPEEDS.length];
-      audio.defaultPlaybackRate = audio.playbackRate = S.speed;
-      store.set('speed', S.speed);
+      const lecture = isLecture(S.byId.get(S.current));
+      const list = lecture ? LECT_SPEEDS : SPEEDS;
+      const speed = list[(list.indexOf(speedOf()) + 1) % list.length];
+      if (lecture) S.lectSpeed = speed; else S.speed = speed;
+      store.set(lecture ? 'lectSpeed' : 'speed', speed);
+      audio.defaultPlaybackRate = audio.playbackRate = speed;
       updatePlayerButtons();
-      toast(`Playback speed ${S.speed}×`);
+      toast(`Playback speed ${speed}×`);
       break;
     }
+    case 'mark-played': setPlayed(id, !(S.played.has(id) && !S.positions[id])); break;
+    case 'lect-sort':
+      S.lect.sort = S.lect.sort === 'old' ? 'new' : 'old';
+      store.set('lectSort', S.lect.sort);
+      S.lect.shown = LECT_PAGE;
+      $('#lect-results').innerHTML = lectureResults();
+      watchLectureList();
+      break;
+    case 'lect-search':
+      Object.assign(S.lect, { q: el.dataset.q, year: 'All', shown: LECT_PAGE });
+      lectScroll = 0; // new results start at the top
+      location.hash = '#/lectures';
+      break;
     case 'share': shareTrack(); break;
     case 'theme': setTheme(el.dataset.theme); break;
     case 'account': setTimeout(() => openAccount(el.dataset.mode)); break;
@@ -2497,7 +2551,7 @@ document.addEventListener('click', async e => {
     case 'lect-retry': S.lectState = 'unknown'; route(); break;
     case 'lect-signout': {
       await fetch('/api/lectures/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-      S.lectState = 'locked';
+      forgetLectures();
       route();
       break;
     }
@@ -2646,27 +2700,105 @@ function restoreLast() {
 // Sacinandana Swami's lectures from the Saranagati Library (owner, 25 Oct 2026): their own
 // section, behind a password (worker/lectures.js). They play in the app's player straight
 // from the library, so they can't be saved offline or shared as links.
+//
+// The list (2 MB) is kept on the device, so the page opens at once, even offline. Each
+// start asks the server with the kept copy's ETag and downloads it only when it changed;
+// a 401 (password changed, or locked here) forgets it.
+const LECT_LIST = '/api/lectures';
+const LECT_CACHE = 'kirtan-lectures';
 let lectLoading = null;
 function loadLectures() {
   lectLoading ??= (async () => {
-    S.lectState = 'loading';
-    const res = await fetch('/api/lectures', { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
-    if (!res) S.lectState = 'error';
-    else if (res.status === 401) S.lectState = 'locked';
-    else if (!res.ok) S.lectState = 'error';
-    else {
-      const { lectures = [] } = await res.json().catch(() => ({}));
-      S.lectures = lectures.map(l => ({
-        id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
-        year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
-        src: l.url, external: true, duration: S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures,
-        skey: lectNorm(`${l.title} ${l.ref} ${l.date} ${l.year} ${l.place} ${l.with} ${l.language} ${l.into || ''}`),
-      }));
-      for (const t of S.lectures) S.byId.set(t.id, t);
-      S.lectState = 'ready';
+    if (S.lectState !== 'ready') S.lectState = 'loading';
+    const cache = 'caches' in window ? await caches.open(LECT_CACHE).catch(() => null) : null;
+    const kept = await cache?.match(LECT_LIST).catch(() => null);
+    if (kept && S.lectState !== 'ready') {
+      const data = await kept.clone().json().catch(() => null);
+      if (data) useLectures(data);
     }
+    const fresh = refreshLectures(cache, kept?.headers.get('ETag'));
+    if (S.lectState !== 'ready') await fresh; // nothing kept: wait for the network
   })().finally(() => { lectLoading = null; });
   return lectLoading;
+}
+
+async function refreshLectures(cache, etag) {
+  const res = await fetch(LECT_LIST, { credentials: 'same-origin', cache: 'no-store', headers: etag ? { 'If-None-Match': etag } : {} }).catch(() => null);
+  if (res?.status === 304) return;
+  if (res?.status === 401) {
+    const was = S.lectState;
+    forgetLectures();
+    if (was === 'ready') lecturesChanged();
+    return;
+  }
+  const data = res?.ok && await res.clone().json().catch(() => null);
+  if (!data) {
+    if (S.lectState !== 'ready') S.lectState = 'error';
+    return;
+  }
+  await cache?.put(LECT_LIST, res).catch(() => {});
+  const was = S.lectState;
+  useLectures(data);
+  if (was === 'ready') lecturesChanged();
+}
+
+function useLectures({ lectures = [] }) {
+  S.lectures = lectures.map(l => ({
+    id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
+    year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
+    src: l.url, external: true, duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '',
+  }));
+  S.lecturesOld = null;
+  for (const t of S.lectures) S.byId.set(t.id, t);
+  S.lectState = 'ready';
+  lectKeyAt = 0;
+  lectKeys();
+}
+
+// Search keys (each lecture's words in lectNorm's spelling) take ~150 ms for the whole list,
+// enough to make a phone stutter as the app opens, so they're made a few hundred at a time
+// in quiet moments; a search before they're all made finishes them first.
+let lectKeyAt = 0;
+function lectKeys(all = false) {
+  const list = S.lectures;
+  const end = all ? list.length : Math.min(list.length, lectKeyAt + 300);
+  for (; lectKeyAt < end; lectKeyAt++) {
+    const t = list[lectKeyAt];
+    t.skey = lectNorm(`${t.title} ${t.ref} ${t.date} ${t.year} ${t.place} ${t.with} ${t.language} ${t.into || ''}`);
+  }
+  if (!all && lectKeyAt < list.length) (window.requestIdleCallback || setTimeout)(() => lectKeys());
+}
+
+// Oldest first, made when first asked for.
+function lecturesOld() {
+  return S.lecturesOld ??= S.lectures.slice().sort((a, b) => (a.date > b.date) - (a.date < b.date) || byTitle(a, b));
+}
+
+function forgetLectures() {
+  S.lectState = 'locked';
+  S.lectures = [];
+  S.lecturesOld = null;
+  if ('caches' in window) caches.delete(LECT_CACHE).catch(() => {});
+}
+
+// Pages that show lectures are drawn again when the list arrives or changes.
+function lecturesChanged() {
+  const page = location.hash.replace(/^#\/?/, '').split('/')[0];
+  if (['', 'lectures', 'library', 'search'].includes(page)) route();
+}
+
+// Mark as played (or not), from a lecture's ⋯ menu, as in Apple Podcasts.
+function setPlayed(id, on) {
+  if (on) S.played.add(id); else S.played.delete(id);
+  store.set('played', [...S.played]);
+  if (on && S.positions[id] && id !== S.current) {
+    delete S.positions[id];
+    S.posAt[id] = Date.now();
+    store.set('positions', S.positions);
+    store.set('posAt', S.posAt);
+    syncLater();
+  }
+  if (location.hash.startsWith('#/lectures')) route(); else refreshTrack(id);
 }
 
 // Laid out like Apple Podcasts (owner, 25 Oct 2026): the show at the top with Play latest,
@@ -2706,14 +2838,14 @@ function lecturesView() {
   const started = S.lectures.filter(t => S.positions[t.id]).sort((a, b) => (S.posAt[b.id] || 0) - (S.posAt[a.id] || 0)).slice(0, 12);
   S.lists['lectures-continue'] = started.map(t => t.id);
   return `<div class="lect-show">${lectArt()}<div class="lect-show-text"><h1>Lectures</h1><p class="lect-by">Sacinandana Swami</p>
-      <p class="lect-about">${S.lectures.length.toLocaleString()} lectures from the Saranagati Library, ${Math.min(...S.lectures.map(t => t.year))} to today.</p>
+      <p class="lect-about">${S.lectures.length.toLocaleString()} lectures from the Saranagati Library, ${S.lectures.at(-1)?.year} to today.</p>
       ${latest ? `<div class="lect-show-actions"><button class="btn" data-action="play" data-list="lectures-latest" data-id="${latest.id}">${icon('play')}Play latest</button>
-        <span class="lect-latest">${esc(fmtDate(latest.date))}</span></div>` : ''}</div></div>
+        <span class="lect-latest">${esc(lectDate(latest))}${latest.duration ? ` · ${fmtDur(latest.duration)}` : ''}</span></div>` : ''}</div></div>
     ${started.length ? `<section class="lect-section"><h2>Continue listening</h2><div class="lect-cards">${started.map(lectCard).join('')}</div></section>` : ''}
     <section class="lect-section">
       <h2>All lectures</h2>
       <div class="lect-search">${icon('search')}<input id="lq" type="search" placeholder="Search lectures, verses, years" value="${esc(S.lect.q)}" autocomplete="off" enterkeyhint="search">
-        ${S.lect.q ? `<button class="icon-btn" data-action="lect-clear" aria-label="Clear search">${icon('x')}</button>` : ''}</div>
+        <button class="icon-btn" id="lq-clear" data-action="lect-clear" aria-label="Clear search"${S.lect.q ? '' : ' hidden'}>${icon('x')}</button></div>
       <div class="lect-filters">
         <label class="lect-pick">${icon('calendar')}<select id="lyear" aria-label="Year"><option value="All">All years</option>${years.map(y => `<option value="${y}"${String(y) === String(S.lect.year) ? ' selected' : ''}>${y} (${yearCounts[y]})</option>`).join('')}</select></label>
         <label class="lect-pick">${icon('globe')}<select id="llang" aria-label="Language"><option value="All">All languages</option>${langs.map(l => `<option value="${esc(l)}"${l === S.lect.lang ? ' selected' : ''}>${esc(l)} (${counts[l].toLocaleString()})</option>`).join('')}</select></label>
@@ -2734,16 +2866,25 @@ function lectNorm(s) {
     .replace(/ri/g, 'r').replace(/aa/g, 'a').replace(/ee/g, 'i').replace(/ou/g, 'au').replace(/w/g, 'v');
 }
 // A searched word and the other ways it's written ("gita" also finds BG verses).
-const LECT_ALSO = { sb: ['bhagavatam'], bhagavatam: ['sb'], srimad: ['sb', 'bhagavatam'], bg: ['gita'], gita: ['bg'], bhagavad: ['bg', 'gita'], cc: ['caritamrta'], caritamrta: ['cc'] };
+// (Written in lectNorm's spelling, since that's what they're compared with: "srimad" is "srmad".)
+const LECT_ALSO = Object.fromEntries(Object.entries({
+  sb: ['bhagavatam'], bhagavatam: ['sb'], srimad: ['sb', 'bhagavatam'], bg: ['gita'], gita: ['bg'], bhagavad: ['bg', 'gita'],
+  cc: ['caritamrta'], caritamrta: ['cc'], noi: ['nectar of instruction'], nod: ['nectar of devotion'],
+}).map(([w, also]) => [lectNorm(w), also.map(lectNorm)]));
+// A number matches a whole number or the start of a verse ("1" finds "Retreat 1" and SB 1.2.6,
+// not every date with a 1 in it); words match anywhere.
 function lectWords(q) {
-  return lectNorm(q).split(/[\s,;]+/).filter(Boolean).map(w => [w, ...(LECT_ALSO[w] || [])]);
+  return lectNorm(q).split(/[\s,;]+/).filter(Boolean).map(w => [w, ...(LECT_ALSO[w] || [])]
+    .map(x => (/^\d/.test(x) ? new RegExp(`(^|\\s)${x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\d)`) : x)));
 }
+const lectHit = (t, words) => words.every(alts => alts.some(w => (typeof w === 'string' ? t.skey.includes(w) : w.test(t.skey))));
 
 function lectMatches() {
   const words = lectWords(S.lect.q);
   const inFilters = t => (S.lect.lang === 'All' || t.language === S.lect.lang) && (S.lect.year === 'All' || t.year === Number(S.lect.year));
-  const hit = t => words.every(alts => alts.some(w => t.skey.includes(w)));
-  const list = S.lectures.filter(t => inFilters(t) && hit(t));
+  const hit = t => lectHit(t, words);
+  if (words.length) lectKeys(true);
+  const list = (S.lect.sort === 'old' ? lecturesOld() : S.lectures).filter(t => inFilters(t) && hit(t));
   // Nothing in this language or year? Say how many are elsewhere.
   const elsewhere = words.length && !list.length ? S.lectures.filter(hit).length : 0;
   return { list, words, elsewhere };
@@ -2757,10 +2898,13 @@ function lectureResults() {
     return words.length ? `<p class="empty">No lectures found for “${esc(S.lect.q)}”${S.lect.lang !== 'All' || S.lect.year !== 'All' ? ` in ${[S.lect.year !== 'All' && S.lect.year, S.lect.lang !== 'All' && S.lect.lang].filter(Boolean).join(', ')}` : ''}.
         ${elsewhere ? `<button class="text-btn" data-action="lect-everywhere">Show ${elsewhere} in all years and languages</button>` : 'Try a shorter word.'}</p>` : `<p class="empty">No lectures here.</p>`;
   }
-  const topics = ['Holy Name', 'Japa', 'Prayer', 'Bhagavad-gita', 'Srimad Bhagavatam', 'Vrindavan', 'Radharani', 'Lord Caitanya', 'Kirtan', 'Humility', 'Guru'];
-  const suggest = !words.length && S.lect.year === 'All' ? `<div class="lect-suggest">${topics.map(x => `<button class="chip" data-action="lect-topic" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
+  // Topics with plenty of English lectures (25 Oct 2026: from about 60 to 1,400 each).
+  const topics = ['Holy Name', 'Japa', 'Kirtan', 'Srimad-Bhagavatam', 'Bhagavad-gita', 'Radha', 'Caitanya', 'Vrindavan', 'Govardhan', 'Kartik', 'Retreat', 'Prabhupada', 'Vyasa Puja', 'Prayer'];
+  const suggest = !words.length && S.lect.year === 'All' && ['English', 'All'].includes(S.lect.lang)
+    ? `<div class="lect-suggest">${topics.map(x => `<button class="chip" data-action="lect-topic" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
   S.lect.shown = Math.max(S.lect.shown || 0, LECT_PAGE);
-  return `${suggest}<p class="lect-count">${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}${words.length ? ` for “${esc(S.lect.q)}”` : ''}</p>
+  return `${suggest}<div class="lect-count"><span>${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}${words.length ? ` for “${esc(S.lect.q)}”` : ''}</span>
+      ${list.length > 1 ? `<button class="text-btn" data-action="lect-sort">${S.lect.sort === 'old' ? 'Oldest first' : 'Newest first'}${icon('down')}</button>` : ''}</div>
     <ul class="lect-list" id="lect-list">${list.slice(0, S.lect.shown).map(t => lectureRow(t, words)).join('')}</ul>
     ${list.length > S.lect.shown ? `<div class="lect-sentinel" id="lect-sentinel"><button class="btn ghost" data-action="lect-more">Show more</button></div>` : ''}`;
 }
@@ -2768,7 +2912,7 @@ function lectureResults() {
 // Marks the searched words in a title (only where the title has them as typed).
 function markWords(text, words) {
   let out = esc(text);
-  for (const w of words.flat().filter(x => x.length > 2 && !/^\d/.test(x))) {
+  for (const w of words.flat().filter(x => typeof x === 'string' && x.length > 2)) {
     out = out.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>');
   }
   return out;
@@ -2784,17 +2928,17 @@ function lectureRow(t, words = []) {
   const playing = S.current === t.id;
   const pos = S.positions[t.id];
   const pct = pos && t.duration ? Math.min(100, Math.round((pos / t.duration) * 100)) : 0;
-  const details = [t.ref, t.place, t.with && `with ${t.with}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language].filter(Boolean).map(esc).join(' · ');
+  const details = [t.title.startsWith(t.ref) ? '' : t.ref, t.place, t.with && `with ${t.with}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language].filter(Boolean).map(esc).join(' · ');
   return `<li class="lect-row${playing ? ' playing' : ''}" data-id="${t.id}">
     <button class="lect-main" data-action="play" data-list="lectures" data-id="${t.id}">
-      <span class="lect-date">${esc(t.date ? fmtDate(t.date) : t.year)}</span>
+      <span class="lect-date">${esc(lectDate(t))}</span>
       <span class="lect-title">${markWords(t.title, words)}</span>
       ${details ? `<span class="lect-details">${details}</span>` : ''}
     </button>
     <div class="lect-foot">
       <button class="lect-play${pos ? ' started' : ''}" data-action="play" data-list="lectures" data-id="${t.id}" aria-label="${playing ? 'Playing' : 'Play'} ${esc(t.title)}">
         ${playing ? `<span class="when-playing"><span class="eq"><i></i><i></i><i></i></span>Playing</span><span class="when-paused">${icon('play')}${lectLeft(t)}</span>`
-          : `${icon('play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
+          : `${icon(lectLeft(t) === 'Played' ? 'tick' : 'play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
       </button>
       <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
     </div>
@@ -2805,7 +2949,7 @@ function lectCard(t) {
   const pos = S.positions[t.id];
   const pct = pos && t.duration ? Math.min(100, Math.round((pos / t.duration) * 100)) : 0;
   return `<button class="lect-card" data-action="play" data-list="lectures-continue" data-id="${t.id}">
-    <span class="lect-date">${esc(t.date ? fmtDate(t.date) : t.year)}</span>
+    <span class="lect-date">${esc(lectDate(t))}</span>
     <span class="lect-title">${esc(t.title)}</span>
     <span class="lect-card-foot">${icon('play')}<span>${lectLeft(t)}</span></span>
     ${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
@@ -2859,16 +3003,13 @@ document.addEventListener('submit', async e => {
 
   restoreLast();
   route();
-  // Lectures load in the background on a device that has the password, so a lecture in
-  // Favourites, History or the mini player shows up there too.
-  if (isOnline()) {
-    loadLectures().then(() => {
-      if (S.lectState !== 'ready') return;
-      restoreLast();
-      const page = location.hash.replace(/^#\/?/, '').split('/')[0];
-      if (['', 'lectures', 'library', 'search'].includes(page)) route();
-    });
-  }
+  // Lectures load in the background on a device that has the password (from the copy kept
+  // on it, then checked online), so a lecture in Favourites, History or the mini player shows up there too.
+  loadLectures().then(() => {
+    if (S.lectState !== 'ready') return;
+    restoreLast();
+    lecturesChanged();
+  });
   setPlayingClass();
   accountStart();
 

@@ -384,6 +384,14 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .controls .icon-btn svg { width: 30px; height: 30px; }
 .controls .mode-btn { color: var(--ink-2); }
 .controls .mode-btn svg { width: 24px; height: 24px; }
+/* Lectures (Apple Podcasts): back 15 and forward 30 beside play, previous/next outside them,
+   and a speed button in the bar; no shuffle or repeat. */
+.controls .skip-btn { display: none; }
+.player.lecture .controls .skip-btn { display: inline-grid; }
+.player.lecture .controls .mode-btn { display: none; }
+.player.lecture .controls [data-action="prev"] svg, .player.lecture .controls [data-action="next"] svg { width: 24px; height: 24px; }
+.player.lecture .controls .skip-btn svg { width: 34px; height: 34px; }
+.speed-btn span { display: inline-grid; place-items: center; min-width: 46px; height: 28px; padding: 0 8px; border: 1.5px solid currentColor; border-radius: 8px; font: 700 13px var(--sans); }
 .mode-btn { position: relative; }
 .mode-btn.on { color: var(--teal); }
 .mode-btn.on::before { content: ""; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
@@ -731,7 +739,10 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 .lect-suggest::-webkit-scrollbar { display: none; }
 .lect-suggest .chip { flex: none; }
 .lect-suggest .chip { padding: 6px 12px; font-size: 13px; }
-.lect-count { margin: 16px 0 2px; font-size: 13px; color: var(--ink-3); }
+.lect-count { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 2px; font-size: 13px; color: var(--ink-3); }
+.lect-count .text-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.lect-count .text-btn svg { width: 14px; height: 14px; }
+.q-more { padding: 10px 4px 4px; font-size: 13px; color: var(--ink-3); }
 .lect-list { list-style: none; margin: 0; padding: 0; }
 .lect-row { padding: 14px 0 12px; border-bottom: 1px solid var(--line); }
 .lect-main { display: block; width: 100%; text-align: left; color: inherit; }

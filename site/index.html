@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=f2b5f4e5b3">
+  <link rel="stylesheet" href="styles.css?v=760d8aef5f">
 </head>
 <body>
   <div class="app">
@@ -81,13 +81,16 @@
       <div class="controls">
         <button class="icon-btn mode-btn" data-action="shuffle-toggle" id="shuffle-btn" aria-pressed="false" aria-label="Shuffle"><svg><use href="#i-shuffle"/></svg></button>
         <button class="icon-btn" data-action="prev" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+        <button class="icon-btn skip-btn" data-action="back15" aria-label="Back 15 seconds"><svg><use href="#i-back"/></svg></button>
         <button class="play-big" data-action="toggle" aria-label="Play"><svg class="i-play"><use href="#i-play"/></svg><svg class="i-pause"><use href="#i-pause"/></svg></button>
+        <button class="icon-btn skip-btn" data-action="fwd30" aria-label="Forward 30 seconds"><svg><use href="#i-fwd"/></svg></button>
         <button class="icon-btn" data-action="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
         <button class="icon-btn mode-btn" data-action="loop" id="loop-btn" aria-label="When this kirtan ends"><svg><use href="#i-repeat"/></svg></button>
       </div>
       <div class="player-bar">
         <button class="bar-btn" data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
-        <button class="icon-btn" data-action="share" aria-label="Share"><svg><use href="#i-share"/></svg></button>
+        <button class="bar-btn speed-btn" data-action="speed" id="player-speed" aria-label="Playback speed" hidden><span>1×</span></button>
+        <button class="icon-btn" data-action="share" id="player-share" aria-label="Share"><svg><use href="#i-share"/></svg></button>
         <button class="icon-btn bar-timer" data-action="sleep-menu" id="sleep-btn" aria-label="Sleep timer"><svg><use href="#i-moon"/></svg><span id="sleep-label"></span></button>
         <button class="icon-btn" data-action="queue" aria-label="Queue"><svg><use href="#i-queue"/></svg></button>
       </div>
@@ -248,6 +251,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=f2b5f4e5b3" type="module"></script>
+  <script src="app.js?v=760d8aef5f" type="module"></script>
 </body>
 </html>
