@@ -234,11 +234,33 @@ with `wrangler dev --local` (localhost and 127.0.0.1 act as two devices).
 ## Lectures (password-protected section, 25 Oct 2026)
 Its own section of the app (owner: "on the main platform as its own section, but password protected"):
 a Lectures item in the menu, a Home card, `#/lectures` (`lecturesView` in app.js: password form until
-unlocked, then search, language menu (English first), year chips, 150 rows at a time). Lectures are
+unlocked, then the Apple Podcasts-style page described below). Lectures are
 tracks with `section: 'lecture'`, `external: true` and ids `lec-<id>`, kept in `S.lectures` and `S.byId`
 (not `S.tracks`), so they play in the main player (queue, lock screen, speed, favourites, history,
 positions) but have no Save offline, Share or prefetch. They load in the background on devices that have
 the password. Search shows a Lectures group. The old `/lectures/` page just redirects to `#/lectures`.
+Looks like Apple Podcasts (owner's reference, 25 Oct 2026): the show header (picture, title, Play latest),
+Continue listening cards (lectures part-heard), one search box with Year and Language menus (not a wall of
+year buttons), topic chips in one sliding row, and episode rows (date in small capitals, title, verse ·
+place, a play pill showing time left, or "Playing" while it plays, ⋯). Rows load 60 at a time as you scroll
+(IntersectionObserver). Search forgives spellings (`lectNorm`: Krishna = Krsna, Chaitanya = Caitanya,
+Shri = Sri, Gour = Gaur, "sb7.7") and knows book names (`LECT_ALSO`: gita = BG, bhagavatam = SB); the
+owner likes the search, so keep it prominent. A number matches a whole number or a verse's start ("1" finds
+"Retreat 1", not every date with a 1); search keys are made a few hundred at a time when idle (`lectKeys`).
+Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
+- The list is kept on the device (Cache Storage `kirtan-lectures`): the page opens at once, even offline;
+  each start sends its ETag and the Worker answers 304 when unchanged; a 401 or "Lock lectures" forgets it.
+- Every lecture's exact length comes from the first 4 KB of its MP3 (the library's files are constant
+  bitrate), measured by `tools/lectures.mjs` and kept in `tools/lecture-lengths.json` (in git) so only new
+  lectures are read. Titles are tidied there too ("Retreat1" → "Retreat 1"; "Cc.Ad5.204" → ref "CC Adi 5.204").
+- Dates: `lectDate` ("Dec 2010" when there's no day, the year alone when no month); `fmtDate` reads
+  YYYY-MM-DD as a local date.
+- Player for a lecture (Apple Podcasts): previous · back 15 · play · forward 30 · next, a "1×" speed button
+  (lectures have their own speed, `S.lectSpeed`), no shuffle, repeat, Save or Share; the lock screen shows
+  15/30 skips for lectures only (kirtans keep previous/next). ⋯ has Mark as played / unplayed.
+- Newest/Oldest first (oldest first plays a seminar in order); the page keeps your place when you come back;
+  the Search page shows a Lectures group (and "See all") even when no kirtan matches; the queue shows the
+  next 100.
 It lists Sacinandana Swami's lectures (speaker code starting "SSNS") from the
 Saranagati Library (https://www.saranagati-library.net, year folders 1985–2026, ~6,900 files) and plays
 them straight from the library; nothing is copied. `tools/lectures.mjs --upload` reads the library's

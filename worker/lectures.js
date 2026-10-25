@@ -7,7 +7,7 @@
 //
 //   POST /api/lectures/login   { password } → sets the cookie (90 days)
 //   POST /api/lectures/logout
-//   GET  /api/lectures          → the lecture list, or 401
+//   GET  /api/lectures          → the lecture list (304 when the ETag sent still matches), or 401
 
 const COOKIE = 'lectures';
 const enc = new TextEncoder();
@@ -51,9 +51,12 @@ export async function lectures(request, env, url) {
   if (url.pathname === '/api/lectures' && request.method === 'GET') {
     const sent = /(?:^|;\s*)lectures=([0-9a-f]+)/.exec(request.headers.get('Cookie') || '')?.[1] || '';
     if (!same(sent, good)) return json({ error: 'Password needed' }, 401);
-    const list = await env.AUDIO.get('lectures/catalog.json');
+    // The app keeps the list and asks with its ETag, so an unchanged list costs a 304, not 2 MB.
+    const list = await env.AUDIO.get('lectures/catalog.json', { onlyIf: request.headers });
     if (!list) return json({ error: 'No lecture list yet' }, 404);
-    return new Response(list.body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-cache', ETag: list.httpEtag };
+    if (!('body' in list)) return new Response(null, { status: 304, headers });
+    return new Response(list.body, { headers });
   }
   return json({ error: 'Not found' }, 404);
 }

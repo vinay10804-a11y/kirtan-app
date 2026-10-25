@@ -44,7 +44,16 @@ const checks = [
   ['Accounts: the service worker never caches /api/', sw.includes("url.pathname.startsWith('/api/')) return")],
   ['Home page section pictures (Sacinandana Swami, Gour Krishna, the three Japa collections)', app.includes('const SECTION_ART = {') && sw.includes('art/sections/sacinandana-swami.jpg')],
   ['App icon fills the Mac tile: the maskable icon is the edge-to-edge wave', read('site/manifest.webmanifest').includes('icons/maskable-full-512.png')],
-  ['Lectures: its own section in the app (menu, Home card), behind a password; the list is only served after it, never from site/', read('worker/lectures.js').includes('LECTURES_PASSWORD') && read('worker/index.js').includes("'/api/lectures'") && app.includes('function lecturesView') && app.includes("fetch('/api/lectures'") && html.includes('data-nav="lectures"')],
+  ['Lectures: its own section in the app (menu, Home card), behind a password; the list is only served after it, never from site/', read('worker/lectures.js').includes('LECTURES_PASSWORD') && read('worker/index.js').includes("'/api/lectures'") && app.includes('function lecturesView') && app.includes("const LECT_LIST = '/api/lectures'") && html.includes('data-nav="lectures"')],
+  ['Lectures look like Apple Podcasts (show header, Continue listening, Year/Language menus, episode rows, load on scroll) and search forgives spellings', app.includes('function lectureRow') && app.includes('function lectCard') && app.includes('function watchLectureList') && app.includes('function lectNorm') && app.includes('const LECT_ALSO') && css.includes('.lect-show') && app.includes('when-paused')],
+  // Lectures audit (25 Oct 2026).
+  ['Lecture list kept on the device and fetched again only when it changes (ETag, 304)', app.includes('const LECT_CACHE') && app.includes("'If-None-Match'") && read('worker/lectures.js').includes('onlyIf: request.headers')],
+  ['Lecture dates without a day or month read properly (no "Invalid Date"), and no time zone shifts a day', app.includes('function lectDate') && /const ymd = .*\\d\{4\}/.test(app)],
+  ['Lecture lengths measured for the whole list (tools/lecture-lengths.json), shown on every row', read('tools/lectures.mjs').includes('async function lengthOf') && app.includes('l.dur ||')],
+  ['Lecture search: book names in lectNorm spelling ("srimad"), numbers match whole numbers, keys made in idle time', app.includes('also.map(lectNorm)') && app.includes('const lectHit') && app.includes('function lectKeys')],
+  ['Lecture player: back 15 / forward 30, own speed, no Share; lock screen skips for lectures only', html.includes('data-action="back15"') && css.includes('.player.lecture') && app.includes('LECT_SPEEDS') && app.includes("$('#player-share').hidden")],
+  ['Search page shows Lectures even when no kirtan matches', !app.includes("if (!hits.length && !vids.length) return")],
+  ['Queue shows at most 100 upcoming; saved queue keeps the stretch around what plays', app.includes('upcoming.slice(0, 100)') && app.includes('Math.max(0, S.qi - 100)')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
   // Platform audit (22 Oct): smooth playback, as on SoundCloud and Spotify.
