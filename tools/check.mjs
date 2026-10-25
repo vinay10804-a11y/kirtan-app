@@ -45,6 +45,7 @@ const checks = [
   ['Home page section pictures (Sacinandana Swami, Gour Krishna, the three Japa collections)', app.includes('const SECTION_ART = {') && sw.includes('art/sections/sacinandana-swami.jpg')],
   ['App icon fills the Mac tile: the maskable icon is the edge-to-edge wave', read('site/manifest.webmanifest').includes('icons/maskable-full-512.png')],
   ['Lectures: its own section in the app (menu, Home card), behind a password; the list is only served after it, never from site/', read('worker/lectures.js').includes('LECTURES_PASSWORD') && read('worker/index.js').includes("'/api/lectures'") && app.includes('function lecturesView') && app.includes("fetch('/api/lectures'") && html.includes('data-nav="lectures"')],
+  ['Lectures look like Apple Podcasts (show header, Continue listening, Year/Language menus, episode rows, load on scroll) and search forgives spellings', app.includes('function lectureRow') && app.includes('function lectCard') && app.includes('function watchLectureList') && app.includes('function lectNorm') && app.includes('const LECT_ALSO') && css.includes('.lect-show') && app.includes('when-paused')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
   // Platform audit (22 Oct): smooth playback, as on SoundCloud and Spotify.

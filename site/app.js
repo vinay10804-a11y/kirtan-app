@@ -78,7 +78,8 @@ const S = {
   // Lectures (password-protected section): 'unknown' until asked, then 'locked', 'loading', 'ready' or 'error'.
   lectState: 'unknown',
   lectures: [],
-  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 150 },
+  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60 },
+  lectDur: store.get('lectDur', {}), // lecture lengths, learnt the first time each is played
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
   dlQueue: [],
@@ -984,9 +985,15 @@ function route() {
   const lq = $('#lq');
   if (lq) {
     let typing;
-    lq.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { S.lect.q = lq.value; S.lect.shown = 150; $('#lect-results').innerHTML = lectureResults(); }, 150); });
+    lq.addEventListener('input', () => {
+      clearTimeout(typing);
+      typing = setTimeout(() => { S.lect.q = lq.value; S.lect.shown = LECT_PAGE; $('#lect-results').innerHTML = lectureResults(); watchLectureList(); }, 120);
+    });
+    lq.addEventListener('keydown', e => { if (e.key === 'Enter') lq.blur(); });
   }
-  $('#llang')?.addEventListener('change', e => { S.lect.lang = e.target.value; store.set('lectLang', S.lect.lang); S.lect.shown = 150; route(); });
+  $('#llang')?.addEventListener('change', e => { S.lect.lang = e.target.value; store.set('lectLang', S.lect.lang); S.lect.shown = LECT_PAGE; route(); });
+  $('#lyear')?.addEventListener('change', e => { S.lect.year = e.target.value; S.lect.shown = LECT_PAGE; route(); });
+  watchLectureList();
   const q = $('#q');
   if (q) {
     let remember;
@@ -1025,6 +1032,10 @@ function refreshTrack(id) {
   if (!t) return;
   for (const li of $$(`.track[data-id="${id}"]`)) {
     li.outerHTML = trackRow(t, Number(li.dataset.i), li.dataset.list, JSON.parse(li.dataset.opts || '{}'));
+  }
+  if (t.section === 'lecture') {
+    const words = lectWords(S.lect.q);
+    for (const li of $$(`.lect-row[data-id="${id}"]`)) li.outerHTML = lectureRow(t, words);
   }
   for (const btn of $$(`.video[data-track="${id}"] .dl`)) btn.outerHTML = dlButton(t);
   for (const btn of $$('[data-action="save-list"], .text-btn.done')) {
@@ -1124,6 +1135,11 @@ async function load(id, { autoplay = true, at } = {}) {
   audio.addEventListener('loadedmetadata', () => {
     if (seq !== loadSeq) return;
     audio.playbackRate = S.speed;
+    // Lectures' lengths aren't in the list; learn each one when it's first played.
+    if (t.section === 'lecture' && !t.duration && audio.duration > 60) {
+      t.duration = S.lectDur[t.id] = Math.round(audio.duration);
+      store.set('lectDur', S.lectDur);
+    }
     if (resumeAt && resumeAt > 10 && resumeAt < (t.duration || audio.duration) - 10) seekTo(resumeAt);
   }, { once: true });
 
@@ -2474,8 +2490,10 @@ document.addEventListener('click', async e => {
     case 'add-to-playlist': setTimeout(() => openPlaylistPicker(id)); break;
     case 'toggle-fav': toggleFav(id); break;
     case 'queue': openQueue(); break;
-    case 'lect-year': S.lect.year = el.dataset.year; S.lect.shown = 150; route(); break;
-    case 'lect-more': S.lect.shown += 150; $('#lect-results').innerHTML = lectureResults(); break;
+    case 'lect-more': showMoreLectures(); break;
+    case 'lect-clear': S.lect.q = ''; S.lect.shown = LECT_PAGE; route(); $('#lq')?.focus(); break;
+    case 'lect-topic': S.lect.q = el.dataset.q; S.lect.shown = LECT_PAGE; route(); break;
+    case 'lect-everywhere': S.lect.year = 'All'; S.lect.lang = 'All'; S.lect.shown = LECT_PAGE; route(); break;
     case 'lect-retry': S.lectState = 'unknown'; route(); break;
     case 'lect-signout': {
       await fetch('/api/lectures/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
@@ -2641,8 +2659,8 @@ function loadLectures() {
       S.lectures = lectures.map(l => ({
         id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
         year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
-        src: l.url, external: true, duration: 0, cover: SECTION_ART.Lectures,
-        key: norm(`${l.title} ${l.ref} ${l.date} ${l.year} ${l.place} ${l.with}`),
+        src: l.url, external: true, duration: S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures,
+        skey: lectNorm(`${l.title} ${l.ref} ${l.date} ${l.year} ${l.place} ${l.with} ${l.language} ${l.into || ''}`),
       }));
       for (const t of S.lectures) S.byId.set(t.id, t);
       S.lectState = 'ready';
@@ -2651,6 +2669,10 @@ function loadLectures() {
   return lectLoading;
 }
 
+// Laid out like Apple Podcasts (owner, 25 Oct 2026): the show at the top with Play latest,
+// Continue listening cards for lectures part-heard, then one search box with Year and
+// Language menus (no wall of year buttons), and episode rows: date, title, details, and a
+// play pill that shows time left. More rows load as you scroll.
 function lecturesView() {
   const head = `<h1 class="page-title">Lectures</h1>`;
   if (S.lectState === 'unknown' || S.lectState === 'loading') {
@@ -2661,7 +2683,8 @@ function lecturesView() {
     return `${head}<p class="empty">The lectures need an internet connection. <button class="text-btn" data-action="lect-retry">Try again</button></p>`;
   }
   if (S.lectState === 'locked') {
-    return `${head}<p class="page-sub">Sacinandana Swami's lectures. This section is private for now.</p>
+    return `<div class="lect-show">${lectArt()}<div class="lect-show-text"><h1>Lectures</h1><p class="lect-by">Sacinandana Swami</p>
+        <p class="lect-about">Sacinandana Swami's lectures from the Saranagati Library, 1985 to today. This section is private for now.</p></div></div>
       <form class="lect-gate" id="lect-login">
         <label for="lect-pw">Password</label>
         <input id="lect-pw" type="password" autocomplete="current-password" required>
@@ -2674,27 +2697,136 @@ function lecturesView() {
   const langs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
   if (S.lect.lang !== 'All' && !counts[S.lect.lang]) S.lect.lang = 'English';
   const inLang = S.lectures.filter(t => S.lect.lang === 'All' || t.language === S.lect.lang);
-  const years = [...new Set(inLang.map(t => t.year))].sort((a, b) => b - a);
-  if (S.lect.year !== 'All' && !years.includes(Number(S.lect.year))) S.lect.year = 'All';
-  return `${head}<p class="page-sub">Sacinandana Swami · ${S.lectures.length.toLocaleString()} lectures from the Saranagati Library</p>
-    <div class="lect-controls">
-      <input id="lq" type="search" placeholder="Search a title, verse (SB 7.7) or year" value="${esc(S.lect.q)}" autocomplete="off">
-      <select id="llang" aria-label="Language"><option value="All">All languages</option>${langs.map(l => `<option value="${esc(l)}"${l === S.lect.lang ? ' selected' : ''}>${esc(l)} (${counts[l].toLocaleString()})</option>`).join('')}</select>
-    </div>
-    <div class="chips">${['All', ...years].map(y => `<button class="chip" data-action="lect-year" data-year="${y}" aria-current="${String(y) === String(S.lect.year)}">${y}</button>`).join('')}</div>
-    <div id="lect-results">${lectureResults()}</div>
+  const yearCounts = {};
+  for (const t of inLang) yearCounts[t.year] = (yearCounts[t.year] || 0) + 1;
+  const years = Object.keys(yearCounts).map(Number).sort((a, b) => b - a);
+  if (S.lect.year !== 'All' && !yearCounts[S.lect.year]) S.lect.year = 'All';
+  const latest = inLang[0];
+  S.lists['lectures-latest'] = inLang.map(t => t.id);
+  const started = S.lectures.filter(t => S.positions[t.id]).sort((a, b) => (S.posAt[b.id] || 0) - (S.posAt[a.id] || 0)).slice(0, 12);
+  S.lists['lectures-continue'] = started.map(t => t.id);
+  return `<div class="lect-show">${lectArt()}<div class="lect-show-text"><h1>Lectures</h1><p class="lect-by">Sacinandana Swami</p>
+      <p class="lect-about">${S.lectures.length.toLocaleString()} lectures from the Saranagati Library, ${Math.min(...S.lectures.map(t => t.year))} to today.</p>
+      ${latest ? `<div class="lect-show-actions"><button class="btn" data-action="play" data-list="lectures-latest" data-id="${latest.id}">${icon('play')}Play latest</button>
+        <span class="lect-latest">${esc(fmtDate(latest.date))}</span></div>` : ''}</div></div>
+    ${started.length ? `<section class="lect-section"><h2>Continue listening</h2><div class="lect-cards">${started.map(lectCard).join('')}</div></section>` : ''}
+    <section class="lect-section">
+      <h2>All lectures</h2>
+      <div class="lect-search">${icon('search')}<input id="lq" type="search" placeholder="Search lectures, verses, years" value="${esc(S.lect.q)}" autocomplete="off" enterkeyhint="search">
+        ${S.lect.q ? `<button class="icon-btn" data-action="lect-clear" aria-label="Clear search">${icon('x')}</button>` : ''}</div>
+      <div class="lect-filters">
+        <label class="lect-pick">${icon('calendar')}<select id="lyear" aria-label="Year"><option value="All">All years</option>${years.map(y => `<option value="${y}"${String(y) === String(S.lect.year) ? ' selected' : ''}>${y} (${yearCounts[y]})</option>`).join('')}</select></label>
+        <label class="lect-pick">${icon('globe')}<select id="llang" aria-label="Language"><option value="All">All languages</option>${langs.map(l => `<option value="${esc(l)}"${l === S.lect.lang ? ' selected' : ''}>${esc(l)} (${counts[l].toLocaleString()})</option>`).join('')}</select></label>
+      </div>
+      <div id="lect-results">${lectureResults()}</div>
+    </section>
     <p class="note">The audio plays from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>, so lectures can't be saved offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button></p>`;
 }
 
+function lectArt() {
+  return `<span class="lect-art"><img src="${esc(SECTION_ART.Lectures)}" alt=""></span>`;
+}
+
+// Search that forgives spelling: Krishna = Krsna, Chaitanya = Caitanya, Shri = Sri,
+// Gour = Gaur; "Bhagavatam 7.7" = SB 7.7, "Gita 2.13" = BG 2.13; "sb7.7" works too.
+function lectNorm(s) {
+  return norm(s).replace(/[-–—_/'’]+/g, ' ').replace(/([a-z])(\d)/g, '$1 $2').replace(/sh/g, 's').replace(/ch/g, 'c')
+    .replace(/ri/g, 'r').replace(/aa/g, 'a').replace(/ee/g, 'i').replace(/ou/g, 'au').replace(/w/g, 'v');
+}
+// A searched word and the other ways it's written ("gita" also finds BG verses).
+const LECT_ALSO = { sb: ['bhagavatam'], bhagavatam: ['sb'], srimad: ['sb', 'bhagavatam'], bg: ['gita'], gita: ['bg'], bhagavad: ['bg', 'gita'], cc: ['caritamrta'], caritamrta: ['cc'] };
+function lectWords(q) {
+  return lectNorm(q).split(/[\s,;]+/).filter(Boolean).map(w => [w, ...(LECT_ALSO[w] || [])]);
+}
+
+function lectMatches() {
+  const words = lectWords(S.lect.q);
+  const inFilters = t => (S.lect.lang === 'All' || t.language === S.lect.lang) && (S.lect.year === 'All' || t.year === Number(S.lect.year));
+  const hit = t => words.every(alts => alts.some(w => t.skey.includes(w)));
+  const list = S.lectures.filter(t => inFilters(t) && hit(t));
+  // Nothing in this language or year? Say how many are elsewhere.
+  const elsewhere = words.length && !list.length ? S.lectures.filter(hit).length : 0;
+  return { list, words, elsewhere };
+}
+
+const LECT_PAGE = 60;
 function lectureResults() {
-  const words = norm(S.lect.q).split(/\s+/).filter(Boolean);
-  const list = S.lectures.filter(t => (S.lect.lang === 'All' || t.language === S.lect.lang)
-    && (S.lect.year === 'All' || t.year === Number(S.lect.year)) && words.every(w => t.key.includes(w)));
+  const { list, words, elsewhere } = lectMatches();
   S.lists.lectures = list.map(t => t.id); // a lecture plays on through everything listed, not just what's shown
-  const shown = list.slice(0, S.lect.shown);
-  return `<p class="page-sub" style="margin-top:12px">${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}</p>
-    <ul class="tracks">${shown.map((t, i) => trackRow(t, i, 'lectures', { thumb: false })).join('')}</ul>
-    ${list.length > shown.length ? `<p class="lect-more"><button class="btn ghost" data-action="lect-more">Show more (${(list.length - shown.length).toLocaleString()} left)</button></p>` : ''}`;
+  if (!list.length) {
+    return words.length ? `<p class="empty">No lectures found for “${esc(S.lect.q)}”${S.lect.lang !== 'All' || S.lect.year !== 'All' ? ` in ${[S.lect.year !== 'All' && S.lect.year, S.lect.lang !== 'All' && S.lect.lang].filter(Boolean).join(', ')}` : ''}.
+        ${elsewhere ? `<button class="text-btn" data-action="lect-everywhere">Show ${elsewhere} in all years and languages</button>` : 'Try a shorter word.'}</p>` : `<p class="empty">No lectures here.</p>`;
+  }
+  const topics = ['Holy Name', 'Japa', 'Prayer', 'Bhagavad-gita', 'Srimad Bhagavatam', 'Vrindavan', 'Radharani', 'Lord Caitanya', 'Kirtan', 'Humility', 'Guru'];
+  const suggest = !words.length && S.lect.year === 'All' ? `<div class="lect-suggest">${topics.map(x => `<button class="chip" data-action="lect-topic" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
+  S.lect.shown = Math.max(S.lect.shown || 0, LECT_PAGE);
+  return `${suggest}<p class="lect-count">${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}${words.length ? ` for “${esc(S.lect.q)}”` : ''}</p>
+    <ul class="lect-list" id="lect-list">${list.slice(0, S.lect.shown).map(t => lectureRow(t, words)).join('')}</ul>
+    ${list.length > S.lect.shown ? `<div class="lect-sentinel" id="lect-sentinel"><button class="btn ghost" data-action="lect-more">Show more</button></div>` : ''}`;
+}
+
+// Marks the searched words in a title (only where the title has them as typed).
+function markWords(text, words) {
+  let out = esc(text);
+  for (const w of words.flat().filter(x => x.length > 2 && !/^\d/.test(x))) {
+    out = out.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>');
+  }
+  return out;
+}
+
+function lectLeft(t) {
+  const pos = S.positions[t.id];
+  if (!pos) return S.played.has(t.id) ? 'Played' : t.duration ? fmtDur(t.duration) : 'Play';
+  return t.duration ? `${fmtDur(Math.max(60, t.duration - pos))} left` : `Resume`;
+}
+
+function lectureRow(t, words = []) {
+  const playing = S.current === t.id;
+  const pos = S.positions[t.id];
+  const pct = pos && t.duration ? Math.min(100, Math.round((pos / t.duration) * 100)) : 0;
+  const details = [t.ref, t.place, t.with && `with ${t.with}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language].filter(Boolean).map(esc).join(' · ');
+  return `<li class="lect-row${playing ? ' playing' : ''}" data-id="${t.id}">
+    <button class="lect-main" data-action="play" data-list="lectures" data-id="${t.id}">
+      <span class="lect-date">${esc(t.date ? fmtDate(t.date) : t.year)}</span>
+      <span class="lect-title">${markWords(t.title, words)}</span>
+      ${details ? `<span class="lect-details">${details}</span>` : ''}
+    </button>
+    <div class="lect-foot">
+      <button class="lect-play${pos ? ' started' : ''}" data-action="play" data-list="lectures" data-id="${t.id}" aria-label="${playing ? 'Playing' : 'Play'} ${esc(t.title)}">
+        ${playing ? `<span class="when-playing"><span class="eq"><i></i><i></i><i></i></span>Playing</span><span class="when-paused">${icon('play')}${lectLeft(t)}</span>`
+          : `${icon('play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
+      </button>
+      <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
+    </div>
+  </li>`;
+}
+
+function lectCard(t) {
+  const pos = S.positions[t.id];
+  const pct = pos && t.duration ? Math.min(100, Math.round((pos / t.duration) * 100)) : 0;
+  return `<button class="lect-card" data-action="play" data-list="lectures-continue" data-id="${t.id}">
+    <span class="lect-date">${esc(t.date ? fmtDate(t.date) : t.year)}</span>
+    <span class="lect-title">${esc(t.title)}</span>
+    <span class="lect-card-foot">${icon('play')}<span>${lectLeft(t)}</span></span>
+    ${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
+  </button>`;
+}
+
+// More rows appear as you scroll near the end of the list.
+let lectObserver = null;
+function watchLectureList() {
+  lectObserver?.disconnect();
+  const sentinel = $('#lect-sentinel');
+  if (!sentinel || !('IntersectionObserver' in window)) return;
+  lectObserver = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) showMoreLectures(); }, { rootMargin: '600px' });
+  lectObserver.observe(sentinel);
+}
+function showMoreLectures() {
+  const { list, words } = lectMatches();
+  const from = S.lect.shown;
+  S.lect.shown += LECT_PAGE;
+  $('#lect-list')?.insertAdjacentHTML('beforeend', list.slice(from, S.lect.shown).map(t => lectureRow(t, words)).join(''));
+  if (S.lect.shown >= list.length) { lectObserver?.disconnect(); $('#lect-sentinel')?.remove(); }
 }
 
 document.addEventListener('submit', async e => {
