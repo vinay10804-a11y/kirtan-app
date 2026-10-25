@@ -75,6 +75,10 @@ const S = {
   // order, to go back to when shuffle is turned off.
   shuffle: store.get('shuffle', false),
   order: null,
+  // Lectures (password-protected section): 'unknown' until asked, then 'locked', 'loading', 'ready' or 'error'.
+  lectState: 'unknown',
+  lectures: [],
+  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 150 },
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
   dlQueue: [],
@@ -175,6 +179,7 @@ const SECTION_ART = {
   'Guided Japa': 'art/sections/guided-japa.jpg',
   'Japa Inspirations': 'art/sections/japa-inspirations.jpg',
   'Living Name Meditations': 'art/sections/living-name-meditations.jpg',
+  Lectures: 'art/sections/sacinandana-swami.jpg',
 };
 function collectionArt(name) {
   const src = SECTION_ART[name] || personPhoto(name);
@@ -319,6 +324,7 @@ const JAPA_MODE = { ...MODES.year, within: byDate, opts: { date: true } };
 /* ---------------- rendering pieces ---------------- */
 
 function dlButton(t) {
+  if (t.external) return ''; // lectures stream from the Saranagati Library and can't be saved
   const d = S.downloads.get(t.id);
   if (S.saved.has(t.id)) {
     return `<button class="icon-btn dl saved" data-action="download" data-id="${t.id}" aria-label="Saved offline. Tap to remove.">${icon('check')}</button>`;
@@ -333,13 +339,18 @@ function dlButton(t) {
 
 function trackMeta(t, opts = {}) {
   const parts = [];
+  if (t.section === 'lecture') {
+    const pos = S.positions[t.id];
+    return [t.date && fmtDate(t.date), t.ref, esc(t.place), t.with && `with ${esc(t.with)}`, t.into ? `${t.language} → ${t.into}` : t.language !== 'English' && t.language,
+      opts.when && fmtWhen(opts.when), pos && `<span class="left">${fmtClock(pos)} listened</span>`].filter(Boolean).join(' · ');
+  }
   if (opts.source) parts.push(esc(t.section === 'japa' ? t.type : t.artist));
   if (opts.year && t.year) parts.push(t.year);
   if (opts.place && (t.place || t.album)) parts.push(esc(t.place || t.album));
   if (opts.date && t.date) parts.push(fmtDate(t.date));
   if (opts.when) parts.push(fmtWhen(opts.when));
   const pos = S.positions[t.id];
-  parts.push(pos && t.duration ? `<span class="left">${fmtDur(t.duration - pos)} left</span>` : fmtDur(t.duration));
+  parts.push(pos && t.duration ? `<span class="left">${fmtDur(t.duration - pos)} left</span>` : t.duration ? fmtDur(t.duration) : '');
   if (!pos && S.played.has(t.id)) parts.push(`<span class="played">${icon('tick')}Played</span>`);
   return parts.join(' · ');
 }
@@ -498,6 +509,11 @@ function homeView() {
         <a class="entry-head" href="#/japa"><h2>Japa</h2>${icon('right')}</a>
         <p>Chant your rounds with Sacinandana Swami. Guided japa sessions play here from YouTube; Japa Inspirations and Living Name meditations play here from SoundCloud.</p>
         <div class="entry-links">${japaLinks || '<p class="muted">Japa sessions appear here once they’re published.</p>'}</div>
+      </div>
+      <div class="entry">
+        <a class="entry-head" href="#/lectures"><h2>Lectures</h2>${icon('right')}</a>
+        <p>Sacinandana Swami's lectures from the Saranagati Library, 1985 to today. Private for now: it needs a password.</p>
+        <div class="entry-links">${entryLink('#/lectures', collectionArt('Lectures'), 'All lectures', S.lectState === 'ready' ? `${S.lectures.length.toLocaleString()} lectures` : 'Password needed')}</div>
       </div>
     </section>
     ${recent.length ? `<section class="section"><h2>Recently added</h2>${trackList(recent, 'recent', { source: true, year: true })}</section>` : ''}
@@ -732,10 +748,13 @@ function searchResults() {
   if (!hits.length && !vids.length) return `<p class="empty">Nothing found for “${esc(S.query)}”. Try a shorter word, a place or a year.</p>`;
   const k = hits.filter(t => t.section !== 'japa');
   const j = hits.filter(t => t.section === 'japa');
+  const l = S.lectures.filter(t => match(`${t.title} ${t.ref} ${t.place} ${t.year} ${t.date} lecture`)).slice(0, 60);
+  if (!hits.length && !vids.length && !l.length) return `<p class="empty">Nothing found for “${esc(S.query)}”. Try a shorter word, a place or a year.</p>`;
   return [
     k.length ? `<section class="group"><div class="group-head"><h3>Kirtans<small>${k.length}</small></h3></div>${trackList(k, 'search:k', { source: true, year: true, place: true })}</section>` : '',
     vids.length ? `<section class="group"><div class="group-head"><h3>Japa videos<small>${vids.length}</small></h3></div><div class="vrows">${vids.map(videoRow).join('')}</div></section>` : '',
     j.length ? `<section class="group"><div class="group-head"><h3>Japa audio<small>${j.length}</small></h3></div>${trackList(j, 'search:j', { source: true, date: true })}</section>` : '',
+    l.length ? `<section class="group"><div class="group-head"><h3>Lectures<small>${l.length}</small></h3></div>${trackList(l, 'search:l', { thumb: false })}</section>` : '',
   ].join('');
 }
 
@@ -942,6 +961,7 @@ function route() {
     case 'japa': html = japaView(a); break;
     case 'search': html = searchView(); break;
     case 'library': html = libraryView(a, b); break;
+    case 'lectures': html = lecturesView(); break;
     case 'play': html = homeView(); break;
     default: html = notFound();
   }
@@ -961,6 +981,12 @@ function route() {
   lastViewKey = viewKey;
   $('.chips [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 
+  const lq = $('#lq');
+  if (lq) {
+    let typing;
+    lq.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(() => { S.lect.q = lq.value; S.lect.shown = 150; $('#lect-results').innerHTML = lectureResults(); }, 150); });
+  }
+  $('#llang')?.addEventListener('change', e => { S.lect.lang = e.target.value; store.set('lectLang', S.lect.lang); S.lect.shown = 150; route(); });
   const q = $('#q');
   if (q) {
     let remember;
@@ -1110,8 +1136,11 @@ async function load(id, { autoplay = true, at } = {}) {
 function keepListening() {
   const t = S.byId.get(S.current);
   if (!t || S.repeat === 'all' || S.queue.slice(S.qi + 1).some(playable)) return;
-  const page = S.tracks.filter(x => x.section === t.section && x.artist === t.artist && x.type === t.type && !x.hidden)
-    .sort((a, b) => (b.year || 0) - (a.year || 0) || a.title.localeCompare(b.title, undefined, { numeric: true }));
+  // Lectures carry on with the next older lectures in the same language.
+  const page = t.section === 'lecture'
+    ? S.lectures.filter(x => x.language === t.language)
+    : S.tracks.filter(x => x.section === t.section && x.artist === t.artist && x.type === t.type && !x.hidden)
+      .sort((a, b) => (b.year || 0) - (a.year || 0) || a.title.localeCompare(b.title, undefined, { numeric: true }));
   const at = page.findIndex(x => x.id === t.id);
   const queued = new Set(S.queue);
   const more = [...page.slice(at + 1), ...page.slice(0, Math.max(0, at))].map(x => x.id).filter(id => !queued.has(id)).slice(0, 30);
@@ -1124,7 +1153,7 @@ let prefetched = null;
 function prefetchNext() {
   const id = S.queue[stepIndex(1)];
   const t = S.byId.get(id);
-  if (!t || prefetched === id || S.saved.has(id) || !isOnline()) return;
+  if (!t || t.external || prefetched === id || S.saved.has(id) || !isOnline()) return;
   prefetched = id;
   fetch(t.src, { headers: { Range: 'bytes=0-393215' }, priority: 'low' }).then(r => r.arrayBuffer()).catch(() => {});
   const art = artFor(t);
@@ -1398,6 +1427,7 @@ function updatePlayerButtons() {
   }
 
   const dl = $('#player-dl');
+  dl.hidden = !!t.external;
   const d = S.downloads.get(t.id);
   dl.classList.toggle('on', S.saved.has(t.id));
   dl.querySelector('use').setAttribute('href', S.saved.has(t.id) ? '#i-check' : '#i-download');
@@ -1857,12 +1887,12 @@ function openTrackMenu(id, row) {
     ${S.current && S.current !== id ? item('play-next', 'next', 'Play next') + item('add-queue', 'queue', 'Add to queue') : ''}
     ${item('add-to-playlist', 'playlist', 'Add to playlist')}
     ${item('toggle-fav', 'heart', S.favs.has(id) ? 'Remove from Favourites' : 'Add to Favourites')}
-    ${'caches' in window ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
+    ${'caches' in window && !t.external ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
     ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${S.speed}×`) : ''}
-    ${item('share-track', 'share', 'Share')}
+    ${t.external ? '' : item('share-track', 'share', 'Share')}
     <button value="cancel" class="muted">Cancel</button>`;
   $('#track-dialog').showModal();
 }
@@ -2444,6 +2474,15 @@ document.addEventListener('click', async e => {
     case 'add-to-playlist': setTimeout(() => openPlaylistPicker(id)); break;
     case 'toggle-fav': toggleFav(id); break;
     case 'queue': openQueue(); break;
+    case 'lect-year': S.lect.year = el.dataset.year; S.lect.shown = 150; route(); break;
+    case 'lect-more': S.lect.shown += 150; $('#lect-results').innerHTML = lectureResults(); break;
+    case 'lect-retry': S.lectState = 'unknown'; route(); break;
+    case 'lect-signout': {
+      await fetch('/api/lectures/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+      S.lectState = 'locked';
+      route();
+      break;
+    }
     case 'queue-jump': jumpTo(Number(el.dataset.qi)); break;
     case 'queue-remove': removeFromQueue(Number(el.dataset.qi)); break;
     case 'pl-new': {
@@ -2569,6 +2608,115 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
 
 /* ---------------- start ---------------- */
 
+// Shows the last recording in the mini player, ready to resume, with the rest of
+// the queue it was playing from.
+function restoreLast() {
+  const last = store.get('last');
+  if (S.current || !S.byId.has(last) || location.hash.startsWith('#/play/')) return;
+  const saved = store.get('queue', null);
+  const ids = (saved?.ids || []).filter(id => S.byId.has(id));
+  S.current = last;
+  S.queue = ids.includes(last) ? ids : [last];
+  S.qi = S.queue.indexOf(last);
+  S.order = S.shuffle && saved?.order ? saved.order.filter(id => S.byId.has(id)) : null;
+  updateNowPlaying();
+  setPlayingClass();
+}
+
+/* ---------------- lectures (password-protected) ---------------- */
+
+// Sacinandana Swami's lectures from the Saranagati Library (owner, 25 Oct 2026): their own
+// section, behind a password (worker/lectures.js). They play in the app's player straight
+// from the library, so they can't be saved offline or shared as links.
+let lectLoading = null;
+function loadLectures() {
+  lectLoading ??= (async () => {
+    S.lectState = 'loading';
+    const res = await fetch('/api/lectures', { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
+    if (!res) S.lectState = 'error';
+    else if (res.status === 401) S.lectState = 'locked';
+    else if (!res.ok) S.lectState = 'error';
+    else {
+      const { lectures = [] } = await res.json().catch(() => ({}));
+      S.lectures = lectures.map(l => ({
+        id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
+        year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
+        src: l.url, external: true, duration: 0, cover: SECTION_ART.Lectures,
+        key: norm(`${l.title} ${l.ref} ${l.date} ${l.year} ${l.place} ${l.with}`),
+      }));
+      for (const t of S.lectures) S.byId.set(t.id, t);
+      S.lectState = 'ready';
+    }
+  })().finally(() => { lectLoading = null; });
+  return lectLoading;
+}
+
+function lecturesView() {
+  const head = `<h1 class="page-title">Lectures</h1>`;
+  if (S.lectState === 'unknown' || S.lectState === 'loading') {
+    loadLectures().then(() => { if (location.hash.startsWith('#/lectures')) route(); });
+    return `${head}<p class="page-sub">Loading…</p>`;
+  }
+  if (S.lectState === 'error') {
+    return `${head}<p class="empty">The lectures need an internet connection. <button class="text-btn" data-action="lect-retry">Try again</button></p>`;
+  }
+  if (S.lectState === 'locked') {
+    return `${head}<p class="page-sub">Sacinandana Swami's lectures. This section is private for now.</p>
+      <form class="lect-gate" id="lect-login">
+        <label for="lect-pw">Password</label>
+        <input id="lect-pw" type="password" autocomplete="current-password" required>
+        <button class="btn" type="submit">Open lectures</button>
+        <p class="lect-msg" id="lect-msg" role="alert"></p>
+      </form>`;
+  }
+  const counts = {};
+  for (const t of S.lectures) counts[t.language] = (counts[t.language] || 0) + 1;
+  const langs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  if (S.lect.lang !== 'All' && !counts[S.lect.lang]) S.lect.lang = 'English';
+  const inLang = S.lectures.filter(t => S.lect.lang === 'All' || t.language === S.lect.lang);
+  const years = [...new Set(inLang.map(t => t.year))].sort((a, b) => b - a);
+  if (S.lect.year !== 'All' && !years.includes(Number(S.lect.year))) S.lect.year = 'All';
+  return `${head}<p class="page-sub">Sacinandana Swami · ${S.lectures.length.toLocaleString()} lectures from the Saranagati Library</p>
+    <div class="lect-controls">
+      <input id="lq" type="search" placeholder="Search a title, verse (SB 7.7) or year" value="${esc(S.lect.q)}" autocomplete="off">
+      <select id="llang" aria-label="Language"><option value="All">All languages</option>${langs.map(l => `<option value="${esc(l)}"${l === S.lect.lang ? ' selected' : ''}>${esc(l)} (${counts[l].toLocaleString()})</option>`).join('')}</select>
+    </div>
+    <div class="chips">${['All', ...years].map(y => `<button class="chip" data-action="lect-year" data-year="${y}" aria-current="${String(y) === String(S.lect.year)}">${y}</button>`).join('')}</div>
+    <div id="lect-results">${lectureResults()}</div>
+    <p class="note">The audio plays from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>, so lectures can't be saved offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button></p>`;
+}
+
+function lectureResults() {
+  const words = norm(S.lect.q).split(/\s+/).filter(Boolean);
+  const list = S.lectures.filter(t => (S.lect.lang === 'All' || t.language === S.lect.lang)
+    && (S.lect.year === 'All' || t.year === Number(S.lect.year)) && words.every(w => t.key.includes(w)));
+  S.lists.lectures = list.map(t => t.id); // a lecture plays on through everything listed, not just what's shown
+  const shown = list.slice(0, S.lect.shown);
+  return `<p class="page-sub" style="margin-top:12px">${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}</p>
+    <ul class="tracks">${shown.map((t, i) => trackRow(t, i, 'lectures', { thumb: false })).join('')}</ul>
+    ${list.length > shown.length ? `<p class="lect-more"><button class="btn ghost" data-action="lect-more">Show more (${(list.length - shown.length).toLocaleString()} left)</button></p>` : ''}`;
+}
+
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'lect-login') return;
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  $('#lect-msg').textContent = '';
+  const res = await fetch('/api/lectures/login', {
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: $('#lect-pw').value }),
+  }).catch(() => null);
+  btn.disabled = false;
+  if (!res?.ok) {
+    $('#lect-msg').textContent = res ? (await res.json().catch(() => ({}))).error || 'That didn’t work.' : 'No connection.';
+    return;
+  }
+  S.lectState = 'unknown';
+  await loadLectures();
+  route();
+});
+
 (async function start() {
   // A shared link (/k/<id>) opens that kirtan in the player.
   const shared = /^\/k\/([A-Za-z0-9_-]+)/.exec(location.pathname);
@@ -2577,19 +2725,18 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.inst
   plShape = new Map(S.playlists.map(p => [p.id, shapeOf(p)])); // so the next save only marks real changes
   $('.offline-pill').hidden = isOnline();
 
-  // Show the last recording in the mini player, ready to resume, with the rest
-  // of the queue it was playing from.
-  const last = store.get('last');
-  if (S.byId.has(last) && !location.hash.startsWith('#/play/')) {
-    const saved = store.get('queue', null);
-    const ids = (saved?.ids || []).filter(id => S.byId.has(id));
-    S.current = last;
-    S.queue = ids.includes(last) ? ids : [last];
-    S.qi = S.queue.indexOf(last);
-    S.order = S.shuffle && saved?.order ? saved.order.filter(id => S.byId.has(id)) : null;
-    updateNowPlaying();
-  }
+  restoreLast();
   route();
+  // Lectures load in the background on a device that has the password, so a lecture in
+  // Favourites, History or the mini player shows up there too.
+  if (isOnline()) {
+    loadLectures().then(() => {
+      if (S.lectState !== 'ready') return;
+      restoreLast();
+      const page = location.hash.replace(/^#\/?/, '').split('/')[0];
+      if (['', 'lectures', 'library', 'search'].includes(page)) route();
+    });
+  }
   setPlayingClass();
   accountStart();
 

@@ -231,10 +231,15 @@ with `wrangler dev --local` (localhost and 127.0.0.1 act as two devices).
   next kirtan, Loop this kirtan, Play once then stop, Loop the whole list (`REPEAT` in app.js; also in
   the ⋯ menu of the kirtan that's playing).
 
-## Lectures (private test, 25 Oct 2026)
-The owner wants to try a Lectures section before deciding. It is deliberately separate from the app: its
-own page `site/lectures/` (index.html, lectures.js, lectures.css; storage keys `lect.*`), not linked from
-the app's menus, `noindex`. It lists Sacinandana Swami's lectures (speaker code starting "SSNS") from the
+## Lectures (password-protected section, 25 Oct 2026)
+Its own section of the app (owner: "on the main platform as its own section, but password protected"):
+a Lectures item in the menu, a Home card, `#/lectures` (`lecturesView` in app.js: password form until
+unlocked, then search, language menu (English first), year chips, 150 rows at a time). Lectures are
+tracks with `section: 'lecture'`, `external: true` and ids `lec-<id>`, kept in `S.lectures` and `S.byId`
+(not `S.tracks`), so they play in the main player (queue, lock screen, speed, favourites, history,
+positions) but have no Save offline, Share or prefetch. They load in the background on devices that have
+the password. Search shows a Lectures group. The old `/lectures/` page just redirects to `#/lectures`.
+It lists Sacinandana Swami's lectures (speaker code starting "SSNS") from the
 Saranagati Library (https://www.saranagati-library.net, year folders 1985–2026, ~6,900 files) and plays
 them straight from the library; nothing is copied. `tools/lectures.mjs --upload` reads the library's
 folder listings into `build/lectures.json` and puts it in R2 at `lectures/catalog.json` (re-run it to pick
