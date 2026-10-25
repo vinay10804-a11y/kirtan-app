@@ -4,12 +4,15 @@
 // preview for WhatsApp and the like). Everything else is a static asset.
 // /stream/ holds the current, volume-levelled AAC files; /media/ and /audio/ older ones.
 import { api } from './api.js';
+import { lectures } from './lectures.js';
 import { sharePage } from './share.js';
 
 const AUDIO_PATH = /^\/(stream|media|audio)\//;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // The password-protected Lectures test section (worker/lectures.js).
+    if (url.pathname === '/api/lectures' || url.pathname.startsWith('/api/lectures/')) return lectures(request, env, url);
     if (url.pathname.startsWith('/api/')) return api(request, env, url);
     if (url.pathname.startsWith('/k/') && request.method === 'GET') return sharePage(request, env, url);
     if (AUDIO_PATH.test(url.pathname)) {
