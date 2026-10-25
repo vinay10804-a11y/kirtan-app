@@ -73,9 +73,9 @@ Tick items off (or delete them) as they're done.
   To swap a picture you don't like, delete it in the Picture column of Kirtans list.xlsx (or type
   another file name in its Thumbnail cell), save, close Excel and publish.
 
-- **Lectures (private test, 25 Oct):** https://kirtans.kirtan-app.workers.dev/lectures/ with the password in
-  "Lectures password.txt" (in the SNS Kirtan Platform folder). 6,913 of Sacinandana Swami's lectures from
-  the Saranagati Library, playing straight from there; not linked from the main app. Decide whether to
+- **Lectures (25 Oct):** its own section in the app (menu → Lectures, and a card on Home), locked with the
+  password in "Lectures password.txt" (in the SNS Kirtan Platform folder). 6,913 of Sacinandana Swami's
+  lectures from the Saranagati Library, playing straight from there in the app's player. Decide whether to
   keep it; if it goes public, ask SacinandanaSwami.com first (their site says the content is copyright).
   Tell Claude what the place codes mean (GD, RD, V, GB, B, HD, VA, Z, …) to show places.
 

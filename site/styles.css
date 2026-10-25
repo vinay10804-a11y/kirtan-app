@@ -683,3 +683,14 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 #q-repeat { position: relative; }
 #q-repeat.one::after { top: 14px; left: calc(50% + 6px); }
 .suggest h2 .text-btn { margin-left: 8px; font: 500 13px var(--sans); }
+
+/* Lectures (password-protected section) */
+.lect-gate { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin-top: 14px; }
+.lect-gate label { font-size: 14px; color: var(--ink-2); }
+.lect-gate input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 17px var(--sans); }
+.lect-gate .btn { justify-content: center; padding: 12px 18px; font-size: 15px; }
+.lect-msg { min-height: 1.2em; margin: 0; color: #b0503c; font-size: 14px; }
+.lect-controls { display: flex; gap: 8px; margin-top: 14px; }
+.lect-controls input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 16px var(--sans); }
+.lect-controls select { max-width: 44%; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 15px var(--sans); }
+.lect-more { text-align: center; margin: 16px 0 0; }

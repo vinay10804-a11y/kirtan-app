@@ -44,7 +44,7 @@ const checks = [
   ['Accounts: the service worker never caches /api/', sw.includes("url.pathname.startsWith('/api/')) return")],
   ['Home page section pictures (Sacinandana Swami, Gour Krishna, the three Japa collections)', app.includes('const SECTION_ART = {') && sw.includes('art/sections/sacinandana-swami.jpg')],
   ['App icon fills the Mac tile: the maskable icon is the edge-to-edge wave', read('site/manifest.webmanifest').includes('icons/maskable-full-512.png')],
-  ['Lectures test: a separate page behind a password; the lecture list is only served after it, never from site/', read('worker/lectures.js').includes('LECTURES_PASSWORD') && read('worker/index.js').includes("'/api/lectures'") && !app.includes('/lectures') && read('site/lectures/lectures.js').includes("fetch('/api/lectures'")],
+  ['Lectures: its own section in the app (menu, Home card), behind a password; the list is only served after it, never from site/', read('worker/lectures.js').includes('LECTURES_PASSWORD') && read('worker/index.js').includes("'/api/lectures'") && app.includes('function lecturesView') && app.includes("fetch('/api/lectures'") && html.includes('data-nav="lectures"')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],
   // Platform audit (22 Oct): smooth playback, as on SoundCloud and Spotify.
