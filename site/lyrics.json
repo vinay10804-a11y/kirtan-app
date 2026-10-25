@@ -95,5 +95,12 @@
   "language": "Braj",
   "match": "jaya\\s*jaya\\s*radhe\\s*jaya\\s*jaya\\s*s(h)?yam",
   "link": "https://kksongs.org/songs/j/jayajayaradhejayajayasyama.html"
+ },
+ {
+  "name": "Ohe Vaisnava Thakura",
+  "author": "Bhaktivinoda Thakura",
+  "language": "Bengali",
+  "match": "ohe\\s*vai?s?h?nava\\s*thakura",
+  "link": "https://kksongs.org/songs/o/ohevaisnava.html"
  }
 ]
