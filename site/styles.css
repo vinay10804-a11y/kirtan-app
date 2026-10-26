@@ -607,7 +607,7 @@ dialog.video-sheet::backdrop { background: #000; }
 .install-cta-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--teal-deep); color: var(--bg); }
 .install-cta-icon svg { width: 20px; height: 20px; }
 .install-cta-text { flex: 1; min-width: 0; }
-.install-cta-text b { display: block; font: 500 18px/1.2 var(--serif); }
+.install-cta-text b { display: block; font: 500 18px/1.2 var(--serif); text-wrap: balance; }
 .install-cta-text small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
 .install-cta > svg { flex: none; width: 18px; height: 18px; color: var(--ink-3); }
 .install { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 16px); }

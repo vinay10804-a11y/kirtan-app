@@ -506,12 +506,12 @@ function homeView() {
 
   return `${topbar()}
     <div class="hero"><img src="art/card-1.webp" alt="The Hare Kṛṣṇa mahāmantra written into a wave"></div>
-    <p class="intro">Kirtan and japa with Sacinandana Swami and Gour Krishna. Listen here, or save recordings to play without internet.</p>
+    <p class="intro">Kirtans by Sacinandana Swami and Gour Krishna.<br>Japa and lectures by Sacinandana Swami.</p>
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()
-        ? '<b>Install on another device</b><small>Steps for iPhone and laptop, in Safari or Chrome</small>'
-        : '<b>Install the app</b><small>On your iPhone or laptop: opens from its own icon and works offline</small>'}</span>
+        ? '<b>How to install this website as an app</b><small>On another phone or laptop: steps for Safari and Chrome</small>'
+        : '<b>How to install this website as an app</b><small>On your iPhone or laptop: it opens from its own icon and works offline</small>'}</span>
       ${icon('right')}
     </button>
     ${last && lastPos ? `<section class="section"><h2>Continue listening</h2><div class="rows">
@@ -909,7 +909,7 @@ function openPlaylistMenu(id) {
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
 // Home page: how to install the site as an app on an iPhone or a laptop, in Safari
-// or Chrome. The "Install the app" button near the top of Home scrolls here.
+// or Chrome. The "How to install this website as an app" button near the top of Home scrolls here.
 // Inside the installed app it stays, for installing on another device.
 function installSection() {
   const steps = list => `<ol>${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
@@ -920,7 +920,7 @@ function installSection() {
     ? 'You’re already using the app. To install it on another phone or computer, open this site there and follow these steps.'
     : 'Install it once and it opens from its own icon, like any app. Kirtans you save there play with no internet, even on the Underground.';
   return `<section class="section install" id="install">
-    <h2>Use it as an app</h2>
+    <h2>How to install this website as an app</h2>
     <p class="install-why">${why}</p>
     ${quick}
     <div class="install-grid">

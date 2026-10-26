@@ -118,8 +118,9 @@ R2 bucket `kirtans` at `/stream/*`.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
-- Home has an "Install the app" button right under the intro (owner: must be near the top) that scrolls
-  to the "Use it as an app" steps (iPhone and laptop, Safari and Chrome) above "How to use this site",
+- Home's intro (owner, 26 Oct 2026): "Kirtans by Sacinandana Swami and Gour Krishna. / Japa and lectures by
+  Sacinandana Swami." Right under it, a "How to install this website as an app" button (owner: must be near
+  the top, with a clear title) that scrolls to the steps of the same title (iPhone and laptop, Safari and Chrome) above "How to use this site",
   which also links there. Inside the installed app both stay, worded for installing on another device.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.
