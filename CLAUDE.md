@@ -258,13 +258,20 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
 - Player for a lecture (Apple Podcasts): previous · back 15 · play · forward 30 · next, a "1×" speed button
   (lectures have their own speed, `S.lectSpeed`), no shuffle, repeat, Save or Share; the lock screen shows
   15/30 skips for lectures only (kirtans keep previous/next). ⋯ has Mark as played / unplayed.
-- AI transcripts (owner, 26 Oct 2026: on his Mac, a test on the newest 2026 lectures first):
-  `tools/transcribe.mjs` downloads each lecture, runs mlx-whisper (large-v3-turbo,
-  `--condition-on-previous-text False` or chanting turns into loops), deletes the MP3 and keeps
-  `build/transcripts/<id>.json` ({ segments: [[start, end, text]] }); `--upload` puts them in R2
-  (`lectures/transcripts/`) and marks the list (`tx`). It runs on its own (nohup + caffeinate); Claude
-  needn't be open. ~10 h of audio took about an hour on the M1 Pro. Never put transcripts in git or
-  site/ (the repo is public); `tools/lecture-transcripts.json` lists only which ids have one. The app's
+- AI transcripts (owner, 26 Oct 2026: on his Mac; nine 2026 lectures as a test, then every English
+  lecture, ~4,400, about a week of Mac time): `tools/transcribe.mjs` downloads each lecture, runs
+  mlx-whisper (large-v3-turbo, `--condition-on-previous-text False` or chanting turns into loops),
+  deletes the MP3, tidies singing into "♪ Singing ♪", and keeps the transcript in
+  `../Lecture transcripts.nosync/` (json/<id>.json, srt/<year>/…, lectures.json, Progress.txt), a
+  private GitHub repo (vinay10804-a11y/lecture-transcripts) it pushes every 25 lectures; the owner
+  wants them kept there for use elsewhere. The owner offered this public repo instead; I advised
+  against it (anyone could read every lecture, undoing the password; copyright SacinandanaSwami.com).
+  `--upload` puts each in R2 (`lectures/transcripts/`) as it's done and marks the app's list (`tx`)
+  every 25. It runs on its own (nohup + caffeinate -s, from "Resume transcripts.command" in that
+  folder; "Stop transcripts.command" stops it): only on mains power, paused while the lid is shut,
+  downloads retried after waking, one run at a time (lock in build/transcribe-work). About 27× faster
+  than listening on the M1 Pro. Never put transcripts in git or site/ (this repo is public);
+  `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
   Transcript sheet (player bar, ⋯ menu, a button on the row) follows along like Apple Podcasts: the
   line being spoken highlighted and kept in view, tap a line to play from there, search inside it,
   "Back to now" after scrolling by hand.
