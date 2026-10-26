@@ -237,7 +237,14 @@ a Lectures item in the menu, a Home card, `#/lectures` (`lecturesView` in app.js
 unlocked, then the Apple Podcasts-style page described below). Lectures are
 tracks with `section: 'lecture'`, `external: true` and ids `lec-<id>`, kept in `S.lectures` and `S.byId`
 (not `S.tracks`), so they play in the main player (queue, lock screen, speed, favourites, history,
-positions) but have no Save offline, Share or prefetch. They load in the background on devices that have
+positions) but have no Share or prefetch. Save offline (owner, 26 Oct 2026, "for free"): the library's
+server doesn't let other sites save its files (no CORS), so a lecture is saved through the Worker:
+`/lecture-audio/<library path>` (`t.dl`) streams it from the library (nothing stored on Cloudflare; only
+with the password; only SSNS .mp3 paths, so it's no open proxy), and the app keeps it in the audio cache
+under that path like a kirtan (sw.js serves `?offline=1`). Saved lectures are matched to ids when the
+list arrives (`savedLectures`; loadData must not delete them as unknown); their transcripts are kept in
+`kirtan-lectures` (`keepTranscript`); Library > Saved offline lists them under Lectures; "Lock lectures
+on this device" (or a 401) removes them. They load in the background on devices that have
 the password. Search shows a Lectures group. The old `/lectures/` page just redirects to `#/lectures`.
 Looks like Apple Podcasts (owner's reference, 25 Oct 2026): the show header (picture, title, Play latest),
 Continue listening cards (lectures part-heard), one search box with Year and Language menus (not a wall of
@@ -258,13 +265,20 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
 - Player for a lecture (Apple Podcasts): previous · back 15 · play · forward 30 · next, a "1×" speed button
   (lectures have their own speed, `S.lectSpeed`), no shuffle, repeat, Save or Share; the lock screen shows
   15/30 skips for lectures only (kirtans keep previous/next). ⋯ has Mark as played / unplayed.
-- AI transcripts (owner, 26 Oct 2026: on his Mac, a test on the newest 2026 lectures first):
-  `tools/transcribe.mjs` downloads each lecture, runs mlx-whisper (large-v3-turbo,
-  `--condition-on-previous-text False` or chanting turns into loops), deletes the MP3 and keeps
-  `build/transcripts/<id>.json` ({ segments: [[start, end, text]] }); `--upload` puts them in R2
-  (`lectures/transcripts/`) and marks the list (`tx`). It runs on its own (nohup + caffeinate); Claude
-  needn't be open. ~10 h of audio took about an hour on the M1 Pro. Never put transcripts in git or
-  site/ (the repo is public); `tools/lecture-transcripts.json` lists only which ids have one. The app's
+- AI transcripts (owner, 26 Oct 2026: on his Mac; nine 2026 lectures as a test, then every English
+  lecture, ~4,400, about a week of Mac time): `tools/transcribe.mjs` downloads each lecture, runs
+  mlx-whisper (large-v3-turbo, `--condition-on-previous-text False` or chanting turns into loops),
+  deletes the MP3, tidies singing into "♪ Singing ♪", and keeps the transcript in
+  `../Lecture transcripts.nosync/` (json/<id>.json, srt/<year>/…, lectures.json, Progress.txt), a
+  private GitHub repo (vinay10804-a11y/lecture-transcripts) it pushes every 25 lectures; the owner
+  wants them kept there for use elsewhere. The owner offered this public repo instead; I advised
+  against it (anyone could read every lecture, undoing the password; copyright SacinandanaSwami.com).
+  `--upload` puts each in R2 (`lectures/transcripts/`) as it's done and marks the app's list (`tx`)
+  every 25. It runs on its own (nohup + caffeinate -s, from "Resume transcripts.command" in that
+  folder; "Stop transcripts.command" stops it): only on mains power, paused while the lid is shut,
+  downloads retried after waking, one run at a time (lock in build/transcribe-work). About 27× faster
+  than listening on the M1 Pro. Never put transcripts in git or site/ (this repo is public);
+  `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
   Transcript sheet (player bar, ⋯ menu, a button on the row) follows along like Apple Podcasts: the
   line being spoken highlighted and kept in view, tap a line to play from there, search inside it,
   "Back to now" after scrolling by hand.

@@ -85,6 +85,7 @@ const S = {
   lecturesOld: null, // the same, oldest first (lecturesOld())
   lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60, sort: store.get('lectSort', 'new') },
   lectDur: store.get('lectDur', {}), // lecture lengths, learnt the first time each is played
+  lectBytes: store.get('lectBytes', {}), // sizes of lectures saved on this device
   saved: new Set(),
   downloads: new Map(), // id → { progress, ctrl }
   dlQueue: [],
@@ -286,8 +287,11 @@ async function loadData() {
     try {
       const cache = await caches.open(AUDIO_CACHE);
       for (const req of await cache.keys()) {
-        const t = S.bySrc.get(new URL(req.url).pathname);
+        const path = new URL(req.url).pathname;
+        const t = S.bySrc.get(path);
         if (t) S.saved.add(t.id);
+        // Saved lectures are matched up when the lecture list arrives (useLectures).
+        else if (path.startsWith('/lecture-audio/')) savedLectures.add(path);
         // A copy no longer in the catalog (e.g. replaced by a smaller format) only takes up space.
         else if (S.tracks.length) await cache.delete(req);
       }
@@ -338,7 +342,7 @@ const JAPA_MODE = { ...MODES.year, within: byDate, opts: { date: true } };
 /* ---------------- rendering pieces ---------------- */
 
 function dlButton(t) {
-  if (t.external) return ''; // lectures stream from the Saranagati Library and can't be saved
+  if (t.external && !t.dl) return '';
   const d = S.downloads.get(t.id);
   if (S.saved.has(t.id)) {
     return `<button class="icon-btn dl saved" data-action="download" data-id="${t.id}" aria-label="Saved offline. Tap to remove.">${icon('check')}</button>`;
@@ -808,12 +812,15 @@ function libraryView(tab = 'favourites', sub) {
   }
 
   if (tab === 'saved') {
-    const list = S.tracks.filter(t => S.saved.has(t.id));
+    const kirtansSaved = S.tracks.filter(t => S.saved.has(t.id));
+    const lecturesSaved = S.lectures.filter(t => S.saved.has(t.id)); // in their own group below
+    const list = [...kirtansSaved, ...lecturesSaved];
     const size = sum(list, t => t.size);
     body = list.length ? `<p class="page-sub" style="margin-top:16px">${plural(list.length, 'recording')} · ${fmtMB(size)} on this device
         · <button class="text-btn" data-action="remove-all">Remove all</button></p>
         <p class="note" id="storage-note"></p>
-        <div class="group" style="margin-top:12px">${trackList(list, 'saved', { source: true, year: true })}</div>`
+        ${kirtansSaved.length ? `<div class="group" style="margin-top:12px">${trackList(kirtansSaved, 'saved', { source: true, year: true })}</div>` : ''}
+        ${lecturesSaved.length ? `<section class="group" style="margin-top:12px"><div class="group-head"><h3>Lectures<small>${lecturesSaved.length}</small></h3></div>${trackList(lecturesSaved, 'saved-lectures', { thumb: false })}</section>` : ''}`
       : `<p class="empty">Nothing saved yet. Tap ${icon('download')} next to any kirtan, or <b>Save all offline</b> on a year, to listen without internet.</p>`;
     body += installNote();
   }
@@ -1097,12 +1104,13 @@ function closePlayer({ instant = false, fromHistory = false } = {}) {
 }
 
 async function sourceFor(t) {
+  const saved = t.dl || t.src; // where a saved copy is kept (a lecture's is under /lecture-audio/)
   if (S.saved.has(t.id) && navigator.serviceWorker?.controller && !/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-    return `${t.src}?offline=1`; // served from the device by sw.js, a piece at a time
+    return `${saved}?offline=1`; // served from the device by sw.js, a piece at a time
   }
   if (S.saved.has(t.id) && 'caches' in window) {
     try {
-      const res = await (await caches.open(AUDIO_CACHE)).match(t.src);
+      const res = await (await caches.open(AUDIO_CACHE)).match(saved);
       if (res) {
         if (S.blobUrl) URL.revokeObjectURL(S.blobUrl);
         S.blobUrl = URL.createObjectURL(await res.blob());
@@ -1476,7 +1484,7 @@ function updatePlayerButtons() {
   }
 
   const dl = $('#player-dl');
-  dl.hidden = !!t.external;
+  dl.hidden = !!t.external && !t.dl;
   $('#player-share').hidden = !!t.external; // a lecture has no share page
   $('#player-tx').hidden = !t.tx;
   $('#player-speed').hidden = !isLecture(t);
@@ -1944,7 +1952,7 @@ function openTrackMenu(id, row) {
     ${S.current && S.current !== id ? item('play-next', 'next', 'Play next') + item('add-queue', 'queue', 'Add to queue') : ''}
     ${item('add-to-playlist', 'playlist', 'Add to playlist')}
     ${item('toggle-fav', 'heart', S.favs.has(id) ? 'Remove from Favourites' : 'Add to Favourites')}
-    ${'caches' in window && !t.external ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
+    ${'caches' in window && (!t.external || t.dl) ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
@@ -2404,7 +2412,9 @@ async function download(id) {
   const t = S.byId.get(id);
   const ctrl = new AbortController();
   S.downloads.get(id).ctrl = ctrl;
-  const res = await fetch(t.src, { signal: ctrl.signal });
+  // A lecture comes through our Worker (/lecture-audio/), since the library doesn't let other
+  // sites save its files.
+  const res = await fetch(t.dl || t.src, { signal: ctrl.signal, credentials: 'same-origin' });
   if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
   const total = Number(res.headers.get('content-length')) || t.size || 1;
   const reader = res.body.getReader();
@@ -2425,8 +2435,13 @@ async function download(id) {
   }
   const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'audio/mpeg' });
   const cache = await caches.open(AUDIO_CACHE);
-  await cache.put(t.src, new Response(blob, { headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) } }));
+  await cache.put(t.dl || t.src, new Response(blob, { headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) } }));
   await keepArt(t);
+  if (t.dl) {
+    S.lectBytes[id] = t.size = blob.size;
+    store.set('lectBytes', S.lectBytes);
+    if (t.tx) await keepTranscript(id); // so reading along works offline too
+  }
   S.saved.add(id);
   S.downloads.delete(id);
   refreshTrack(id);
@@ -2434,7 +2449,8 @@ async function download(id) {
 
 async function removeDownload(id) {
   const t = S.byId.get(id);
-  await (await caches.open(AUDIO_CACHE)).delete(t.src);
+  await (await caches.open(AUDIO_CACHE)).delete(t.dl || t.src);
+  if (t.tx) await (await caches.open(LECT_CACHE)).delete(transcriptUrl(id));
   S.saved.delete(id);
   refreshTrack(id);
 }
@@ -2760,10 +2776,15 @@ function useLectures({ lectures = [] }) {
   S.lectures = lectures.map(l => ({
     id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
     year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
-    src: l.url, external: true, duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx,
+    src: l.url, dl: `/lecture-audio/${l.url.replace(/^https:\/\/www\.saranagati-library\.net\//, '')}`, external: true,
+    duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, size: S.lectBytes[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx,
   }));
   S.lecturesOld = null;
-  for (const t of S.lectures) S.byId.set(t.id, t);
+  for (const t of S.lectures) {
+    S.byId.set(t.id, t);
+    S.bySrc.set(t.dl, t);
+    if (savedLectures.has(t.dl)) S.saved.add(t.id);
+  }
   S.lectState = 'ready';
   lectKeyAt = 0;
   lectKeys();
@@ -2792,7 +2813,32 @@ function forgetLectures() {
   S.lectState = 'locked';
   S.lectures = [];
   S.lecturesOld = null;
-  if ('caches' in window) caches.delete(LECT_CACHE).catch(() => {});
+  // Lectures saved on this device go too: nothing would show them any more.
+  for (const id of [...S.saved]) if (id.startsWith('lec-')) S.saved.delete(id);
+  savedLectures.clear();
+  if (!('caches' in window)) return;
+  caches.delete(LECT_CACHE).catch(() => {});
+  caches.open(AUDIO_CACHE).then(async cache => {
+    for (const req of await cache.keys()) if (new URL(req.url).pathname.startsWith('/lecture-audio/')) await cache.delete(req);
+  }).catch(() => {});
+}
+
+// Lectures saved on this device (paths in the audio cache), found before the list arrives.
+const savedLectures = new Set();
+const transcriptUrl = id => `/api/lectures/transcript/${id.replace(/^lec-/, '')}`;
+// A saved lecture's transcript is kept with it, including one that's made after it was saved.
+async function keepTranscript(id) {
+  try {
+    const res = await fetch(transcriptUrl(id), { credentials: 'same-origin' });
+    if (res.ok) await (await caches.open(LECT_CACHE)).put(transcriptUrl(id), res);
+  } catch {}
+}
+async function keepSavedTranscripts() {
+  if (!('caches' in window) || !isOnline()) return;
+  const cache = await caches.open(LECT_CACHE).catch(() => null);
+  for (const t of S.lectures) {
+    if (t.tx && S.saved.has(t.id) && !(await cache?.match(transcriptUrl(t.id)))) await keepTranscript(t.id);
+  }
 }
 
 // Pages that show lectures are drawn again when the list arrives or changes.
@@ -2866,7 +2912,7 @@ function lecturesView() {
       </div>
       <div id="lect-results">${lectureResults()}</div>
     </section>
-    <p class="note">The audio plays from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>, so lectures can't be saved offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button></p>`;
+    <p class="note">The lectures play from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>. Tap ${icon('download')} to save one for listening offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button> (removes saved lectures too)</p>`;
 }
 
 function lectArt() {
@@ -2955,7 +3001,7 @@ function lectureRow(t, words = []) {
           : `${icon(lectLeft(t) === 'Played' ? 'tick' : 'play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
       </button>
       ${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button>` : ''}</span>
-      <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
+      <span class="lect-btns">${dlButton(t)}<button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button></span>
     </div>
   </li>`;
 }
@@ -3008,8 +3054,9 @@ async function openTranscript(id) {
   $('#tx-body').innerHTML = '<p class="tx-load">Loading the transcript…</p>';
   txControls();
   if (!$('#transcript-dialog').open) $('#transcript-dialog').showModal();
-  const data = await fetch(`/api/lectures/transcript/${id.replace(/^lec-/, '')}`, { credentials: 'same-origin' })
-    .then(r => (r.ok ? r.json() : null)).catch(() => null);
+  // Online it's fetched fresh; a saved lecture's copy is used when there's no connection.
+  const data = await fetch(transcriptUrl(id), { credentials: 'same-origin' }).then(r => (r.ok ? r.json() : null)).catch(() => null)
+    || ('caches' in window ? await caches.open(LECT_CACHE).then(c => c.match(transcriptUrl(id))).then(r => r?.json()).catch(() => null) : null);
   if (tx.id !== id) return; // another one was opened meanwhile
   if (!data?.segments) {
     $('#tx-body').innerHTML = `<p class="tx-load">${isOnline() ? 'The transcript couldn’t be loaded. Please try again.' : 'The transcript needs an internet connection.'}</p>`;
@@ -3179,6 +3226,7 @@ document.addEventListener('submit', async e => {
     if (S.lectState !== 'ready') return;
     restoreLast();
     lecturesChanged();
+    setTimeout(keepSavedTranscripts, 5000);
   });
   setPlayingClass();
   accountStart();
