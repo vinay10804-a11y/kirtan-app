@@ -44,11 +44,21 @@ const ids = args.filter(a => /^[0-9a-f]{12}$/.test(a));
 const clock = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 const log = (...a) => console.log(new Date().toTimeString().slice(0, 5), ...a);
 
-// Singing (kirtan, prayers) comes out as runs of "Oh", "I kiss", "Kissing"…: a run of five or
-// more one- or two-word lines becomes one "♪ Singing ♪" line, and lone "Oh"s and "Mm"s go.
+// Singing (kirtan, prayers) comes out as runs of "Oh", "I kiss", "Kissing"…, or as one line of
+// a word over and over ("Hare, Hare, Hare…" for 30 seconds): a run of five or more one- or
+// two-word lines, or a long line that's mostly one word, becomes one "♪ Singing ♪" line
+// (next to each other, they're one), and lone "Oh"s and "Mm"s go.
 const FILLER = /^(oh+|ah+|o|mm+|hmm+|uh|um|la)[.!?,]*$/i;
 const SINGING = '♪ Singing ♪';
+function looped(text) {
+  const words = text.toLowerCase().match(/[\p{L}']+/gu) || [];
+  if (words.length < 24) return false; // the whole maha-mantra once is 16 words, and may be spoken
+  const n = {};
+  for (const w of words) n[w] = (n[w] || 0) + 1;
+  return Math.max(...Object.values(n)) / words.length > 0.4;
+}
 function tidy(segs) {
+  segs = segs.map(s => (looped(s[2]) ? [s[0], s[1], SINGING] : s));
   const tiny = s => s[2] === SINGING || s[2].split(/\s+/).length <= 2;
   const out = [];
   for (let i = 0; i < segs.length;) {
@@ -62,10 +72,34 @@ function tidy(segs) {
     if (!FILLER.test(segs[i][2])) out.push(segs[i]);
     i++;
   }
-  return out;
+  return out.filter((s, i) => {
+    const before = out[i - 1];
+    if (s[2] !== SINGING || before?.[2] !== SINGING) return true;
+    before[1] = s[1]; // joined to the singing line before
+    return false;
+  });
+}
+
+// Whisper's own output (it writes NaN for some scores, which JSON doesn't allow); null if the
+// file isn't that (e.g. it's already one of our transcripts).
+async function whisperOutput(file) {
+  const text = await fs.readFile(file, 'utf8').catch(() => '');
+  const raw = text && JSON.parse(text.replace(/:\s*-?(NaN|Infinity)\b/g, ': null'));
+  return raw?.segments?.length && !Array.isArray(raw.segments[0]) ? raw : null;
 }
 
 async function transcribe(l) {
+  const json = path.join(OUT, `${l.id}.json`);
+  const raw = await whisperOutput(json) || await whisper(l); // an earlier run's output is used again
+  let segments = raw.segments
+    .map(s => [Math.round(s.start * 10) / 10, Math.round(s.end * 10) / 10, s.text.trim()])
+    .filter(([, , text]) => /[\p{L}\p{N}]/u.test(text)); // music notes and the like aren't words
+  segments = tidy(segments);
+  await fs.writeFile(json, JSON.stringify({ model: 'whisper-large-v3-turbo', lang: raw.language, made: new Date().toISOString().slice(0, 10), segments }));
+  log(`  ${segments.length} lines`);
+}
+
+async function whisper(l) {
   const mp3 = path.join(OUT, `${l.id}.mp3`);
   const res = await fetch(l.url, { headers: { 'User-Agent': 'Kirtan app transcripts (private test)' } });
   if (!res.ok) throw new Error(`download failed (${res.status})`);
@@ -78,14 +112,9 @@ async function transcribe(l) {
   { encoding: 'utf8', maxBuffer: 1 << 26 });
   await fs.rm(mp3, { force: true });
   if (r.status !== 0) throw new Error(`whisper failed: ${(r.stderr || r.stdout || '').slice(-300)}`);
-  const raw = JSON.parse(await fs.readFile(path.join(OUT, `${l.id}.json`), 'utf8'));
-  let segments = raw.segments
-    .map(s => [Math.round(s.start * 10) / 10, Math.round(s.end * 10) / 10, s.text.trim()])
-    .filter(([, , text]) => /[\p{L}\p{N}]/u.test(text)); // music notes and the like aren't words
-  segments = tidy(segments);
-  await fs.writeFile(path.join(OUT, `${l.id}.json`), JSON.stringify({ model: 'whisper-large-v3-turbo', lang: raw.language, made: new Date().toISOString().slice(0, 10), segments }));
   const took = (Date.now() - started) / 1000;
-  log(`done in ${Math.round(took / 60)} min (${(l.dur / took).toFixed(1)}× faster than listening), ${segments.length} lines`);
+  log(`  transcribed in ${Math.round(took / 60)} min (${(l.dur / took).toFixed(1)}× faster than listening)`);
+  return whisperOutput(path.join(OUT, `${l.id}.json`));
 }
 
 async function main() {
