@@ -1,4 +1,9 @@
-# Sacinandana Swami and Gour Krishna Kirtans
+# Sacinandana Swami Central
+
+The site's name since 26 Oct 2026 (owner; it was "Sacinandana Swami and Gour Krishna Kirtans"): in the
+side menu and phone top bar as "Sacinandana Swami" over a large "Central", the page title, manifest,
+share previews and lock screen. The home-screen label (`short_name`, apple-mobile-web-app-title) is
+still "Kirtans", as the full name is too long for under an icon.
 
 Offline-capable web app (PWA) for kirtans, bhajans and guided japa, built for Vinay
 (devotee name Vinoda Govinda; use that name when talking about this project).
@@ -120,8 +125,8 @@ R2 bucket `kirtans` at `/stream/*`.
   applies it before first paint.
 - Home's intro (owner, 26 Oct 2026: kirtans by both, japa and lectures by Sacinandana Swami, worded to invite,
   keeping "Listen here, or save recordings to play without internet"): "Welcome. Immerse yourself in kirtans by
-  Sacinandana Swami and Gour Krishna, and in japa and lectures by Sacinandana Swami. Listen here, or save
-  recordings to play without internet." Right under it, a "How to install this website as an app" button (owner: must be near
+  Sacinandana Swami and Gour Krishna, and in japa and lectures by Sacinandana Swami. / Listen here, or save
+  recordings to play without internet." (the last sentence on its own line). Right under it, a "How to install this website as an app" button (owner: must be near
   the top, with a clear title) that scrolls to the steps of the same title (iPhone and laptop, Safari and Chrome) above "How to use this site",
   which also links there. Inside the installed app both stay, worded for installing on another device.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.

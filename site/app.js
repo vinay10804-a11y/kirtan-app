@@ -1,4 +1,5 @@
-// Sacinandana Swami and Gour Krishna Kirtans: a small offline-capable audio app.
+// Sacinandana Swami Central (named so by the owner, 26 Oct 2026; was "Sacinandana Swami and Gour Krishna
+// Kirtans"): a small offline-capable audio app.
 // No framework: hash routes render HTML strings into #view, and one delegated
 // click handler drives everything through data-action attributes.
 
@@ -440,7 +441,7 @@ function playActions(listKey) {
 }
 
 function topbar() {
-  return `<header class="topbar"><a class="topbar-title" href="#/">Sacinandana Swami and Gour Krishna <b>Kirtans</b></a>
+  return `<header class="topbar"><a class="topbar-title" href="#/">Sacinandana Swami <b>Central</b></a>
     <button class="icon-btn theme-toggle" data-action="theme-toggle" aria-label="Switch between light and dark">${icon('moon', 'show-light')}${icon('sun', 'show-dark')}</button></header>`;
 }
 
@@ -506,7 +507,7 @@ function homeView() {
 
   return `${topbar()}
     <div class="hero"><img src="art/card-1.webp" alt="The Hare Kṛṣṇa mahāmantra written into a wave"></div>
-    <p class="intro">Welcome. Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna, and in japa and lectures by Sacinandana&nbsp;Swami. Listen here, or save recordings to play without internet.</p>
+    <p class="intro">Welcome. Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna, and in japa and lectures by Sacinandana&nbsp;Swami.<br>Listen here, or save recordings to play without internet.</p>
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()
@@ -1421,7 +1422,7 @@ function setMediaMetadata(t) {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title,
     artist: collectionName(t),
-    album: isLecture(t) ? 'Lectures' : 'Sacinandana Swami and Gour Krishna Kirtans',
+    album: isLecture(t) ? 'Lectures' : 'Sacinandana Swami Central',
     artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
   });
 }
