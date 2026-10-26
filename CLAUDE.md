@@ -258,6 +258,16 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
 - Player for a lecture (Apple Podcasts): previous · back 15 · play · forward 30 · next, a "1×" speed button
   (lectures have their own speed, `S.lectSpeed`), no shuffle, repeat, Save or Share; the lock screen shows
   15/30 skips for lectures only (kirtans keep previous/next). ⋯ has Mark as played / unplayed.
+- AI transcripts (owner, 26 Oct 2026: on his Mac, a test on the newest 2026 lectures first):
+  `tools/transcribe.mjs` downloads each lecture, runs mlx-whisper (large-v3-turbo,
+  `--condition-on-previous-text False` or chanting turns into loops), deletes the MP3 and keeps
+  `build/transcripts/<id>.json` ({ segments: [[start, end, text]] }); `--upload` puts them in R2
+  (`lectures/transcripts/`) and marks the list (`tx`). It runs on its own (nohup + caffeinate); Claude
+  needn't be open. ~10 h of audio took about an hour on the M1 Pro. Never put transcripts in git or
+  site/ (the repo is public); `tools/lecture-transcripts.json` lists only which ids have one. The app's
+  Transcript sheet (player bar, ⋯ menu, a button on the row) follows along like Apple Podcasts: the
+  line being spoken highlighted and kept in view, tap a line to play from there, search inside it,
+  "Back to now" after scrolling by hand.
 - Newest/Oldest first (oldest first plays a seminar in order); the page keeps your place when you come back;
   the Search page shows a Lectures group (and "See all") even when no kirtan matches; the queue shows the
   next 100.

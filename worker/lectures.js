@@ -8,6 +8,7 @@
 //   POST /api/lectures/login   { password } → sets the cookie (90 days)
 //   POST /api/lectures/logout
 //   GET  /api/lectures          → the lecture list (304 when the ETag sent still matches), or 401
+//   GET  /api/lectures/transcript/<id> → a lecture's AI transcript (tools/transcribe.mjs), or 401/404
 
 const COOKIE = 'lectures';
 const enc = new TextEncoder();
@@ -48,15 +49,17 @@ export async function lectures(request, env, url) {
   if (url.pathname === '/api/lectures/logout' && request.method === 'POST') {
     return json({ ok: true }, 200, { 'Set-Cookie': cookie('', 0) });
   }
-  if (url.pathname === '/api/lectures' && request.method === 'GET') {
+  const transcript = /^\/api\/lectures\/transcript\/([0-9a-f]{12})$/.exec(url.pathname);
+  if ((url.pathname === '/api/lectures' || transcript) && request.method === 'GET') {
     const sent = /(?:^|;\s*)lectures=([0-9a-f]+)/.exec(request.headers.get('Cookie') || '')?.[1] || '';
     if (!same(sent, good)) return json({ error: 'Password needed' }, 401);
-    // The app keeps the list and asks with its ETag, so an unchanged list costs a 304, not 2 MB.
-    const list = await env.AUDIO.get('lectures/catalog.json', { onlyIf: request.headers });
-    if (!list) return json({ error: 'No lecture list yet' }, 404);
-    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-cache', ETag: list.httpEtag };
-    if (!('body' in list)) return new Response(null, { status: 304, headers });
-    return new Response(list.body, { headers });
+    // The app keeps what it fetched and asks with its ETag, so an unchanged file costs a 304.
+    const key = transcript ? `lectures/transcripts/${transcript[1]}.json` : 'lectures/catalog.json';
+    const file = await env.AUDIO.get(key, { onlyIf: request.headers });
+    if (!file) return json({ error: transcript ? 'No transcript for this lecture yet' : 'No lecture list yet' }, 404);
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-cache', ETag: file.httpEtag };
+    if (!('body' in file)) return new Response(null, { status: 304, headers });
+    return new Response(file.body, { headers });
   }
   return json({ error: 'Not found' }, 404);
 }

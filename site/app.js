@@ -1395,6 +1395,10 @@ function updateNowPlaying() {
   $('#player-sub').textContent = (isLecture(t) ? [collectionName(t), lectDate(t), t.ref, t.place]
     : [collectionName(t), t.year, t.section !== 'japa' && t.place]).filter(Boolean).join(' · ');
   $('#player').classList.toggle('lecture', isLecture(t)); // skip 15/30 and speed in place of shuffle and repeat
+  if ($('#transcript-dialog').open) {
+    if (t.id !== tx.id && t.tx) openTranscript(t.id); // the next lecture's, when it has one
+    else txControls();
+  }
   $('#player-context').textContent = t.section === 'japa' ? 'Japa' : t.type;
 
   renderLyricsCard(t);
@@ -1474,6 +1478,7 @@ function updatePlayerButtons() {
   const dl = $('#player-dl');
   dl.hidden = !!t.external;
   $('#player-share').hidden = !!t.external; // a lecture has no share page
+  $('#player-tx').hidden = !t.tx;
   $('#player-speed').hidden = !isLecture(t);
   $('#player-speed span').textContent = `${speedOf(t)}×`;
   $('#player-speed').setAttribute('aria-label', `Playback speed ${speedOf(t)}×`);
@@ -1943,6 +1948,7 @@ function openTrackMenu(id, row) {
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
+    ${t.tx ? item('transcript', 'transcript', 'Transcript') : ''}
     ${isLecture(t) ? item('mark-played', 'tick', S.played.has(id) && !S.positions[id] ? 'Mark as unplayed' : 'Mark as played') : ''}
     ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${speedOf(t)}×`) : ''}
     ${t.external ? '' : item('share-track', 'share', 'Share')}
@@ -2519,6 +2525,14 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'mark-played': setPlayed(id, !(S.played.has(id) && !S.positions[id])); break;
+    case 'transcript': setTimeout(() => openTranscript(id || S.current)); break;
+    case 'tx-now': txFollow(true); break;
+    case 'tx-find': stepFind(Number(el.dataset.dir)); break;
+    case 'tx-play':
+      startList(S.lists.lectures?.includes(tx.id) ? S.lists.lectures : [tx.id], tx.id);
+      load(tx.id);
+      txControls();
+      break;
     case 'lect-sort':
       S.lect.sort = S.lect.sort === 'old' ? 'new' : 'old';
       store.set('lectSort', S.lect.sort);
@@ -2746,7 +2760,7 @@ function useLectures({ lectures = [] }) {
   S.lectures = lectures.map(l => ({
     id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
     year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
-    src: l.url, external: true, duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '',
+    src: l.url, external: true, duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx,
   }));
   S.lecturesOld = null;
   for (const t of S.lectures) S.byId.set(t.id, t);
@@ -2935,11 +2949,12 @@ function lectureRow(t, words = []) {
       <span class="lect-title">${markWords(t.title, words)}</span>
       ${details ? `<span class="lect-details">${details}</span>` : ''}
     </button>
-    <div class="lect-foot">
+    <div class="lect-foot"><span class="lect-btns">
       <button class="lect-play${pos ? ' started' : ''}" data-action="play" data-list="lectures" data-id="${t.id}" aria-label="${playing ? 'Playing' : 'Play'} ${esc(t.title)}">
         ${playing ? `<span class="when-playing"><span class="eq"><i></i><i></i><i></i></span>Playing</span><span class="when-paused">${icon('play')}${lectLeft(t)}</span>`
           : `${icon(lectLeft(t) === 'Played' ? 'tick' : 'play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
       </button>
+      ${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button>` : ''}</span>
       <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
     </div>
   </li>`;
@@ -2971,6 +2986,161 @@ function showMoreLectures() {
   S.lect.shown += LECT_PAGE;
   $('#lect-list')?.insertAdjacentHTML('beforeend', list.slice(from, S.lect.shown).map(t => lectureRow(t, words)).join(''));
   if (S.lect.shown >= list.length) { lectObserver?.disconnect(); $('#lect-sentinel')?.remove(); }
+}
+
+/* ---------------- lecture transcripts ---------------- */
+
+// A lecture's AI transcript (tools/transcribe.mjs, owner's test 26 Oct 2026), like Apple
+// Podcasts': it follows along as he speaks (the paragraph being spoken is brighter, its line
+// highlighted and kept in view), a tap on any line plays from there, and it can be searched.
+// Scrolling it yourself stops it following until "Back to now".
+const tx = { id: null, segs: [], at: -1, follow: true, hits: [], hit: -1 };
+
+async function openTranscript(id) {
+  const t = S.byId.get(id);
+  if (!t?.tx) return;
+  Object.assign(tx, { id, segs: [], at: -1, follow: true, hits: [], hit: -1 });
+  $('#tx-title').textContent = t.title;
+  $('#tx-sub').textContent = `Transcript · ${lectDate(t)}`;
+  $('#tx-q').value = '';
+  $('#tx-count').textContent = '';
+  $('#tx-prev').hidden = $('#tx-next').hidden = $('#tx-now').hidden = true;
+  $('#tx-body').innerHTML = '<p class="tx-load">Loading the transcript…</p>';
+  txControls();
+  if (!$('#transcript-dialog').open) $('#transcript-dialog').showModal();
+  const data = await fetch(`/api/lectures/transcript/${id.replace(/^lec-/, '')}`, { credentials: 'same-origin' })
+    .then(r => (r.ok ? r.json() : null)).catch(() => null);
+  if (tx.id !== id) return; // another one was opened meanwhile
+  if (!data?.segments) {
+    $('#tx-body').innerHTML = `<p class="tx-load">${isOnline() ? 'The transcript couldn’t be loaded. Please try again.' : 'The transcript needs an internet connection.'}</p>`;
+    return;
+  }
+  tx.segs = data.segments;
+  renderTranscript();
+  followTranscript(true);
+}
+
+// Lines are grouped into paragraphs at pauses (or after a few sentences), each with its time.
+function renderTranscript() {
+  let html = '', para = '', from = 0, chars = 0;
+  const close = () => {
+    if (para) html += `<p class="tx-p"><span class="tx-at">${fmtClock(from)}</span>${para}</p>`;
+    para = '';
+    chars = 0;
+  };
+  tx.segs.forEach(([start, , text], i) => {
+    const before = tx.segs[i - 1];
+    if (para && (start - before[1] > 1.5 || (chars > 420 && /[.?!]$/.test(before[2])))) close();
+    if (!para) from = start;
+    para += `<span class="tx-s" data-i="${i}">${esc(text)} </span>`;
+    chars += text.length;
+  });
+  close();
+  $('#tx-body').innerHTML = `${html}<p class="tx-note">Transcribed automatically by AI (Whisper), so expect some mistakes, especially in Sanskrit words and names.</p>`;
+}
+
+// Play, back 15 and forward 30 for the lecture playing; another lecture's transcript offers to play it.
+function txControls() {
+  $('#tx-controls').innerHTML = tx.id === S.current
+    ? `<button class="icon-btn" data-action="back15" aria-label="Back 15 seconds">${icon('back')}</button>
+      <button class="q-play" data-action="toggle" aria-label="${audio.paused ? 'Play' : 'Pause'}">${icon('play', 'i-play')}${icon('pause', 'i-pause')}</button>
+      <button class="icon-btn" data-action="fwd30" aria-label="Forward 30 seconds">${icon('fwd')}</button>`
+    : `<button class="btn" data-action="tx-play">${icon('play')}Play this lecture</button>`;
+}
+
+// The line at this moment: the last one that has started.
+function txIndexAt(sec) {
+  let lo = 0, hi = tx.segs.length - 1, at = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (tx.segs[mid][0] <= sec + 0.25) { at = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return at;
+}
+
+let txAutoScroll = 0;
+function followTranscript(jump = false) {
+  if (!tx.segs.length || tx.id !== S.current) return;
+  const i = txIndexAt(audio.currentTime);
+  if (i === tx.at && !jump) return;
+  const body = $('#tx-body');
+  body.querySelector('.tx-s.now')?.classList.remove('now');
+  body.querySelector('.tx-p.on')?.classList.remove('on');
+  tx.at = i;
+  const line = i >= 0 && body.querySelector(`.tx-s[data-i="${i}"]`);
+  if (!line) return;
+  line.classList.add('now');
+  line.parentElement.classList.add('on');
+  if (tx.follow) {
+    txAutoScroll = Date.now();
+    line.scrollIntoView({ block: 'center', behavior: jump || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+}
+
+function txFollow(on) {
+  tx.follow = on;
+  $('#tx-now').hidden = on || tx.id !== S.current;
+  if (on) followTranscript(true);
+}
+
+// Scrolling by hand (not our own smooth scroll) stops following.
+for (const ev of ['wheel', 'touchmove']) $('#tx-body').addEventListener(ev, () => { if (tx.follow) txFollow(false); }, { passive: true });
+audio.addEventListener('timeupdate', () => { if ($('#transcript-dialog').open) followTranscript(); });
+audio.addEventListener('seeked', () => { if ($('#transcript-dialog').open) followTranscript(); });
+
+// A tap on a line plays from there.
+$('#tx-body').addEventListener('click', e => {
+  const line = e.target.closest('.tx-s');
+  if (!line || window.getSelection()?.toString()) return;
+  const at = tx.segs[line.dataset.i][0];
+  if (tx.id === S.current && audio.src) {
+    seekTo(at);
+    if (audio.paused) audio.play().catch(() => {});
+  } else {
+    startList(S.lists.lectures?.includes(tx.id) ? S.lists.lectures : [tx.id], tx.id);
+    load(tx.id, { at });
+    txControls();
+  }
+  txFollow(true);
+});
+
+// Search inside the transcript: matches are marked, ↑/↓ (or Enter) step through them.
+$('#tx-q').addEventListener('input', () => findInTranscript());
+$('#tx-q').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  stepFind(e.shiftKey ? -1 : 1);
+});
+function findInTranscript() {
+  const q = norm($('#tx-q').value.trim());
+  const body = $('#tx-body');
+  for (const line of body.querySelectorAll('.tx-s.found')) {
+    line.classList.remove('found');
+    line.textContent = `${tx.segs[line.dataset.i][2]} `;
+  }
+  tx.hits = [];
+  tx.hit = -1;
+  if (q.length > 1) tx.segs.forEach(([, , text], i) => { if (norm(text).includes(q)) tx.hits.push(i); });
+  const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig');
+  for (const i of tx.hits) {
+    const line = body.querySelector(`.tx-s[data-i="${i}"]`);
+    line.classList.add('found');
+    line.innerHTML = `${esc(tx.segs[i][2]).replace(re, m => `<mark>${m}</mark>`)} `;
+  }
+  $('#tx-count').textContent = q.length < 2 ? '' : tx.hits.length ? '' : 'Not found';
+  $('#tx-prev').hidden = $('#tx-next').hidden = !tx.hits.length;
+  if (tx.hits.length) stepFind(1);
+}
+function stepFind(dir) {
+  if (!tx.hits.length) return;
+  tx.hit = (tx.hit + dir + tx.hits.length) % tx.hits.length;
+  const body = $('#tx-body');
+  body.querySelector('mark.here')?.classList.remove('here');
+  const line = body.querySelector(`.tx-s[data-i="${tx.hits[tx.hit]}"]`);
+  line.querySelector('mark')?.classList.add('here');
+  if (tx.follow) txFollow(false);
+  line.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  $('#tx-count').textContent = `${tx.hit + 1} of ${tx.hits.length}`;
 }
 
 document.addEventListener('submit', async e => {

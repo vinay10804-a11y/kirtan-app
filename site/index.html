@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=760d8aef5f">
+  <link rel="stylesheet" href="styles.css?v=7d83f1b6f7">
 </head>
 <body>
   <div class="app">
@@ -90,6 +90,7 @@
       <div class="player-bar">
         <button class="bar-btn" data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
         <button class="bar-btn speed-btn" data-action="speed" id="player-speed" aria-label="Playback speed" hidden><span>1×</span></button>
+        <button class="icon-btn" data-action="transcript" id="player-tx" aria-label="Transcript" hidden><svg><use href="#i-transcript"/></svg></button>
         <button class="icon-btn" data-action="share" id="player-share" aria-label="Share"><svg><use href="#i-share"/></svg></button>
         <button class="icon-btn bar-timer" data-action="sleep-menu" id="sleep-btn" aria-label="Sleep timer"><svg><use href="#i-moon"/></svg><span id="sleep-label"></span></button>
         <button class="icon-btn" data-action="queue" aria-label="Queue"><svg><use href="#i-queue"/></svg></button>
@@ -184,6 +185,25 @@
   </dialog>
 
   <!-- The queue: what plays next -->
+  <!-- A lecture's AI transcript, which follows along as in Apple Podcasts (tools/transcribe.mjs) -->
+  <dialog id="transcript-dialog" class="sheet" aria-labelledby="tx-title">
+    <header class="sheet-head">
+      <div><h3 id="tx-title"></h3><p id="tx-sub">Transcript</p></div>
+      <form method="dialog"><button class="icon-btn" aria-label="Close transcript"><svg><use href="#i-x"/></svg></button></form>
+    </header>
+    <div class="tx-find">
+      <svg><use href="#i-search"/></svg><input id="tx-q" type="search" placeholder="Search this lecture" autocomplete="off" enterkeyhint="search" aria-label="Search this lecture">
+      <span id="tx-count" aria-live="polite"></span>
+      <button class="icon-btn" id="tx-prev" data-action="tx-find" data-dir="-1" aria-label="Previous match" hidden><svg><use href="#i-up"/></svg></button>
+      <button class="icon-btn" id="tx-next" data-action="tx-find" data-dir="1" aria-label="Next match" hidden><svg><use href="#i-down"/></svg></button>
+    </div>
+    <div id="tx-body" class="lyrics-body tx-body"></div>
+    <div class="tx-foot">
+      <button class="tx-now" id="tx-now" data-action="tx-now" hidden>Back to now</button>
+      <div class="tx-controls" id="tx-controls"></div>
+    </div>
+  </dialog>
+
   <dialog id="queue-dialog" class="sheet" aria-labelledby="queue-title">
     <header class="sheet-head">
       <div><h3 id="queue-title">Queue</h3><p id="queue-sub"></p></div>
@@ -226,6 +246,7 @@
       <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
       <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-transcript" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 10h8M8 13.5h5"/></symbol>
       <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
       <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
@@ -251,6 +272,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=760d8aef5f" type="module"></script>
+  <script src="app.js?v=7d83f1b6f7" type="module"></script>
 </body>
 </html>

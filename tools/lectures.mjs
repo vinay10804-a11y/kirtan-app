@@ -180,6 +180,9 @@ async function main() {
     lectures.push({ id: createHash('sha1').update(f.file).digest('hex').slice(0, 12), url: f.url, ...rest });
   }
   await measure(lectures);
+  // Lectures with an AI transcript (tools/transcribe.mjs) get a Transcript button in the app.
+  const transcribed = JSON.parse(await fs.readFile(path.join(ROOT, 'tools/lecture-transcripts.json'), 'utf8').catch(() => '{}'));
+  for (const l of lectures) if (transcribed[l.id]) l.tx = 1;
   lectures.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
   const byLang = {};
   for (const l of lectures) byLang[l.language] = (byLang[l.language] || 0) + 1;
