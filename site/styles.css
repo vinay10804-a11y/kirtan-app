@@ -337,6 +337,7 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .empty { margin-top: 24px; padding: 24px 0; color: var(--ink-2); font-size: 15px; line-height: 1.55; }
 .empty code { font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; }
 .note { margin-top: 14px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.note svg { width: 16px; height: 16px; vertical-align: -3px; }
 
 /* ---------- Mini player ---------- */
 .mini {
@@ -420,6 +421,7 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .player.lecture .controls .mode-btn { display: none; }
 .player.lecture .controls [data-action="prev"] svg, .player.lecture .controls [data-action="next"] svg { width: 24px; height: 24px; }
 .player.lecture .controls .skip-btn svg { width: 34px; height: 34px; }
+.player.lecture .speed-btn { flex: none; margin-right: 6px; }
 .speed-btn span { display: inline-grid; place-items: center; min-width: 46px; height: 28px; padding: 0 8px; border: 1.5px solid currentColor; border-radius: 8px; font: 700 13px var(--sans); }
 .mode-btn { position: relative; }
 .mode-btn.on { color: var(--teal); }

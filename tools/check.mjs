@@ -55,6 +55,9 @@ const checks = [
   ['Search page shows Lectures even when no kirtan matches', !app.includes("if (!hits.length && !vids.length) return")],
   ['Lecture transcripts: follow-along sheet (tap a line to play, search), only with the password, never in site/ or git', html.includes('id="transcript-dialog"') && app.includes('function followTranscript') && read('worker/lectures.js').includes('lectures/transcripts/') && read('.gitignore').includes('build/') && !fs.existsSync(path.join(ROOT, 'site/transcripts'))
     && read('tools/transcribe.mjs').includes("'../Lecture transcripts.nosync'") && read('tools/transcribe.mjs').includes("'--condition-on-previous-text', 'False'")],
+  ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
+    read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
+    && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],
   ['Queue shows at most 100 upcoming; saved queue keeps the stretch around what plays', app.includes('upcoming.slice(0, 100)') && app.includes('Math.max(0, S.qi - 100)')],
   ['Light / dark appearance', app.includes('function setTheme') && html.includes("localStorage.getItem('kk.theme')")],
   ['Laptop-only light/dark switch hidden on phones', /\.theme-toggle\.side \{ display: none; \}/.test(css)],

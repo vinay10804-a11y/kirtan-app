@@ -12,7 +12,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     // The password-protected Lectures test section (worker/lectures.js).
-    if (url.pathname === '/api/lectures' || url.pathname.startsWith('/api/lectures/')) return lectures(request, env, url);
+    if (url.pathname === '/api/lectures' || url.pathname.startsWith('/api/lectures/') || url.pathname.startsWith('/lecture-audio/')) return lectures(request, env, url);
     if (url.pathname.startsWith('/api/')) return api(request, env, url);
     if (url.pathname.startsWith('/k/') && request.method === 'GET') return sharePage(request, env, url);
     if (AUDIO_PATH.test(url.pathname)) {

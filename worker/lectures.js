@@ -9,8 +9,10 @@
 //   POST /api/lectures/logout
 //   GET  /api/lectures          → the lecture list (304 when the ETag sent still matches), or 401
 //   GET  /api/lectures/transcript/<id> → a lecture's AI transcript (tools/transcribe.mjs), or 401/404
+//   GET  /lecture-audio/<the library's path> → a lecture's MP3, passed through so the app can save it
 
 const COOKIE = 'lectures';
+const LIBRARY = 'https://www.saranagati-library.net/';
 const enc = new TextEncoder();
 
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), {
@@ -49,10 +51,30 @@ export async function lectures(request, env, url) {
   if (url.pathname === '/api/lectures/logout' && request.method === 'POST') {
     return json({ ok: true }, 200, { 'Set-Cookie': cookie('', 0) });
   }
+  const signedIn = () => same(/(?:^|;\s*)lectures=([0-9a-f]+)/.exec(request.headers.get('Cookie') || '')?.[1] || '', good);
+
+  // A lecture's MP3 from the library, passed through so the app can keep it for offline
+  // listening (owner, 26 Oct 2026): the library's server lets other sites play its files but
+  // not save them. Free: nothing is stored here, the Worker only streams it. Only with the
+  // password, and only Sacinandana Swami's lectures, so it can't fetch anything else.
+  if (url.pathname.startsWith('/lecture-audio/') && request.method === 'GET') {
+    if (!signedIn()) return json({ error: 'Password needed' }, 401);
+    const file = url.pathname.slice('/lecture-audio/'.length);
+    let name = '';
+    try { name = decodeURIComponent(file); } catch {}
+    if (!/^(\d{4}\/)?\d{4}\.\d{2}\.\d{2}_SSNS[^/]*\.mp3$/i.test(name)) return json({ error: 'Not found' }, 404);
+    const range = request.headers.get('Range');
+    const res = await fetch(LIBRARY + file, { headers: range ? { Range: range } : {} });
+    const headers = new Headers({ 'Cache-Control': 'private, no-store' });
+    for (const h of ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified']) {
+      if (res.headers.has(h)) headers.set(h, res.headers.get(h));
+    }
+    return new Response(res.body, { status: res.status, headers });
+  }
+
   const transcript = /^\/api\/lectures\/transcript\/([0-9a-f]{12})$/.exec(url.pathname);
   if ((url.pathname === '/api/lectures' || transcript) && request.method === 'GET') {
-    const sent = /(?:^|;\s*)lectures=([0-9a-f]+)/.exec(request.headers.get('Cookie') || '')?.[1] || '';
-    if (!same(sent, good)) return json({ error: 'Password needed' }, 401);
+    if (!signedIn()) return json({ error: 'Password needed' }, 401);
     // The app keeps what it fetched and asks with its ETag, so an unchanged file costs a 304.
     const key = transcript ? `lectures/transcripts/${transcript[1]}.json` : 'lectures/catalog.json';
     const file = await env.AUDIO.get(key, { onlyIf: request.headers });

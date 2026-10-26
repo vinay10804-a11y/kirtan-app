@@ -237,7 +237,14 @@ a Lectures item in the menu, a Home card, `#/lectures` (`lecturesView` in app.js
 unlocked, then the Apple Podcasts-style page described below). Lectures are
 tracks with `section: 'lecture'`, `external: true` and ids `lec-<id>`, kept in `S.lectures` and `S.byId`
 (not `S.tracks`), so they play in the main player (queue, lock screen, speed, favourites, history,
-positions) but have no Save offline, Share or prefetch. They load in the background on devices that have
+positions) but have no Share or prefetch. Save offline (owner, 26 Oct 2026, "for free"): the library's
+server doesn't let other sites save its files (no CORS), so a lecture is saved through the Worker:
+`/lecture-audio/<library path>` (`t.dl`) streams it from the library (nothing stored on Cloudflare; only
+with the password; only SSNS .mp3 paths, so it's no open proxy), and the app keeps it in the audio cache
+under that path like a kirtan (sw.js serves `?offline=1`). Saved lectures are matched to ids when the
+list arrives (`savedLectures`; loadData must not delete them as unknown); their transcripts are kept in
+`kirtan-lectures` (`keepTranscript`); Library > Saved offline lists them under Lectures; "Lock lectures
+on this device" (or a 401) removes them. They load in the background on devices that have
 the password. Search shows a Lectures group. The old `/lectures/` page just redirects to `#/lectures`.
 Looks like Apple Podcasts (owner's reference, 25 Oct 2026): the show header (picture, title, Play latest),
 Continue listening cards (lectures part-heard), one search box with Year and Language menus (not a wall of
