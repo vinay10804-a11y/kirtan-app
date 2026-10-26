@@ -506,7 +506,7 @@ function homeView() {
 
   return `${topbar()}
     <div class="hero"><img src="art/card-1.webp" alt="The Hare Kṛṣṇa mahāmantra written into a wave"></div>
-    <p class="intro">Kirtans by Sacinandana Swami and Gour Krishna.<br>Japa and lectures by Sacinandana Swami.</p>
+    <p class="intro">Welcome. Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna, and in japa and lectures by Sacinandana&nbsp;Swami. Listen here, or save recordings to play without internet.</p>
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()

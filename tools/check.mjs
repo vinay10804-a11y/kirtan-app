@@ -31,7 +31,7 @@ const checks = [
   ['Lyrics open inside the app', app.includes('kksongs.org page shown') || app.includes("dialog.classList.toggle('web'")],
   ['Guided Japa plays in the in-app YouTube player', app.includes('function openVideo') && html.includes('id="video-dialog"')],
   ['Install button near the top of Home, titled "How to install this website as an app" (26 Oct)', app.includes('install-cta') && app.includes('<b>How to install this website as an app</b>')],
-  ['Home intro: kirtans by Sacinandana Swami and Gour Krishna; japa and lectures by Sacinandana Swami (26 Oct)', app.includes('Kirtans by Sacinandana Swami and Gour Krishna.<br>Japa and lectures by Sacinandana Swami.')],
+  ['Home intro: welcoming; kirtans by Sacinandana Swami and Gour Krishna, japa and lectures by Sacinandana Swami; listen here or save offline (26 Oct)', app.includes('Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna, and in japa and lectures by Sacinandana&nbsp;Swami. Listen here, or save recordings to play without internet.')],
   ['Playlists, ⋯ menu and queue', app.includes('function playlistView') && app.includes('function openTrackMenu') && app.includes('function openQueue')],
   ['Playlists: Add kirtans sheet, Edit order, multi-select picker', app.includes('function openAddKirtans') && app.includes("case 'pl-edit'") && app.includes('function renderPicker')],
   ['Playlist name box stays clear of the iPhone keyboard', css.includes('dialog.menu.name-menu')],
