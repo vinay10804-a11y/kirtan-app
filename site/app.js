@@ -93,6 +93,7 @@ const S = {
   lists: {},
   queue: [],
   from: null, // the list the queue was started from (an S.lists key, e.g. pl:<id>)
+  foundAt: null, // the page it was started on, with the Lectures filters: { hash, lect }
   qi: -1,
   current: null,
   sleep: null,
@@ -1080,12 +1081,19 @@ async function showStorage() {
 function refreshTrack(id) {
   const t = S.byId.get(id);
   if (!t) return;
+  // Drawn again in place; a row lit up by "Show in …" stays lit.
+  const redraw = (li, html) => {
+    const found = li.classList.contains('found');
+    li.insertAdjacentHTML('afterend', html);
+    if (found) li.nextElementSibling.classList.add('found');
+    li.remove();
+  };
   for (const li of $$(`.track[data-id="${id}"]`)) {
-    li.outerHTML = trackRow(t, Number(li.dataset.i), li.dataset.list, JSON.parse(li.dataset.opts || '{}'));
+    redraw(li, trackRow(t, Number(li.dataset.i), li.dataset.list, JSON.parse(li.dataset.opts || '{}')));
   }
   if (t.section === 'lecture') {
     const words = lectWords(S.lect.q);
-    for (const li of $$(`.lect-row[data-id="${id}"]`)) li.outerHTML = lectureRow(t, words);
+    for (const li of $$(`.lect-row[data-id="${id}"]`)) redraw(li, lectureRow(t, words));
   }
   for (const btn of $$(`.video[data-track="${id}"] .dl`)) btn.outerHTML = dlButton(t);
   for (const btn of $$('[data-action="save-list"], .text-btn.done')) {
@@ -1123,6 +1131,66 @@ function closePlayer({ instant = false, fromHistory = false } = {}) {
   if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
   player.classList.add('closing');
   setTimeout(done, 260);
+}
+
+// "Show in Lectures / Kirtans" (owner, 27 Oct 2026, for lectures especially): from the player
+// or a ⋯ menu, back to where the recording was found, scrolled to it and lit up briefly,
+// without touching what's playing. That's the page it was started from (the Lectures page
+// with the year, language and search it had then; a kirtans year or place), when it's still
+// listed there; otherwise its own place: a lecture under its year, a kirtan on its artist's
+// page by year.
+function homeOf(t) {
+  if (isLecture(t)) return { name: 'Lectures', icon: 'book', prefix: '#/lectures', hash: '#/lectures' };
+  if (t.section === 'japa') return { name: 'Japa', icon: 'beads', prefix: '#/japa', hash: '#/japa' };
+  return { name: 'Kirtans', icon: 'music', prefix: '#/kirtans', hash: `#/kirtans/${slug(t.artist)}/${slug(t.type)}/year` };
+}
+async function showInSection(id) {
+  const t = S.byId.get(id);
+  if (!t) return;
+  const home = homeOf(t);
+  const found = S.foundAt?.hash.startsWith(home.prefix) && S.queue.includes(id) ? S.foundAt : null;
+  let hash = home.hash;
+  if (isLecture(t)) {
+    // The filters it was found with, if it's among their results; else its year.
+    const at = st => {
+      Object.assign(S.lect, st);
+      return lectMatches().list.findIndex(x => x.id === id);
+    };
+    let i = found?.lect ? at(found.lect) : -1;
+    if (i < 0) i = at({ q: '', year: String(t.year), lang: ['All', t.language].includes(S.lect.lang) ? S.lect.lang : t.language });
+    if (i < 0) i = at({ q: '', year: 'All', lang: 'All' });
+    S.lect.shown = Math.max(LECT_PAGE, Math.ceil((i + 1) / LECT_PAGE) * LECT_PAGE); // drawn down to it
+  } else if (found && S.lists[S.from]?.includes(id)) {
+    hash = found.hash;
+  }
+  await closePlayerFirst();
+  goAndReveal(hash, id);
+}
+// The player takes a step in history (so Back closes it); wait for that step back before
+// going anywhere, or it would undo the move.
+async function closePlayerFirst() {
+  if ($('#player').hidden) return;
+  const back = history.state?.player ? new Promise(r => window.addEventListener('popstate', r, { once: true })) : null;
+  closePlayer();
+  if (back) await Promise.race([back, new Promise(r => setTimeout(r, 500))]);
+}
+function goAndReveal(hash, id) {
+  const reveal = () => { // runs right after route() has drawn the page
+    const row = $(`#view li[data-id="${CSS.escape(id)}"]`); // its row in the list (not a card above it)
+    if (!row) return;
+    row.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    row.classList.remove('found');
+    void row.offsetWidth; // restart the glow if it's still showing
+    row.classList.add('found');
+    setTimeout(() => $$('#view li.found').forEach(li => li.classList.remove('found')), 2600);
+  };
+  if (location.hash === hash) {
+    route();
+    reveal();
+  } else {
+    window.addEventListener('hashchange', reveal, { once: true });
+    location.hash = hash;
+  }
 }
 
 async function sourceFor(t) {
@@ -1234,7 +1302,7 @@ const playable = id => S.saved.has(id) || isOnline();
 function saveQueue() {
   // A long list (thousands of lectures) keeps the stretch around what's playing.
   const from = Math.max(0, S.qi - 100);
-  store.set('queue', { ids: S.queue.slice(from, from + 500), qi: S.qi - from, order: S.order?.slice(0, 500) || null, from: S.from });
+  store.set('queue', { ids: S.queue.slice(from, from + 500), qi: S.qi - from, order: S.order?.slice(0, 500) || null, from: S.from, foundAt: S.foundAt });
 }
 
 function speedOf(t = S.byId.get(S.current)) {
@@ -1254,6 +1322,7 @@ function shuffled(ids) {
 // `from` names the list (S.lists' key), so the player can say "Playing from playlist".
 function startList(ids, id = ids[0], from = null) {
   S.from = from;
+  S.foundAt = from ? { hash: location.hash, lect: location.hash.startsWith('#/lectures') ? { q: S.lect.q, lang: S.lect.lang, year: S.lect.year, sort: S.lect.sort } : null } : null;
   if (S.shuffle) {
     S.order = ids.slice();
     S.queue = [id, ...shuffled(ids.filter(x => x !== id))];
@@ -1300,12 +1369,18 @@ function playFrom(listKey, id) {
 
 function togglePlay() {
   if (!S.current) return;
-  if (audio.paused) {
-    if (!audio.src) return load(S.current);
-    audio.play().catch(() => {});
-  } else {
-    audio.pause();
+  if (audio.paused) resume();
+  else audio.pause();
+}
+// Plays on from where it is. A recording whose connection broke while it sat paused in the
+// background (see the 'error' handler) is loaded again from the same moment.
+function resume() {
+  if (!S.current) return;
+  if (!audio.src || audio.error || recovery.stale) {
+    recovery.stale = false;
+    return load(S.current, { at: recovery.at || undefined });
   }
+  audio.play().catch(() => {});
 }
 
 // The next (or previous) recording that can play: offline, ones that aren't saved
@@ -1433,7 +1508,11 @@ function updateNowPlaying() {
   }
   // "Playing from playlist / Its name", as on Spotify; otherwise what it is (Mahamantra, Lecture…).
   const pl = playingFrom();
-  $('#player-context').innerHTML = pl ? `<small>Playing from playlist</small>${esc(pl.name)}` : esc(t.section === 'japa' ? 'Japa' : t.type);
+  $('#player-context').innerHTML = pl
+    ? `<button data-action="show-playlist" data-pl="${pl.id}" aria-label="Playing from the playlist ${esc(pl.name)}: show it"><small>Playing from playlist</small>${esc(pl.name)}</button>`
+    : esc(t.section === 'japa' ? 'Japa' : t.type);
+  const home = homeOf(t);
+  $('#player-find').innerHTML = `${icon(home.icon)}<span>Show in ${home.name}</span>`;
   // A playlist's round play button shows pause while that playlist is playing.
   for (const b of $$('.pl-play')) {
     const here = b.dataset.list === S.from && (S.lists[b.dataset.list] || []).includes(S.current);
@@ -1585,11 +1664,13 @@ function markPlayed(id) {
 
 let lastTick = null;
 let lastSave = 0;
+let pausedAt = 0; // when the recording was last paused, for the update check
 audio.addEventListener('play', () => { lastTick = performance.now(); setPlayingClass(); closeEmbed(); setMediaState(); });
 audio.addEventListener('pause', () => {
   lastTick = null;
   savePosition();
   if (S.switching) return; // paused only to change recordings
+  pausedAt = Date.now();
   setPlayingClass();
   setBuffering(false);
   setMediaState();
@@ -1696,13 +1777,21 @@ audio.addEventListener('ended', recordingEnded); // in case a browser ends anywa
 
 // When the connection drops mid-recording (a tunnel, a lift, the Underground),
 // carry on from the same moment once it's back, instead of stopping for good.
-const recovery = { tries: 0, at: 0, waiting: false };
+const recovery = { tries: 0, at: 0, waiting: false, stale: false };
 audio.addEventListener('error', () => {
   const t = S.byId.get(S.current);
   if (!t || audio.error?.code === 1 /* aborted on purpose */) return;
   S.switching = false;
   setPlayingClass();
   setBuffering(false);
+  // Paused in the background (another app took the sound, say Instagram, and iOS then cut
+  // the idle connection): leave it be (owner, 27 Oct 2026). Loading it again from here would
+  // drop the app from the lock screen and Control Centre, so Play there did nothing. It loads
+  // again from the same moment when Play is pressed, there or in the app (resume()).
+  if (document.hidden && audio.paused) {
+    recovery.stale = true;
+    return;
+  }
   if (S.saved.has(t.id) || recovery.tries >= 4) {
     toast('Couldn’t play this recording');
     return;
@@ -1903,7 +1992,7 @@ function setMediaHandlers() {
   if (!('mediaSession' in navigator)) return;
   const ms = navigator.mediaSession;
   const handlers = {
-    play: () => (audio.src ? audio.play() : S.current && load(S.current)),
+    play: () => resume(),
     pause: () => audio.pause(),
     stop: () => audio.pause(),
     previoustrack: () => prev(),
@@ -1932,6 +2021,9 @@ try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } ca
 const RUNNING = /app\.js\?v=(\w+)/.exec($('script[src*="app.js?v="]')?.src || '')?.[1];
 async function checkForUpdate() {
   if (!RUNNING || !isOnline() || document.hidden || !audio.paused) return;
+  // Back from a quick look at another app with a recording paused: carry on where you were.
+  // The update waits until the app has rested a while (or is opened afresh).
+  if (audio.src && Date.now() - pausedAt < 10 * 60e3) return;
   try {
     const sw = await (await fetch(`sw.js?fresh=${Date.now()}`, { cache: 'no-store' })).text();
     const latest = /const VERSION = '(\w+)'/.exec(sw)?.[1];
@@ -2171,6 +2263,7 @@ function openTrackMenu(id, row) {
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
     ${t.tx ? item('transcript', 'transcript', 'Transcript') : ''}
     ${isLecture(t) ? item('mark-played', 'tick', S.played.has(id) && !S.positions[id] ? 'Mark as unplayed' : 'Mark as played') : ''}
+    ${!$('#player').hidden || !location.hash.startsWith(homeOf(t).prefix) ? item('show-in-section', homeOf(t).icon, `Show in ${homeOf(t).name}`) : ''}
     ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${speedOf(t)}×`) : ''}
     ${t.external ? '' : item('share-track', 'share', 'Share')}
     <button value="cancel" class="muted">Cancel</button>`;
@@ -2274,7 +2367,7 @@ function addToQueue(id) {
   toast('Added to the queue');
 }
 function playOnly(id) {
-  S.from = null;
+  S.from = S.foundAt = null;
   S.queue = [id];
   S.qi = 0;
   load(id);
@@ -2730,7 +2823,7 @@ document.addEventListener('click', async e => {
       // Continue listening keeps the list it was playing from, if it's still there.
       if (!S.queue.includes(id)) {
         S.queue = [id];
-        S.from = null;
+        S.from = S.foundAt = null;
       }
       S.qi = S.queue.indexOf(id);
       load(id);
@@ -2789,6 +2882,11 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'mark-played': setPlayed(id, !(S.played.has(id) && !S.positions[id])); break;
+    case 'show-in-section': showInSection(id || S.current); break;
+    case 'show-playlist':
+      await closePlayerFirst();
+      goAndReveal(`#/library/playlists/${el.dataset.pl}`, S.current);
+      break;
     case 'transcript': setTimeout(() => openTranscript(id || S.current)); break;
     case 'tx-now': txFollow(true); break;
     case 'tx-find': stepFind(Number(el.dataset.dir)); break;
@@ -2985,6 +3083,7 @@ function restoreLast() {
   S.qi = S.queue.indexOf(last);
   S.order = S.shuffle && saved?.order ? saved.order.filter(id => S.byId.has(id)) : null;
   S.from = ids.includes(last) ? saved?.from || null : null;
+  S.foundAt = ids.includes(last) ? saved?.foundAt || null : null;
   updateNowPlaying();
   setPlayingClass();
 }

@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=b02c2cf0e6">
+  <link rel="stylesheet" href="styles.css?v=9b5ce531aa">
 </head>
 <body>
   <div class="app">
@@ -68,6 +68,7 @@
         <div class="player-text">
           <h2 id="player-title" class="player-title"></h2>
           <p id="player-sub" class="player-sub"></p>
+          <button class="player-find" data-action="show-in-section" id="player-find"></button>
         </div>
         <button class="icon-btn fav-btn" data-action="fav-current" id="player-fav" aria-pressed="false" aria-label="Add to Favourites"><svg><use href="#i-heart"/></svg></button>
       </div>
@@ -277,6 +278,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=b02c2cf0e6" type="module"></script>
+  <script src="app.js?v=9b5ce531aa" type="module"></script>
 </body>
 </html>
