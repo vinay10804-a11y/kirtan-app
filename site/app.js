@@ -92,6 +92,7 @@ const S = {
   dlQueue: [],
   lists: {},
   queue: [],
+  from: null, // the list the queue was started from (an S.lists key, e.g. pl:<id>)
   qi: -1,
   current: null,
   sleep: null,
@@ -248,12 +249,24 @@ function dialogAnswer(dlg, read) {
 }
 
 let toastTimer;
-function toast(msg) {
+// With `undo`, the message carries an Undo button and stays a little longer.
+function toast(msg, undo) {
   const el = $('#toast');
   el.textContent = msg;
+  el.classList.toggle('has-undo', !!undo);
+  if (undo) {
+    const b = document.createElement('button');
+    b.className = 'toast-undo';
+    b.textContent = 'Undo';
+    b.addEventListener('click', () => {
+      el.classList.remove('show');
+      undo();
+    });
+    el.append(b);
+  }
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => el.classList.remove('show'), undo ? 5000 : 2600);
 }
 
 /* ---------------- data ---------------- */
@@ -809,11 +822,11 @@ function libraryView(tab = 'favourites', sub) {
       const list = playlistTracks(p);
       return `<a class="pl-row" href="#/library/playlists/${p.id}"><span class="pl-thumb">${playlistCover(list)}</span>
         <span class="pl-text"><span class="pl-name">${esc(p.name)}</span>
-        <span class="pl-sub">Playlist · ${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</span></span></a>`;
+        <span class="pl-sub">Playlist · ${sizeOf(list)}</span></span></a>`;
     }).join('');
     body = `<div class="pl-rows"><button class="pl-row" data-action="pl-new"><span class="pl-thumb new">${icon('plus')}</span>
         <span class="pl-text"><span class="pl-name">New playlist</span></span></button>${rows}</div>
-      ${rows ? '' : `<p class="empty">Make your own playlists, for japa, for the morning, for travelling. Tap <b>New playlist</b>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
+      ${rows ? '' : `<p class="empty">Make your own playlists, for japa, for the morning, for travelling. Tap <b>New playlist</b>, or tap ${icon('more')} next to any ${S.lectState === 'ready' ? 'kirtan or lecture' : 'kirtan'} and choose <b>Add to playlist</b>.</p>`}`;
   }
 
   if (tab === 'saved') {
@@ -846,42 +859,46 @@ function libraryView(tab = 'favourites', sub) {
   return `<h1 class="page-title">Library</h1>${accountCard()}${tabs(tabItems, tab)}${body}${appearance()}`;
 }
 
-// One playlist: its cover, Play / Shuffle, Add kirtans (search and tick them),
-// Edit (move up or down, remove, all on the page), save offline, rename, delete.
+// One playlist: its cover, Play / Shuffle, Add (search kirtans and lectures and tick them),
+// Edit (drag to reorder, remove), save offline, rename, delete. Kirtans and lectures mix freely
+// (audit, 27 Oct 2026).
 function playlistView(id) {
   const p = playlistById(id);
   if (!p) return `<h1 class="page-title">Playlist</h1><p class="empty">This playlist isn’t on this device. <a href="#/library/playlists">See your playlists</a></p>`;
   const list = playlistTracks(p);
   const key = `pl:${p.id}`;
   const editing = S.plEdit === p.id && list.length > 0;
+  const editMeta = t => (isLecture(t) ? [lectDate(t), t.place] : [t.artist, t.year]).filter(Boolean).map(esc).join(' · ');
   const rows = editing
-    ? `<ul class="tracks pl-edit">${list.map((t, i) => `<li class="track">
-        <span class="track-main"><span class="track-num">${i + 1}</span><span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${esc(t.artist)}${t.year ? ` · ${t.year}` : ''}</span></span></span>
-        <button class="icon-btn" data-action="pl-move" data-pl="${p.id}" data-id="${t.id}" data-dir="-1" aria-label="Move up" ${i ? '' : 'disabled'}>${icon('up')}</button>
-        <button class="icon-btn" data-action="pl-move" data-pl="${p.id}" data-id="${t.id}" data-dir="1" aria-label="Move down" ${i < list.length - 1 ? '' : 'disabled'}>${icon('down')}</button>
-        <button class="icon-btn" data-action="pl-remove" data-pl="${p.id}" data-id="${t.id}" aria-label="Remove from playlist">${icon('x')}</button>
+    ? `<p class="note pl-hint">Drag ${icon('grip')} to change the order, or tap ${icon('x')} to take one out.</p>
+      <ul class="tracks pl-edit" data-pl="${p.id}">${list.map(t => `<li class="track has-thumb" data-id="${t.id}">
+        <span class="track-main"><span class="track-thumb">${artHTML(t, true)}</span><span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${editMeta(t)}</span></span></span>
+        <button class="icon-btn" data-action="pl-remove" data-pl="${p.id}" data-id="${t.id}" aria-label="Remove ${esc(t.title)} from this playlist">${icon('x')}</button>
+        <button class="icon-btn pl-grip" data-pl="${p.id}" data-id="${t.id}" aria-label="Move ${esc(t.title)}: drag, or use the up and down arrow keys">${icon('grip')}</button>
       </li>`).join('')}</ul>`
     : trackList(list, key, { source: true, year: true, pl: p.id, thumb: true });
   if (editing) S.lists[key] = list.map(t => t.id);
   // Like a Spotify playlist: a big cover, the name, then add / more on the left and
-  // shuffle / a round play button on the right. Rename, Edit order, Save offline and
-  // Delete are in the ⋯ menu.
+  // shuffle / a round play button on the right (a pause button while this playlist is
+  // playing). Edit, Save offline, Rename and Delete are in the ⋯ menu.
+  const here = S.from === key && list.some(t => t.id === S.current);
   const right = editing ? `<button class="btn" data-action="pl-edit" data-pl="${p.id}">Done</button>`
     : list.length ? `<button class="icon-btn mode-btn${S.shuffle ? ' on' : ''}" data-action="shuffle" data-list="${key}" aria-label="Shuffle play">${icon('shuffle')}</button>
-      <button class="pl-play" data-action="play-list" data-list="${key}" aria-label="Play">${icon('play')}</button>` : '';
+      <button class="pl-play${here ? ' here' : ''}" data-action="${here ? 'toggle' : 'play-list'}" data-list="${key}" aria-label="${here && !audio.paused ? 'Pause' : 'Play'}">${icon('play', 'pl-i-play')}${icon('pause', 'pl-i-pause')}</button>` : '';
+  const what = S.lectState === 'ready' ? 'kirtans or lectures' : 'kirtans';
   return `<a class="back" href="#/library/playlists">${icon('left')}Playlists</a>
     <div class="pl-hero">
       <span class="pl-cover">${playlistCover(list)}</span>
       <h1 class="pl-title">${esc(p.name)}</h1>
-      <p class="page-sub">Playlist · ${plural(list.length, 'kirtan')}${list.length ? ` · ${fmtHours(sum(list, t => t.duration))}` : ''}</p>
+      <p class="page-sub">Playlist · ${sizeOf(list)}</p>
     </div>
     <div class="pl-actions">
-      <button class="icon-btn" data-action="pl-add" data-pl="${p.id}" aria-label="Add kirtans">${icon('plus')}</button>
+      <button class="icon-btn" data-action="pl-add" data-pl="${p.id}" aria-label="Add to this playlist">${icon('plus')}</button>
       <button class="icon-btn" data-action="pl-menu" data-pl="${p.id}" aria-label="More options for this playlist">${icon('more')}</button>
       <span class="grow"></span>${right}
     </div>
     ${list.length ? `<div class="group">${rows}</div>`
-      : `<p class="empty">Nothing here yet. <button class="text-btn" data-action="pl-add" data-pl="${p.id}">Add kirtans</button>, or tap ${icon('more')} next to any kirtan and choose <b>Add to playlist</b>.</p>`}`;
+      : `<p class="empty">Nothing here yet. <button class="text-btn" data-action="pl-add" data-pl="${p.id}">Add ${what}</button>, or tap ${icon('more')} next to any ${what === 'kirtans' ? 'kirtan' : 'kirtan or lecture'} and choose <b>Add to playlist</b>.</p>`}`;
 }
 
 // A playlist's cover, as on Spotify: four of its kirtans' pictures in a square, or
@@ -901,9 +918,9 @@ function openPlaylistMenu(id) {
   const key = `pl:${p.id}`;
   const unsaved = list.filter(t => !S.saved.has(t.id)).length;
   const item = (action, ic, label, extra = '') => `<button value="${action}" data-action="${action}" data-pl="${p.id}" ${extra}>${icon(ic)}<span>${label}</span></button>`;
-  $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(p.name)}<small>Playlist · ${plural(list.length, 'kirtan')}</small></h3>
-    ${item('pl-add', 'plus', 'Add kirtans')}
-    ${list.length > 1 ? item('pl-edit', 'queue', 'Edit order') : ''}
+  $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(p.name)}<small>Playlist · ${list.length ? countOf(list) : 'Empty'}</small></h3>
+    ${item('pl-add', 'plus', 'Add to this playlist')}
+    ${list.length ? item('pl-edit', 'queue', 'Edit playlist') : ''}
     ${'caches' in window && unsaved ? item('save-list', 'download', `Save ${unsaved === list.length ? 'all' : unsaved} offline`, `data-list="${key}"`) : ''}
     ${item('pl-rename', 'playlist', 'Rename')}
     ${item('pl-delete', 'trash', 'Delete playlist', 'class="danger"')}
@@ -1217,7 +1234,7 @@ const playable = id => S.saved.has(id) || isOnline();
 function saveQueue() {
   // A long list (thousands of lectures) keeps the stretch around what's playing.
   const from = Math.max(0, S.qi - 100);
-  store.set('queue', { ids: S.queue.slice(from, from + 500), qi: S.qi - from, order: S.order?.slice(0, 500) || null });
+  store.set('queue', { ids: S.queue.slice(from, from + 500), qi: S.qi - from, order: S.order?.slice(0, 500) || null, from: S.from });
 }
 
 function speedOf(t = S.byId.get(S.current)) {
@@ -1234,7 +1251,9 @@ function shuffled(ids) {
 }
 
 // Plays a list from one of its kirtans (or from the start), shuffled if Shuffle is on.
-function startList(ids, id = ids[0]) {
+// `from` names the list (S.lists' key), so the player can say "Playing from playlist".
+function startList(ids, id = ids[0], from = null) {
+  S.from = from;
   if (S.shuffle) {
     S.order = ids.slice();
     S.queue = [id, ...shuffled(ids.filter(x => x !== id))];
@@ -1275,7 +1294,7 @@ function setBuffering(on) {
 
 function playFrom(listKey, id) {
   if (S.current === id && audio.src) return togglePlay();
-  startList(S.lists[listKey] || [id], id);
+  startList(S.lists[listKey] || [id], id, S.lists[listKey] ? listKey : null);
   load(id);
 }
 
@@ -1412,7 +1431,15 @@ function updateNowPlaying() {
     if (t.id !== tx.id && t.tx) openTranscript(t.id); // the next lecture's, when it has one
     else txControls();
   }
-  $('#player-context').textContent = t.section === 'japa' ? 'Japa' : t.type;
+  // "Playing from playlist / Its name", as on Spotify; otherwise what it is (Mahamantra, Lecture…).
+  const pl = playingFrom();
+  $('#player-context').innerHTML = pl ? `<small>Playing from playlist</small>${esc(pl.name)}` : esc(t.section === 'japa' ? 'Japa' : t.type);
+  // A playlist's round play button shows pause while that playlist is playing.
+  for (const b of $$('.pl-play')) {
+    const here = b.dataset.list === S.from && (S.lists[b.dataset.list] || []).includes(S.current);
+    b.classList.toggle('here', here);
+    b.dataset.action = here ? 'toggle' : 'play-list';
+  }
 
   renderLyricsCard(t);
 
@@ -1952,8 +1979,32 @@ function toggleFav(id) {
 }
 
 const playlistById = id => S.playlists.find(p => p.id === id);
-// A playlist's kirtans that are in the app (a removed recording simply drops out).
+// A playlist's recordings that this device can show: a removed one simply drops out, and
+// lectures stay hidden (but kept) until their list loads, or on a device without the password.
 const playlistTracks = p => p.ids.map(x => S.byId.get(x)).filter(Boolean);
+const MAX_PL = 1000; // what an account keeps of a playlist (site/library.js)
+// "3 kirtans", "1 lecture", "2 kirtans, 1 lecture"
+function countOf(list) {
+  const l = list.filter(isLecture).length, k = list.length - l;
+  return k && l ? `${plural(k, 'kirtan')}, ${plural(l, 'lecture')}` : l ? plural(l, 'lecture') : plural(k, 'kirtan');
+}
+// "2 kirtans, 1 lecture · 1.4 hours", or "Empty"
+const sizeOf = list => (list.length ? `${countOf(list)} · ${fmtHours(sum(list, t => t.duration))}` : 'Empty');
+const addSub = p => { // under the Add sheet's title
+  const list = playlistTracks(p);
+  $('#add-sub').textContent = list.length ? `${countOf(list)} in ${p.name}` : 'Tap + to add';
+};
+// Puts the recordings a playlist shows in a new order; any it can't show here keep their places.
+function setPlaylistOrder(p, shown) {
+  const on = new Set(shown);
+  let k = 0;
+  p.ids = p.ids.map(x => (on.has(x) ? shown[k++] : x));
+}
+// The playlist playing now, if the player was started from one and is still in it.
+function playingFrom() {
+  const p = S.from?.startsWith('pl:') && playlistById(S.from.slice(3));
+  return p && p.ids.includes(S.current) ? p : null;
+}
 // Saves playlists on this device, noting which ones changed or were deleted so
 // an account can merge them with other devices.
 let plShape = null;
@@ -1975,27 +2026,116 @@ function newPlaylist(name) {
   return p;
 }
 function addToPlaylist(p, id) {
-  if (!p.ids.includes(id)) p.ids.push(id);
+  if (!p.ids.includes(id)) {
+    if (p.ids.length >= MAX_PL) return toast(`A playlist can hold up to ${MAX_PL.toLocaleString()} recordings`);
+    p.ids.push(id);
+  }
   savePlaylists();
   toast(`Added to ${p.name}`);
   if (location.hash.startsWith('#/library/playlists')) route();
 }
-function removeFromPlaylist(p, id) {
+// Taking one out offers Undo (except from the Add to playlist menu, where it's a tap to tick again).
+function removeFromPlaylist(p, id, undo = true) {
   if (!p) return;
+  const at = p.ids.indexOf(id);
   p.ids = p.ids.filter(x => x !== id);
   savePlaylists();
-  toast(`Removed from ${p.name}`);
+  toast(`Removed from ${p.name}`, undo && (() => {
+    const q = playlistById(p.id);
+    if (!q || q.ids.includes(id)) return;
+    q.ids.splice(Math.min(at, q.ids.length), 0, id);
+    savePlaylists();
+    if (location.hash.startsWith('#/library/playlists')) route();
+  }));
   if (!playlistTracks(p).length) S.plEdit = null;
   if (location.hash.startsWith('#/library/playlists')) route();
 }
+// Moves a recording one place among those shown (so a hidden lecture can't swallow the move).
 function movePlaylistItem(p, id, dir) {
-  const i = p ? p.ids.indexOf(id) : -1;
-  const j = i + dir;
-  if (i < 0 || j < 0 || j >= p.ids.length) return;
-  [p.ids[i], p.ids[j]] = [p.ids[j], p.ids[i]];
+  if (!p) return;
+  const shown = playlistTracks(p).map(t => t.id);
+  const i = shown.indexOf(id), j = i + dir;
+  if (i < 0 || j < 0 || j >= shown.length) return;
+  [shown[i], shown[j]] = [shown[j], shown[i]];
+  setPlaylistOrder(p, shown);
   savePlaylists();
   route();
 }
+
+// Edit playlist: drag a recording by its handle to a new place, as in Spotify and Apple Music.
+// The row follows the finger and the others make room; near the top or bottom of the screen
+// the page scrolls along. The up and down arrow keys on a handle move it one place.
+(function dragToReorder() {
+  let drag = null;
+  const place = () => {
+    const { rows, from, mids, h } = drag;
+    const dy = drag.y - drag.y0 + (scrollY - drag.s0);
+    rows[from].style.transform = `translateY(${dy}px)`;
+    let to = 0;
+    for (let j = 0; j < rows.length; j++) if (j !== from && mids[j] < mids[from] + dy) to++;
+    drag.to = to;
+    rows.forEach((r, j) => {
+      if (j === from) return;
+      const shift = from < to && j > from && j <= to ? -h : to < from && j >= to && j < from ? h : 0;
+      r.style.transform = shift ? `translateY(${shift}px)` : '';
+    });
+  };
+  const scroll = () => {
+    if (!drag) return;
+    const low = innerHeight - 150; // above the mini player and the tab bar
+    const speed = drag.y < 90 ? (drag.y - 90) / 5 : drag.y > low ? (drag.y - low) / 5 : 0;
+    if (speed) {
+      scrollBy(0, speed);
+      place();
+    }
+    requestAnimationFrame(scroll);
+  };
+  document.addEventListener('pointerdown', e => {
+    const grip = e.target.closest('.pl-grip');
+    if (!grip || e.button > 0) return;
+    e.preventDefault();
+    const li = grip.closest('li'), rows = [...li.parentElement.children];
+    drag = {
+      ul: li.parentElement, li, rows, from: rows.indexOf(li), to: rows.indexOf(li), y: e.clientY, y0: e.clientY, s0: scrollY,
+      mids: rows.map(r => { const b = r.getBoundingClientRect(); return b.top + b.height / 2; }), h: li.getBoundingClientRect().height,
+    };
+    try { grip.setPointerCapture(e.pointerId); } catch {} // so the finger can leave the handle
+    li.classList.add('dragging');
+    drag.ul.classList.add('sorting');
+    requestAnimationFrame(scroll);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    drag.y = e.clientY;
+    place();
+  });
+  const drop = () => {
+    if (!drag) return;
+    const { ul, li, rows, from, to } = drag;
+    drag = null;
+    ul.classList.remove('sorting');
+    li.classList.remove('dragging');
+    for (const r of rows) r.style.transform = '';
+    const p = playlistById(ul.dataset.pl);
+    if (!p || to === from) return;
+    const shown = rows.map(r => r.dataset.id);
+    shown.splice(to, 0, shown.splice(from, 1)[0]);
+    setPlaylistOrder(p, shown);
+    savePlaylists();
+    li.remove();
+    ul.insertBefore(li, ul.children[to] || null); // in place, so the page doesn't jump
+  };
+  document.addEventListener('pointerup', drop);
+  document.addEventListener('pointercancel', drop);
+  document.addEventListener('keydown', e => {
+    const grip = e.target.closest?.('.pl-grip');
+    if (!grip || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    movePlaylistItem(playlistById(grip.dataset.pl), grip.dataset.id, e.key === 'ArrowUp' ? -1 : 1);
+    $(`.pl-grip[data-id="${grip.dataset.id}"]`)?.focus();
+  }, true);
+})();
 
 // In-page prompt for a playlist name; resolves to the trimmed name, or null.
 function askName(title, value, save) {
@@ -2019,14 +2159,15 @@ function openTrackMenu(id, row) {
   const pl = row ? JSON.parse(row.dataset.opts || '{}').pl : null;
   const p = pl && playlistById(pl);
   const item = (action, ic, label, extra = '') => `<button value="${action}" data-action="${action}" data-id="${t.id}" ${extra}>${icon(ic)}<span>${label}</span></button>`;
-  const i = p ? p.ids.indexOf(id) : -1;
+  const shown = p ? playlistTracks(p).map(x => x.id) : [];
+  const i = shown.indexOf(id);
   $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(t.title)}<small>${esc(collectionName(t))}</small></h3>
     ${S.current && S.current !== id ? item('play-next', 'next', 'Play next') + item('add-queue', 'queue', 'Add to queue') : ''}
     ${item('add-to-playlist', 'playlist', 'Add to playlist')}
     ${item('toggle-fav', 'heart', S.favs.has(id) ? 'Remove from Favourites' : 'Add to Favourites')}
     ${'caches' in window && (!t.external || t.dl) ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
-    ${p && i < p.ids.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
+    ${p && i >= 0 && i < shown.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
     ${t.tx ? item('transcript', 'transcript', 'Transcript') : ''}
     ${isLecture(t) ? item('mark-played', 'tick', S.played.has(id) && !S.positions[id] ? 'Mark as unplayed' : 'Mark as played') : ''}
@@ -2055,33 +2196,64 @@ function renderPicker(id) {
     <button value="done" class="menu-done">Done</button>`;
 }
 
-// "Add kirtans" on a playlist: every kirtan, searchable, each with + / ✓.
-function openAddKirtans(plId) {
+// "Add to this playlist": Kirtans and Lectures tabs (Lectures only on a device with the
+// password), each searchable, each recording with + / ✓; tap anywhere on a row. Kirtans run
+// Sacinandana Swami first, then by title; lectures newest first, found as on the Lectures page
+// (titles, verses, places, dates).
+function openAddSheet(plId) {
   const p = playlistById(plId);
   if (!p) return;
   const dlg = $('#add-dialog');
+  const list = playlistTracks(p);
   dlg.dataset.pl = p.id;
+  dlg.dataset.tab = list.length && isLecture(list[list.length - 1]) ? 'lectures' : 'kirtans'; // more of what it has
   $('#add-title').textContent = `Add to ${p.name}`;
   $('#add-q').value = '';
   renderAddList();
   dlg.showModal();
+  $('#add-body').scrollTop = 0;
 }
 function renderAddList() {
-  const p = playlistById($('#add-dialog').dataset.pl);
+  const dlg = $('#add-dialog');
+  const p = playlistById(dlg.dataset.pl);
   if (!p) return;
-  const words = norm($('#add-q').value).split(/\s+/).filter(Boolean);
-  const list = kirtans()
-    .filter(t => words.every(w => norm(`${t.title} ${t.artist} ${t.type} ${t.place || ''} ${t.year || ''}`).includes(w)))
-    .sort((a, b) => a.artist.localeCompare(b.artist) || byTitle(a, b));
-  $('#add-sub').textContent = `${plural(playlistTracks(p).length, 'kirtan')} in ${p.name}`;
-  $('#add-body').innerHTML = list.length ? `<ul class="tracks">${list.slice(0, 200).map(t => {
+  const lectures = S.lectState === 'ready';
+  const tab = lectures ? dlg.dataset.tab : 'kirtans';
+  $('#add-tabs').hidden = !lectures;
+  for (const b of $$('#add-tabs .chip')) b.setAttribute('aria-current', b.dataset.tab === tab);
+  $('#add-q').placeholder = tab === 'lectures' ? 'Search lectures: title, verse, place, year' : 'Search kirtans';
+  $('#add-q').setAttribute('aria-label', $('#add-q').placeholder);
+  addSub(p);
+  const q = $('#add-q').value.trim();
+  let all;
+  if (tab === 'lectures') {
+    const words = lectWords(q);
+    if (words.length) lectKeys(true);
+    all = words.length ? S.lectures.filter(t => lectHit(t, words)) : S.lectures;
+  } else {
+    const words = norm(q).split(/\s+/).filter(Boolean);
+    const rank = t => (ARTIST_ORDER.includes(t.artist) ? ARTIST_ORDER.indexOf(t.artist) : ARTIST_ORDER.length);
+    all = kirtans()
+      .filter(t => words.every(w => norm(`${t.title} ${t.artist} ${t.type} ${t.place || ''} ${t.year || ''}`).includes(w)))
+      .sort((a, b) => rank(a) - rank(b) || byTitle(a, b));
+  }
+  const list = all.slice(0, tab === 'lectures' ? 100 : 200);
+  const row = t => {
     const on = p.ids.includes(t.id);
-    return `<li class="track add-row">
-      <span class="track-main"><span class="track-text"><span class="track-title">${esc(t.title)}</span>
-        <span class="track-meta">${esc(t.artist)} · ${esc(t.type)}${t.year ? ` · ${t.year}` : ''} · ${fmtDur(t.duration)}</span></span></span>
-      <button class="icon-btn add-toggle${on ? ' in' : ''}" data-action="pl-add-toggle" data-pl="${p.id}" data-id="${t.id}" aria-pressed="${on}" aria-label="Add or remove ${esc(t.title)}">${icon(on ? 'check' : 'plus')}</button>
+    const lecture = isLecture(t);
+    const meta = (lecture ? [lectDate(t), t.title.startsWith(t.ref) ? '' : t.ref, t.place, t.duration && fmtDur(t.duration)]
+      : [t.artist, t.type, t.year, fmtDur(t.duration)]).filter(Boolean).map(esc).join(' · ');
+    const data = `data-action="pl-add-toggle" data-pl="${p.id}" data-id="${t.id}"`;
+    return `<li class="track add-row${lecture ? '' : ' has-thumb'}">
+      <button class="track-main" ${data} tabindex="-1">${lecture ? '' : `<span class="track-thumb">${artHTML(t, true)}</span>`}<span class="track-text"><span class="track-title">${esc(t.title)}</span>
+        <span class="track-meta">${meta}</span></span></button>
+      <button class="icon-btn add-toggle${on ? ' in' : ''}" ${data} aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${esc(t.title)}">${icon(on ? 'check' : 'plus')}</button>
     </li>`;
-  }).join('')}</ul>` : `<p class="empty">No kirtans match “${esc($('#add-q').value)}”.</p>`;
+  };
+  const what = tab === 'lectures' ? 'lectures' : 'kirtans';
+  $('#add-body').innerHTML = list.length
+    ? `<ul class="tracks">${list.map(row).join('')}</ul>${all.length > list.length ? `<p class="note add-more">${(all.length - list.length).toLocaleString()} more ${what}. Search to find the one you want.</p>` : ''}`
+    : `<p class="empty">No ${what} match “${esc(q)}”.</p>`;
 }
 $('#add-q').addEventListener('input', renderAddList);
 $('#add-dialog').addEventListener('close', () => { if (location.hash.startsWith('#/library/playlists')) route(); });
@@ -2102,6 +2274,7 @@ function addToQueue(id) {
   toast('Added to the queue');
 }
 function playOnly(id) {
+  S.from = null;
   S.queue = [id];
   S.qi = 0;
   load(id);
@@ -2128,7 +2301,7 @@ function renderQueue() {
   const now = S.byId.get(S.current);
   const upcoming = S.queue.map((id, qi) => ({ t: S.byId.get(id), qi })).filter(x => x.t && x.qi > S.qi);
   const more = Math.max(0, upcoming.length - 100); // a list of thousands of lectures shows the next 100
-  $('#queue-sub').textContent = upcoming.length ? `${plural(upcoming.length, isLecture(now) ? 'lecture' : 'kirtan')} up next${more ? '' : ` · ${fmtHours(sum(upcoming, x => x.t.duration))}`}` : 'Nothing else queued';
+  $('#queue-sub').textContent = upcoming.length ? `${countOf(upcoming.map(x => x.t))} up next${more ? '' : ` · ${fmtHours(sum(upcoming, x => x.t.duration))}`}` : 'Nothing else queued';
   // Like Spotify's queue: pictures, the playing kirtan on top with a play/pause button.
   const text = (t, meta) => `<span class="q-text"><span class="q-title">${esc(t.title)}</span><span class="q-meta">${esc(meta)}</span></span>`;
   const row = ({ t, qi }) => `<li class="q-row">
@@ -2555,7 +2728,10 @@ document.addEventListener('click', async e => {
     case 'play': playFrom(list, id); break;
     case 'resume': {
       // Continue listening keeps the list it was playing from, if it's still there.
-      if (!S.queue.includes(id)) S.queue = [id];
+      if (!S.queue.includes(id)) {
+        S.queue = [id];
+        S.from = null;
+      }
       S.qi = S.queue.indexOf(id);
       load(id);
       break;
@@ -2566,7 +2742,7 @@ document.addEventListener('click', async e => {
       if (!ids.length) break;
       S.shuffle = false;
       store.set('shuffle', false);
-      startList(ids);
+      startList(ids, ids[0], list);
       load(S.queue[0]);
       break;
     }
@@ -2575,7 +2751,7 @@ document.addEventListener('click', async e => {
       if (!ids.length) break;
       S.shuffle = true;
       store.set('shuffle', true);
-      startList(ids, ids[Math.floor(Math.random() * ids.length)]);
+      startList(ids, ids[Math.floor(Math.random() * ids.length)], list);
       load(S.queue[0]);
       break;
     }
@@ -2595,8 +2771,8 @@ document.addEventListener('click', async e => {
       if (!isOnline()) return toast('Connect to the internet to save');
       const ids = (S.lists[list] || []).filter(x => !S.saved.has(x));
       ids.forEach(queueDownload);
-      const mb = sum(ids, x => S.byId.get(x).size);
-      toast(`Saving ${plural(ids.length, 'recording')} (${fmtMB(mb)})`);
+      const sizes = ids.map(x => S.byId.get(x)?.size || 0); // a lecture's isn't known until it's saved
+      toast(`Saving ${plural(ids.length, 'recording')}${sizes.every(Boolean) ? ` (${fmtMB(sum(sizes, x => x))})` : ''}`);
       break;
     }
     case 'fav-current': if (S.current) toggleFav(S.current); break;
@@ -2661,7 +2837,11 @@ document.addEventListener('click', async e => {
     case 'queue-remove': removeFromQueue(Number(el.dataset.qi)); break;
     case 'pl-new': {
       const name = await askName('New playlist', '', 'Create');
-      if (name) { const p = newPlaylist(name); location.hash = `#/library/playlists/${p.id}`; }
+      if (name) {
+        const p = newPlaylist(name);
+        location.hash = `#/library/playlists/${p.id}`;
+        openAddSheet(p.id); // straight on to filling it, as on Spotify
+      }
       break;
     }
     case 'pl-create-add': {
@@ -2672,22 +2852,33 @@ document.addEventListener('click', async e => {
     }
     case 'pl-toggle': {
       const p = playlistById(el.dataset.pl);
-      if (p?.ids.includes(id)) removeFromPlaylist(p, id); else if (p) addToPlaylist(p, id);
+      if (p?.ids.includes(id)) removeFromPlaylist(p, id, false); else if (p) addToPlaylist(p, id);
       if ($('#playlist-dialog').open) renderPicker(id);
       break;
     }
-    case 'pl-add': setTimeout(() => openAddKirtans(el.dataset.pl)); break;
+    case 'pl-add': setTimeout(() => openAddSheet(el.dataset.pl)); break;
+    case 'add-tab':
+      $('#add-dialog').dataset.tab = el.dataset.tab;
+      renderAddList();
+      $('#add-body').scrollTop = 0;
+      break;
     case 'pl-menu': openPlaylistMenu(el.dataset.pl); break;
     case 'pl-add-toggle': {
       const p = playlistById(el.dataset.pl);
       if (!p) break;
       const on = !p.ids.includes(id);
+      if (on && p.ids.length >= MAX_PL) {
+        $('#add-sub').textContent = `A playlist can hold up to ${MAX_PL.toLocaleString()} recordings`;
+        break;
+      }
       on ? p.ids.push(id) : (p.ids = p.ids.filter(x => x !== id));
       savePlaylists();
-      el.classList.toggle('in', on);
-      el.setAttribute('aria-pressed', on);
-      el.innerHTML = icon(on ? 'check' : 'plus');
-      $('#add-sub').textContent = `${plural(playlistTracks(p).length, 'kirtan')} in ${p.name}`;
+      const btn = el.closest('li').querySelector('.add-toggle');
+      btn.classList.toggle('in', on);
+      btn.setAttribute('aria-pressed', on);
+      btn.setAttribute('aria-label', `${on ? 'Remove' : 'Add'} ${S.byId.get(id)?.title || ''}`);
+      btn.innerHTML = icon(on ? 'check' : 'plus');
+      addSub(p);
       break;
     }
     case 'pl-edit': S.plEdit = S.plEdit === el.dataset.pl ? null : el.dataset.pl; route(); break;
@@ -2702,7 +2893,7 @@ document.addEventListener('click', async e => {
     }
     case 'pl-delete': {
       const p = playlistById(el.dataset.pl);
-      if (!p || !(await ask(`Delete the playlist “${p.name}”? The kirtans stay in the app.`, 'Delete'))) return;
+      if (!p || !(await ask(`Delete the playlist “${p.name}”? What’s in it stays in the app.`, 'Delete'))) return;
       S.playlists = S.playlists.filter(x => x.id !== p.id);
       savePlaylists();
       location.hash = '#/library/playlists';
@@ -2793,6 +2984,7 @@ function restoreLast() {
   S.queue = ids.includes(last) ? ids : [last];
   S.qi = S.queue.indexOf(last);
   S.order = S.shuffle && saved?.order ? saved.order.filter(id => S.byId.has(id)) : null;
+  S.from = ids.includes(last) ? saved?.from || null : null;
   updateNowPlaying();
   setPlayingClass();
 }

@@ -89,6 +89,16 @@ R2 bucket `kirtans` at `/stream/*`.
   its name, + (add kirtans) and ⋯ (Add kirtans, Edit order, Save offline, Rename, Delete) on the left,
   shuffle and a round play button on the right; its kirtans (and Favourites) show pictures instead of
   numbers (`thumb` option of `trackRow`).
+- Playlist audit (owner, 27 Oct 2026: "as good as possible for both lectures and kirtans"): kirtans and
+  lectures mix in one playlist. Counts say what's in it ("2 kirtans, 1 lecture", `countOf`; "Empty").
+  The + opens "Add to <name>" with Kirtans and Lectures tabs (Lectures only with the password): kirtans
+  Sacinandana Swami first then by title, lectures newest first and searched as on the Lectures page
+  (verses, places, dates), 100 shown at a time; tap anywhere on a row to tick it. New playlist goes
+  straight on to that sheet. Edit playlist: drag the ≡ handle (or arrow keys on it) to reorder, × to
+  remove, with Undo in the message (also for Remove from the ⋯ menu). Lectures a device can't show
+  (list not loaded, no password) are kept in place by moves and drags (`setPlaylistOrder`). The round
+  play button turns to pause while that playlist plays, and the player's top says "Playing from
+  playlist / <name>" (`S.from`, saved with the queue). A playlist holds up to 1,000 (library.js).
 - Lock screen on iPhone (24 Oct 2026): iPhones ignore Media Session handlers set before the page is
   playing and then show ±10 s skips, so `setMediaHandlers()` runs again on every 'playing' (with the
   metadata), and `seekbackward`/`seekforward` are set to null. An iPhone also closes a web app's audio
