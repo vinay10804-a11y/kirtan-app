@@ -444,7 +444,7 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 
 /* ---------- Dialogs & toast ---------- */
 dialog.menu { border: 0; padding: 8px; border-radius: 16px; background: var(--surface); color: var(--ink); width: min(320px, calc(100% - 32px)); }
-dialog::backdrop { background: rgba(16, 40, 43, .4); }
+dialog::backdrop { background: rgba(16, 40, 43, .4); opacity: var(--pull, 1); } /* --pull: lighter as a sheet is swiped down */
 dialog.menu form { display: flex; flex-direction: column; }
 dialog.menu h3 { font-size: 20px; padding: 10px 12px 6px; }
 dialog.menu button { text-align: left; padding: 12px; border-radius: 10px; font-size: 16px; }
@@ -677,6 +677,8 @@ dialog.video-sheet::backdrop { background: #000; }
 dialog.sheet { border: 0; padding: 0; width: min(560px, 100%); max-width: 100%; max-height: min(86dvh, 820px); margin: auto auto 0; border-radius: 18px 18px 0 0; background: var(--bg); color: var(--ink); overflow: hidden; }
 dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-up .34s var(--ease-out); }
 @media (min-width: 640px) { dialog.sheet { margin: auto; border-radius: 18px; } }
+/* On phones sheets rise from the bottom, with the same grab handle as menus: swipe down to close */
+@media (max-width: 639px) { dialog.sheet::before { content: ""; position: absolute; top: 7px; left: 50%; z-index: 1; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line); } }
 .sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 12px 22px; border-bottom: 1px solid var(--line); }
 .sheet-head h3 { margin: 0; font: 500 22px/1.2 var(--serif); }
 .sheet-head p { margin: 3px 0 0; font-size: 13px; color: var(--ink-3); }

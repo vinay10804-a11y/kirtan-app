@@ -21,7 +21,7 @@ export async function sharePage(request, env, url) {
   ]);
   const t = (catalog.tracks || []).find(x => x.id === id && !x.hidden);
 
-  const site = 'Sacinandana Swami Central';
+  const site = 'Sacinandana Swami';
   const title = t ? t.title : site;
   const description = t
     ? [t.artist, t.type === 'Bhajans' ? 'Bhajan' : 'Mahamantra kirtan', [t.place, t.year].filter(Boolean).join(' '), t.duration && duration(t.duration)].filter(Boolean).join(' · ')

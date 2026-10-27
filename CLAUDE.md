@@ -1,9 +1,9 @@
-# Sacinandana Swami Central
+# Sacinandana Swami
 
-The site's name since 26 Oct 2026 (owner; it was "Sacinandana Swami and Gour Krishna Kirtans"): in the
-side menu and phone top bar as "Sacinandana Swami" over a large "Central", the page title, manifest,
-share previews and lock screen. The home-screen label (`short_name`, apple-mobile-web-app-title) is
-still "Kirtans", as the full name is too long for under an icon.
+The site's name since 27 Oct 2026 (owner; before that "Sacinandana Swami Central", and first "Sacinandana
+Swami and Gour Krishna Kirtans"): in the side menu and phone top bar as one large "Sacinandana Swami",
+the page title, manifest, share previews and lock screen. The home-screen label (`short_name`,
+apple-mobile-web-app-title) is still "Kirtans", as the full name is too long for under an icon.
 
 Offline-capable web app (PWA) for kirtans, bhajans and guided japa, built for Vinay
 (devotee name Vinoda Govinda; use that name when talking about this project).
@@ -66,7 +66,10 @@ R2 bucket `kirtans` at `/stream/*`.
   style (`verses`) must come from the owner or a source we may use; never copy them from websites or
   write them from memory.
 - Swipe the player artwork or mini player left/right to change recordings; swipe down on the player's
-  top bar to close it. The progress bar works like Spotify's (tap to jump, drag, seek on release).
+  top bar to close it. Menus and sheets that rise from the bottom (⋯ menus, account, queue, transcript,
+  lyrics; all with a grab handle on phones) close with a swipe down or a tap on the dimmed page above,
+  like iPhone sheets (`swipeToClose`; a friend's feedback, 27 Oct 2026). The name and sign-in cards don't,
+  so a stray tap can't lose what was typed. The progress bar works like Spotify's (tap to jump, drag, seek on release).
 - Spotify-inspired (22 Oct 2026): every kirtan has a "⋯" menu (Play next, Add to queue, Add to playlist,
   Favourite, Save offline, Share; inside a playlist also Move up/down and Remove). "Up next" in the
   player opens the queue. Library tabs: Favourites, Playlists, Saved offline, History. Playlists and
@@ -123,10 +126,9 @@ R2 bucket `kirtans` at `/stream/*`.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
-- Home's intro (owner, 26 Oct 2026: kirtans by both, japa and lectures by Sacinandana Swami, worded to invite,
-  keeping "Listen here, or save recordings to play without internet"): "Welcome. Immerse yourself in kirtans by
-  Sacinandana Swami and Gour Krishna, and in japa and lectures by Sacinandana Swami. / Listen here, or save
-  recordings to play without internet." (the last sentence on its own line). Right under it, a "How to install this website as an app" button (owner: must be near
+- Home's intro (owner, 27 Oct 2026, from a friend's wording; each sentence on its own line): "Welcome. Immerse
+  yourself in kirtans by Sacinandana Swami and Gour Krishna. / Be inspired to chant japa and hear lectures by
+  Sacinandana Swami. / Listen here, or save recordings to play without internet." Right under it, a "How to install this website as an app" button (owner: must be near
   the top, with a clear title) that scrolls to the steps of the same title (iPhone and laptop, Safari and Chrome) above "How to use this site",
   which also links there. Inside the installed app both stay, worded for installing on another device.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
