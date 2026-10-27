@@ -1,5 +1,5 @@
-// Sacinandana Swami Central (named so by the owner, 26 Oct 2026; was "Sacinandana Swami and Gour Krishna
-// Kirtans"): a small offline-capable audio app.
+// Sacinandana Swami (the site's name since 27 Oct 2026, owner; before that "Sacinandana Swami Central"
+// and "Sacinandana Swami and Gour Krishna Kirtans"): a small offline-capable audio app.
 // No framework: hash routes render HTML strings into #view, and one delegated
 // click handler drives everything through data-action attributes.
 
@@ -441,7 +441,7 @@ function playActions(listKey) {
 }
 
 function topbar() {
-  return `<header class="topbar"><a class="topbar-title" href="#/">Sacinandana Swami <b>Central</b></a>
+  return `<header class="topbar"><a class="topbar-title" href="#/"><b>Sacinandana Swami</b></a>
     <button class="icon-btn theme-toggle" data-action="theme-toggle" aria-label="Switch between light and dark">${icon('moon', 'show-light')}${icon('sun', 'show-dark')}</button></header>`;
 }
 
@@ -507,7 +507,7 @@ function homeView() {
 
   return `${topbar()}
     <div class="hero"><img src="art/card-1.webp" alt="The Hare Kṛṣṇa mahāmantra written into a wave"></div>
-    <p class="intro">Welcome. Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna, and in japa and lectures by Sacinandana&nbsp;Swami.<br>Listen here, or save recordings to play without internet.</p>
+    <p class="intro">Welcome. Immerse yourself in kirtans by Sacinandana&nbsp;Swami and Gour&nbsp;Krishna.<br>Be inspired to chant japa and hear lectures by Sacinandana&nbsp;Swami.<br>Listen here, or save recordings to play without internet.</p>
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()
@@ -1422,7 +1422,7 @@ function setMediaMetadata(t) {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: t.title,
     artist: collectionName(t),
-    album: isLecture(t) ? 'Lectures' : 'Sacinandana Swami Central',
+    album: isLecture(t) ? 'Lectures' : 'Sacinandana Swami',
     artwork: [{ src: new URL(artFor(t) || 'icons/icon-512.png', location.href).href, sizes: '512x512' }],
   });
 }
@@ -1797,6 +1797,73 @@ scrub.addEventListener('pointercancel', () => {
   player.addEventListener('touchend', end);
   player.addEventListener('touchcancel', end);
 })();
+
+// Menus and sheets that rise from the bottom close like an iPhone's (owner, 27 Oct 2026: the
+// grab handle suggests a swipe down): swipe them down, or tap the dimmed page above them.
+// Either is the same as Cancel. Over a list that's scrolled down, swiping scrolls it back first.
+// The name and sign-in cards are left out, so a stray tap doesn't lose what was typed.
+function swipeToClose(dlg) {
+  let y0 = null, x0 = 0, t0 = 0, dy = 0, mode = null, list = null;
+  const settle = () => {
+    dlg.style.transition = 'transform .2s var(--ease-out)';
+    dlg.style.transform = '';
+    dlg.style.removeProperty('--pull');
+  };
+  const dismiss = () => {
+    dlg.style.transition = 'transform .2s var(--ease-in)';
+    dlg.style.transform = 'translateY(100vh)';
+    dlg.style.setProperty('--pull', 0);
+    setTimeout(() => {
+      dlg.close();
+      dlg.style.transition = dlg.style.transform = '';
+      dlg.style.removeProperty('--pull');
+    }, 200);
+  };
+  dlg.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || e.target.closest('input, textarea, select')) return;
+    y0 = e.touches[0].clientY;
+    x0 = e.touches[0].clientX;
+    t0 = performance.now();
+    dy = 0;
+    mode = null;
+    list = null; // the scrolling list under the finger, if any
+    for (let el = e.target; el && el !== dlg; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY)) { list = el; break; }
+    }
+  }, { passive: true });
+  dlg.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    const ddy = e.touches[0].clientY - y0, ddx = e.touches[0].clientX - x0;
+    if (mode === null && Math.hypot(ddx, ddy) > 8) {
+      mode = ddy > 0 && Math.abs(ddy) > Math.abs(ddx) * 1.2 && !(list?.scrollTop > 0) ? 'close' : 'other';
+    }
+    if (mode !== 'close') return;
+    e.preventDefault(); // the sheet follows the finger instead of the page bouncing
+    dy = Math.max(0, ddy);
+    dlg.style.transition = 'none';
+    dlg.style.transform = `translateY(${dy}px)`;
+    dlg.style.setProperty('--pull', Math.max(0, 1 - dy / dlg.offsetHeight).toFixed(3)); // dims less as it goes
+  }, { passive: false });
+  const end = () => {
+    if (y0 === null) return;
+    const closing = mode === 'close';
+    const speed = dy / Math.max(1, performance.now() - t0); // px per ms
+    y0 = null;
+    mode = null;
+    if (!closing) return;
+    if (dy > 90 || (dy > 40 && speed > 0.5)) dismiss();
+    else settle();
+  };
+  dlg.addEventListener('touchend', end);
+  dlg.addEventListener('touchcancel', end);
+  // A tap on the dimmed page lands on the dialog itself, outside its box.
+  dlg.addEventListener('click', e => {
+    if (e.target !== dlg) return;
+    const r = dlg.getBoundingClientRect();
+    if (e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right) dlg.close();
+  });
+}
+document.querySelectorAll('dialog.menu:not(.name-menu), dialog.sheet').forEach(swipeToClose);
 
 // Lock screen and Control Centre: play/pause, previous/next kirtan and the position
 // bar. The 10-second skip actions are cleared, since iPhones show them instead of
