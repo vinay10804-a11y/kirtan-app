@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=9c8563ab91">
+  <link rel="stylesheet" href="styles.css?v=b02c2cf0e6">
 </head>
 <body>
   <div class="app">
@@ -177,9 +177,13 @@
   <!-- Adding kirtans to a playlist from the playlist itself -->
   <dialog id="add-dialog" class="sheet" aria-labelledby="add-title">
     <header class="sheet-head">
-      <div><h3 id="add-title">Add kirtans</h3><p id="add-sub"></p></div>
+      <div><h3 id="add-title">Add to playlist</h3><p id="add-sub"></p></div>
       <form method="dialog"><button class="btn small">Done</button></form>
     </header>
+    <div class="chips wrap add-tabs" id="add-tabs" hidden>
+      <button class="chip" data-action="add-tab" data-tab="kirtans">Kirtans</button>
+      <button class="chip" data-action="add-tab" data-tab="lectures">Lectures</button>
+    </div>
     <div class="add-search"><svg><use href="#i-search"/></svg><input id="add-q" type="search" placeholder="Search kirtans" autocomplete="off" enterkeyhint="search" aria-label="Search kirtans"></div>
     <div id="add-body" class="lyrics-body"></div>
   </dialog>
@@ -265,6 +269,7 @@
       <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" class="fill" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" class="fill" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" class="fill" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-queue" viewBox="0 0 24 24"><path d="M3 6h13M3 12h13M3 18h9"/><path d="m17 15 4 3-4 3z" class="fill" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-grip" viewBox="0 0 24 24"><path d="M4 8h16M4 12h16M4 16h16"/></symbol>
       <symbol id="i-playlist" viewBox="0 0 24 24"><path d="M3 6h12M3 12h12M3 18h7"/><path d="M18 13v8M14 17h8"/></symbol>
       <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
@@ -272,6 +277,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=9c8563ab91" type="module"></script>
+  <script src="app.js?v=b02c2cf0e6" type="module"></script>
 </body>
 </html>
