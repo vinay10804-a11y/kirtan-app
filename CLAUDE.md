@@ -289,7 +289,9 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   downloads retried after waking, one run at a time (lock in build/transcribe-work). About 27× faster
   than listening on the M1 Pro. Never put transcripts in git or site/ (this repo is public);
   `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
-  Transcript sheet (player bar, ⋯ menu, a button on the row) follows along like Apple Podcasts: the
+  Transcript sheet (player bar, ⋯ menu, a button on the row: on the Lectures page and, since a
+  friend missed it on 27 Oct 2026, under the title of a lecture in playlists, Favourites, History,
+  Saved and Search) follows along like Apple Podcasts: the
   line being spoken highlighted and kept in view, tap a line to play from there, search inside it,
   "Back to now" after scrolling by hand.
 - Newest/Oldest first (oldest first plays a seminar in order); the page keeps your place when you come back;

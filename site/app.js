@@ -385,13 +385,17 @@ function trackRow(t, i, listKey, opts = {}) {
   const thumb = opts.thumb ?? true;
   const lead = thumb ? `<span class="track-thumb">${artHTML(t, true)}${current ? eq : ''}</span>`
     : `<span class="track-num">${current ? eq : i + 1}</span>`;
-  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
+  // A lecture with a transcript gets the Lectures page's Transcript button on a line of its own
+  // under the title, in playlists, Favourites, History, Saved and Search too (a friend, 27 Oct 2026).
+  const tx = t.tx ? `<span class="track-tx"><button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button></span>` : '';
+  return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}${tx ? ' has-tx' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${opts.playList || listKey}">
       ${lead}
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
     ${dlButton(t)}
     <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
+    ${tx}
   </li>`;
 }
 
@@ -2913,6 +2917,10 @@ async function keepSavedTranscripts() {
 function lecturesChanged() {
   const page = location.hash.replace(/^#\/?/, '').split('/')[0];
   if (['', 'lectures', 'library', 'search'].includes(page)) route();
+  // The lecture in the player may have just got its transcript (the app had shown the copy of
+  // the list kept on the device, from before it was made).
+  const t = S.byId.get(S.current);
+  if (isLecture(t)) $('#player-tx').hidden = !t.tx;
 }
 
 // Mark as played (or not), from a lecture's ⋯ menu, as in Apple Podcasts.
