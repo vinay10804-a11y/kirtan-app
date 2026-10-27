@@ -106,6 +106,23 @@ R2 bucket `kirtans` at `/stream/*`.
   locked: recordings always loop (`audio.loop = true`) and the jump from the end back to the start is
   treated as the end (`recordingEnded`); our own seeks go through `seekTo()` so they're never mistaken
   for it. `load()` pauses before switching and sets a streamed source without awaiting.
+- Switching to another app on iPhone (owner, 27 Oct 2026: "with Instagram it drops out of the lock
+  screen player; I want it to stay there like Spotify, but go when YouTube plays"): when another app
+  takes the sound our audio pauses, and iOS may then cut the idle stream. The 'error' handler used to
+  reload it after 1.5 s, which in the background dropped the app from the lock screen and Control
+  Centre. Now a paused recording in a hidden page is left alone (`recovery.stale`) and `resume()` loads
+  it again from the same moment when Play is pressed (lock screen, headphones or the app). Coming back
+  to the app within 10 minutes of pausing no longer reloads it for an update (`pausedAt`). Not tested
+  on a real iPhone with Instagram; iOS may still close a web app to free memory, which only an App
+  Store app avoids.
+- "Show in Lectures / Kirtans" (owner, 27 Oct 2026, asked for as "Find/Show in Library"; named for the
+  section, since Library here is Favourites and Playlists): a button under the player's title and an
+  item in ⋯ menus (not on that section's own page). It goes back to the page the recording was
+  started from (`S.foundAt`: the hash, plus the Lectures year, language, search and order), if it's
+  still listed there, else to its own place (a lecture under its year; a kirtan on its artist's page by
+  year), draws the Lectures list down to it, scrolls to it and lights it up (`.found`). Playback isn't
+  touched. "Playing from playlist / <name>" at the top of the player opens that playlist the same way.
+  `closePlayerFirst()` waits for the player's history step to go back before moving.
 - Covers (owner, 24 Oct 2026): every kirtan should have a picture. `Thumbnails/SNS` and `Thumbnails/GK`
   hold the owner's photos; publishing gives a random one (least used first, at most 3 kirtans each) to
   any kirtan with no picture and any whose picture the owner deleted from the Excel list's Picture
