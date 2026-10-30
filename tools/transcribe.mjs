@@ -212,9 +212,13 @@ function putOnline(id) {
 }
 
 // Every 25 lectures (and at the end): the app's lecture list marks the new transcripts, and
-// the transcripts folder is saved to GitHub.
-async function checkpoint(lectures, list, listFile) {
+// the transcripts folder is saved to GitHub. The list is read afresh each time, so whatever
+// else changed in it meanwhile (video links from tools/lecture-videos.mjs, a new
+// tools/lectures.mjs run) is kept; only `tx` is this job's.
+async function checkpoint(listFile) {
   await uploads;
+  const list = JSON.parse(await fs.readFile(listFile, 'utf8'));
+  const { lectures } = list;
   for (const l of lectures) if (done[l.id]) l.tx = 1; else delete l.tx;
   await fs.writeFile(listFile, JSON.stringify(list));
   // One lecture per line, so GitHub shows what changed.
@@ -319,9 +323,9 @@ async function main() {
     }
     fetched.delete(l.id);
     await progress(todo, i + 1, secs, audio);
-    if ((i + 1) % BATCH === 0) await checkpoint(lectures, list, listFile);
+    if ((i + 1) % BATCH === 0) await checkpoint(listFile);
   }
-  await checkpoint(lectures, list, listFile);
+  await checkpoint(listFile);
   await progress(todo, todo.length, secs, audio);
   log('Finished.');
 }
