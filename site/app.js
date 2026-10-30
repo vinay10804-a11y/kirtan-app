@@ -1241,6 +1241,7 @@ async function load(id, { autoplay = true, at } = {}) {
     return;
   }
   const seq = ++loadSeq;
+  interruption.at = 0;
   // Pause before changing recordings: an iPhone keeps a web app's audio (and the lock
   // screen) through a pause, so the next one can start while the phone is locked.
   // (S.switching keeps the play button from flicking to "play" meanwhile.)
@@ -1388,6 +1389,7 @@ function playFrom(listKey, id) {
 
 function togglePlay() {
   if (!S.current) return;
+  interruption.at = 0;
   if (audio.paused) resume();
   else audio.pause();
 }
@@ -1706,8 +1708,39 @@ audio.addEventListener('playing', () => {
   // set earlier, they show 10-second skips instead of previous/next.
   setMediaMetadata(S.byId.get(S.current));
   setMediaHandlers();
+  watchAudioSession();
 });
 audio.addEventListener('canplay', () => { if (audio.paused) setBuffering(false); });
+
+// Another app taking the sound (a WhatsApp video, a phone call) pauses the recording. An iPhone
+// then freezes a home-screen app after about 30 seconds, and from then on Play in Control Centre
+// does nothing until the app is opened (owner, 31 Oct 2026; Apple's bug, WebKit 261858, with no
+// known way round it for websites). So the recording carries on by itself where it can: as soon as
+// the other app gives the sound back while this one is still awake (a voice note, a short clip),
+// as Spotify does; otherwise the moment the app is opened again within 30 minutes (a tap on the
+// recording in Control Centre opens it).
+const interruption = { at: 0 };
+const RESUME_WITHIN = 30 * 60e3;
+function watchAudioSession() {
+  const session = navigator.audioSession;
+  if (!session?.addEventListener || watchAudioSession.on) return;
+  watchAudioSession.on = true;
+  session.addEventListener('statechange', () => {
+    if (session.state === 'interrupted') {
+      // Only if it was playing (the pause can come just before or just after this)
+      if (!audio.paused || Date.now() - pausedAt < 3000) interruption.at = Date.now();
+    } else if (interruption.at) {
+      carryOn();
+    }
+  });
+}
+watchAudioSession();
+function carryOn() {
+  const recent = Date.now() - interruption.at < RESUME_WITHIN;
+  interruption.at = 0;
+  if (recent && S.current && audio.paused) resume();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && interruption.at) carryOn(); });
 function setMediaState() {
   if ('mediaSession' in navigator) navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
 }
@@ -2044,12 +2077,15 @@ async function checkForUpdate() {
   // Back from a quick look at another app with a recording paused: carry on where you were.
   // The update waits until the app has rested a while (or is opened afresh).
   if (audio.src && Date.now() - pausedAt < 10 * 60e3) return;
+  if (interruption.at && Date.now() - interruption.at < RESUME_WITHIN) return; // it's about to carry on
   try {
     const sw = await (await fetch(`sw.js?fresh=${Date.now()}`, { cache: 'no-store' })).text();
     const latest = /const VERSION = '(\w+)'/.exec(sw)?.[1];
     if (!latest || latest === RUNNING || sessionStorage.getItem('kk.updatedTo') === latest) return;
+    if (!audio.paused) return; // started playing while we asked
     sessionStorage.setItem('kk.updatedTo', latest);
     await navigator.serviceWorker?.getRegistration().then(r => r?.update()).catch(() => {});
+    if (!audio.paused) return;
     location.reload();
   } catch {}
 }
