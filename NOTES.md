@@ -5,6 +5,12 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **YouTube videos for talks: a helper fills in the sheet** (30 Oct). "Sacinandana Swami talks –
+  YouTube links" in your Google Drive lists every English talk; paste a talk's YouTube link next to
+  it (Kartik Inspirations and Above the Clouds are left out, as they're audio only). Share it with
+  your helper from Google Drive's Share button. When it's done, tell Claude: the app is updated from
+  it, and talks with a link get a Video button. Until then, 34 talks have one.
+
 - **Places for 42 kirtans.** They show no place until we know where they were recorded
   (list under "What I need from you").
 - **Thumbnails and details: use "Kirtans list.xlsx"** in the SNS Kirtan Platform folder (built
