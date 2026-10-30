@@ -173,7 +173,7 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 11px 0; text-align: left; }
 /* A lecture's Transcript button, on its own line lined up with the title */
 .track.has-tx { flex-wrap: wrap; }
-.track-tx { flex-basis: 100%; margin-top: -5px; padding: 0 0 10px 34px; }
+.track-tx { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: -5px; padding: 0 0 10px 34px; }
 .track.has-thumb .track-tx { padding-left: 61px; }
 .track-num { width: 22px; flex: none; text-align: right; font: 15px var(--serif); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .track-text { min-width: 0; }
@@ -309,7 +309,7 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .tx-controls .q-play { width: 54px; height: 54px; }
 .tx-now { position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%); padding: 9px 16px; border-radius: 999px; background: #fff; color: #10191a; font: 600 13.5px var(--sans); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
 .tx-now:active { transform: translateX(-50%) scale(.95); }
-.lect-tx { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: var(--ink-2); font: 600 13px var(--sans); border: 1px solid var(--line); }
+.lect-tx { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 999px; color: var(--ink-2); font: 600 12.5px var(--sans); border: 1px solid var(--line); }
 .lect-tx svg { width: 15px; height: 15px; }
 .lect-tx:active { transform: scale(.94); }
 #queue-dialog .sheet-head { border-bottom: 0; padding-bottom: 4px; }
@@ -817,6 +817,10 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 .lect-title mark { background: rgba(124, 195, 187, .32); color: inherit; border-radius: 3px; padding: 0 1px; }
 .lect-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
 .lect-btns { display: flex; align-items: center; gap: 8px; }
+/* Play, Transcript and Video wrap onto a second line on a narrow phone; save and ⋯ stay put */
+.lect-foot { gap: 8px; }
+.lect-foot > .lect-btns:first-child { flex-wrap: wrap; gap: 6px; min-width: 0; }
+.lect-foot > .lect-btns:last-child { flex: none; gap: 0; }
 .lect-play { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--teal-soft); color: var(--teal-deep); font: 600 13px var(--sans); transition: var(--press); }
 .lect-play:active { transform: scale(.94); }
 .lect-play svg { width: 13px; height: 13px; }

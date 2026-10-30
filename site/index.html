@@ -19,7 +19,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=3dee10eb2d">
+  <link rel="stylesheet" href="styles.css?v=d22bc1f773">
 </head>
 <body>
   <div class="app">
@@ -92,6 +92,7 @@
         <button class="bar-btn" data-action="download-current" id="player-dl"><svg><use href="#i-download"/></svg><span>Save offline</span></button>
         <button class="bar-btn speed-btn" data-action="speed" id="player-speed" aria-label="Playback speed" hidden><span>1×</span></button>
         <button class="icon-btn" data-action="transcript" id="player-tx" aria-label="Transcript" hidden><svg><use href="#i-transcript"/></svg></button>
+        <button class="icon-btn" data-action="watch" id="player-video" aria-label="Watch the video" hidden><svg><use href="#i-video"/></svg></button>
         <button class="icon-btn" data-action="share" id="player-share" aria-label="Share"><svg><use href="#i-share"/></svg></button>
         <button class="icon-btn bar-timer" data-action="sleep-menu" id="sleep-btn" aria-label="Sleep timer"><svg><use href="#i-moon"/></svg><span id="sleep-label"></span></button>
         <button class="icon-btn" data-action="queue" aria-label="Queue"><svg><use href="#i-queue"/></svg></button>
@@ -252,6 +253,7 @@
       <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
       <symbol id="i-transcript" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 10h8M8 13.5h5"/></symbol>
+      <symbol id="i-video" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="m10 9.2 5 2.8-5 2.8z" class="fill" fill="currentColor"/></symbol>
       <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
       <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
@@ -278,6 +280,6 @@
   </svg>
 
   <!-- ?v= is stamped by tools/build.mjs, so this page only ever runs with its own styles and code -->
-  <script src="app.js?v=3dee10eb2d" type="module"></script>
+  <script src="app.js?v=d22bc1f773" type="module"></script>
 </body>
 </html>

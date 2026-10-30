@@ -183,6 +183,9 @@ async function main() {
   // Lectures with an AI transcript (tools/transcribe.mjs) get a Transcript button in the app.
   const transcribed = JSON.parse(await fs.readFile(path.join(ROOT, 'tools/lecture-transcripts.json'), 'utf8').catch(() => '{}'));
   for (const l of lectures) if (transcribed[l.id]) l.tx = 1;
+  // …and those with the same talk on YouTube a Video button (tools/youtube-links.mjs).
+  const videos = JSON.parse(await fs.readFile(path.join(ROOT, 'tools/youtube-links.json'), 'utf8').catch(() => '{}')).lectures || {};
+  for (const l of lectures) if (videos[l.id]) l.yt = videos[l.id];
   lectures.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
   const byLang = {};
   for (const l of lectures) byLang[l.language] = (byLang[l.language] || 0) + 1;

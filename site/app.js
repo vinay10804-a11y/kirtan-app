@@ -399,9 +399,10 @@ function trackRow(t, i, listKey, opts = {}) {
   const thumb = opts.thumb ?? true;
   const lead = thumb ? `<span class="track-thumb">${artHTML(t, true)}${current ? eq : ''}</span>`
     : `<span class="track-num">${current ? eq : i + 1}</span>`;
-  // A lecture with a transcript gets the Lectures page's Transcript button on a line of its own
-  // under the title, in playlists, Favourites, History, Saved and Search too (a friend, 27 Oct 2026).
-  const tx = t.tx ? `<span class="track-tx"><button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button></span>` : '';
+  // A lecture with a transcript or a video gets the Lectures page's Transcript / Video buttons on
+  // a line of their own under the title, in playlists, Favourites, History, Saved and Search too
+  // (a friend, 27 Oct 2026).
+  const tx = t.tx || t.yt ? `<span class="track-tx">${extrasHTML(t)}</span>` : '';
   return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}${tx ? ' has-tx' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${opts.playList || listKey}">
       ${lead}
@@ -411,6 +412,13 @@ function trackRow(t, i, listKey, opts = {}) {
     <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
     ${tx}
   </li>`;
+}
+
+// The Transcript and Video buttons a recording has (Video: the same talk or kirtan on
+// Sacinandana Swami's YouTube channel, matched by tools/lecture-videos.mjs).
+function extrasHTML(t) {
+  return `${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button>` : ''}${
+    t.yt ? `<button class="lect-tx" data-action="watch" data-id="${t.id}" aria-label="Watch ${esc(t.title)} on YouTube">${icon('video')}Video</button>` : ''}`;
 }
 
 function trackList(tracks, listKey, opts) {
@@ -707,15 +715,26 @@ function videoRow(v) {
 function openVideo(vid) {
   const v = S.videos.find(x => x.id === vid && !isSC(x));
   if (!v) return;
+  showVideo(v.id, v.title, [v.collection, v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)], 'Guided Japa');
+}
+// A lecture's or kirtan's video (owner, 30 Oct 2026: "watch instead of just listening"):
+// the audio pauses and the video opens in the same player, with Open in YouTube.
+function watchVideo(id) {
+  const t = S.byId.get(id);
+  if (!t?.yt) return;
+  showVideo(t.yt, t.title, [collectionName(t), isLecture(t) ? lectDate(t) : t.year], isLecture(t) ? 'Lecture video' : 'Kirtan video');
+}
+function showVideo(ytId, title, meta, label) {
   if (!isOnline()) return toast('Connect to the internet to watch');
   audio.pause();
   closeEmbed();
   const q = new URLSearchParams({ autoplay: '1', playsinline: '1', rel: '0', modestbranding: '1', vq: 'hd1080' });
-  $('#video-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?${q}" title="${esc(v.title)}"
+  $('#video-frame').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(ytId)}?${q}" title="${esc(title)}"
     allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
-  $('#video-title').textContent = v.title;
-  $('#video-meta').textContent = [v.collection, v.date && fmtDate(v.date), v.duration && fmtDur(v.duration)].filter(Boolean).join(' · ');
-  $('#video-yt').href = ytLink(v.id);
+  $('.video-head-label').textContent = label;
+  $('#video-title').textContent = title;
+  $('#video-meta').textContent = meta.filter(Boolean).join(' · ');
+  $('#video-yt').href = ytLink(ytId);
   $('#video-dialog').showModal();
 }
 // Closing the player stops the video.
@@ -1598,6 +1617,7 @@ function updatePlayerButtons() {
   dl.hidden = !!t.external && !t.dl;
   $('#player-share').hidden = !!t.external; // a lecture has no share page
   $('#player-tx').hidden = !t.tx;
+  $('#player-video').hidden = !t.yt;
   $('#player-speed').hidden = !isLecture(t);
   $('#player-speed span').textContent = `${speedOf(t)}×`;
   $('#player-speed').setAttribute('aria-label', `Playback speed ${speedOf(t)}×`);
@@ -2262,6 +2282,7 @@ function openTrackMenu(id, row) {
     ${p && i >= 0 && i < shown.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
     ${t.tx ? item('transcript', 'transcript', 'Transcript') : ''}
+    ${t.yt ? item('watch', 'video', 'Watch video') : ''}
     ${isLecture(t) ? item('mark-played', 'tick', S.played.has(id) && !S.positions[id] ? 'Mark as unplayed' : 'Mark as played') : ''}
     ${!$('#player').hidden || !location.hash.startsWith(homeOf(t).prefix) ? item('show-in-section', homeOf(t).icon, `Show in ${homeOf(t).name}`) : ''}
     ${id === S.current ? item('loop', REPEAT[S.repeat]?.icon || 'next', `When it ends: ${(REPEAT[S.repeat] || REPEAT.off).short}`) + item('speed', 'speed', `Playback speed: ${speedOf(t)}×`) : ''}
@@ -2888,6 +2909,7 @@ document.addEventListener('click', async e => {
       goAndReveal(`#/library/playlists/${el.dataset.pl}`, S.current);
       break;
     case 'transcript': setTimeout(() => openTranscript(id || S.current)); break;
+    case 'watch': setTimeout(() => watchVideo(id || S.current)); break;
     case 'tx-now': txFollow(true); break;
     case 'tx-find': stepFind(Number(el.dataset.dir)); break;
     case 'tx-play':
@@ -3140,7 +3162,7 @@ function useLectures({ lectures = [] }) {
     id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
     year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
     src: l.url, dl: `/lecture-audio/${l.url.replace(/^https:\/\/www\.saranagati-library\.net\//, '')}`, external: true,
-    duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, size: S.lectBytes[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx,
+    duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, size: S.lectBytes[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx, yt: l.yt,
   }));
   S.lecturesOld = null;
   for (const t of S.lectures) {
@@ -3211,7 +3233,10 @@ function lecturesChanged() {
   // The lecture in the player may have just got its transcript (the app had shown the copy of
   // the list kept on the device, from before it was made).
   const t = S.byId.get(S.current);
-  if (isLecture(t)) $('#player-tx').hidden = !t.tx;
+  if (isLecture(t)) {
+    $('#player-tx').hidden = !t.tx;
+    $('#player-video').hidden = !t.yt;
+  }
 }
 
 // Mark as played (or not), from a lecture's ⋯ menu, as in Apple Podcasts.
@@ -3367,7 +3392,7 @@ function lectureRow(t, words = []) {
         ${playing ? `<span class="when-playing"><span class="eq"><i></i><i></i><i></i></span>Playing</span><span class="when-paused">${icon('play')}${lectLeft(t)}</span>`
           : `${icon(lectLeft(t) === 'Played' ? 'tick' : 'play')}<span>${lectLeft(t)}</span>`}${pct ? `<i class="lect-bar"><b style="width:${pct}%"></b></i>` : ''}
       </button>
-      ${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button>` : ''}</span>
+      ${extrasHTML(t)}</span>
       <span class="lect-btns">${dlButton(t)}<button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button></span>
     </div>
   </li>`;

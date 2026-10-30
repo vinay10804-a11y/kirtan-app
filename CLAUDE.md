@@ -321,6 +321,18 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   Saved and Search) follows along like Apple Podcasts: the
   line being spoken highlighted and kept in view, tap a line to play from there, search inside it,
   "Back to now" after scrolling by hand.
+- Videos (owner, 30 Oct 2026: "a button towards the YouTube video if someone wants to watch instead of
+  just listening; it has to match"): `tools/youtube-links.mjs` reads the channel @SacinandanaSwamiYouTube
+  (videos and livestreams) and links a lecture or kirtan to a video only when the titles have the same
+  words in any order and the same numbers, the video went up within 60 days of the recording (3 days
+  early at most; a year in the video's title must agree), and the lengths are within 50%; with not
+  quite the same words, only the same day at about the same length. One video per recording (the
+  closest length) and vice versa. Links go to `tools/youtube-links.json` and `yt` in
+  build/lectures.json (`--upload` puts that in R2); lectures.mjs and build.mjs (kirtans) carry them
+  through rebuilds, and transcribe.mjs re-reads the list at each checkpoint so it keeps them. Video
+  dates are cached in `tools/youtube-videos.json`. The app shows a Video button beside Transcript on
+  rows, in the player bar and in ⋯ (`extrasHTML`, `watchVideo`): the audio pauses and the video opens
+  in the in-app YouTube player, with Open in YouTube.
 - Newest/Oldest first (oldest first plays a seminar in order); the page keeps your place when you come back;
   the Search page shows a Lectures group (and "See all") even when no kirtan matches; the queue shows the
   next 100.

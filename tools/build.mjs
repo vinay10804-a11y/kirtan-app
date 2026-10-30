@@ -306,6 +306,13 @@ async function main() {
   }
 
   const tracks = [...reused, ...kept].map(refresh).filter(Boolean).concat(added);
+  // The same kirtan on Sacinandana Swami's YouTube channel (tools/youtube-links.mjs): a Video
+  // button in the app. A YouTube id in the file name ([id], from a download) comes first.
+  const videos = JSON.parse(await fs.readFile(path.join(ROOT, 'tools/youtube-links.json'), 'utf8').catch(() => '{}')).kirtans || {};
+  for (const t of tracks) {
+    const yt = t.rel?.match(/\[([A-Za-z0-9_-]{11})\]/)?.[1] || videos[t.id];
+    if (yt) t.yt = yt; else delete t.yt;
+  }
   // The owner's "Kirtans list.xlsx": edits, thumbnails, hidden kirtans.
   await applySheet(tracks);
   const totalMB = tracks.reduce((s, t) => s + t.size, 0) / 1e6;
