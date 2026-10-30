@@ -115,6 +115,17 @@ R2 bucket `kirtans` at `/stream/*`.
   to the app within 10 minutes of pausing no longer reloads it for an update (`pausedAt`). Not tested
   on a real iPhone with Instagram; iOS may still close a web app to free memory, which only an App
   Store app avoids.
+- Play in Control Centre after another app's video (owner, 31 Oct 2026: "I switch to WhatsApp to watch
+  a video, then press play in Control Centre and nothing happens until I go back into the app"): an
+  iPhone freezes a home-screen web app about 30 seconds after its audio stops, and Control Centre's
+  Play can't reach a frozen app (WebKit bug 261858, open since 2023; Apple forum thread 762582; no
+  known workaround for websites). The owner doesn't want an App Store app. So the app carries on by
+  itself instead (`watchAudioSession`, `interruption`, `carryOn`): when `navigator.audioSession` says
+  the interruption is over while the app is still awake (a voice note, a short clip), like Spotify;
+  otherwise as soon as the app is opened again within 30 minutes (tapping the recording in Control
+  Centre opens it). Only after an interruption (audioSession state "interrupted" while it was playing),
+  never after the person's own pause. The update check waits while it's pending and never reloads
+  once something plays. Tested with a stand-in audio session in Chromium, not on an iPhone.
 - "Show in Lectures / Kirtans" (owner, 27 Oct 2026, asked for as "Find/Show in Library"; named for the
   section, since Library here is Favourites and Playlists): a button under the player's title and an
   item in ⋯ menus (not on that section's own page). It goes back to the page the recording was
