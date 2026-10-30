@@ -333,6 +333,19 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   dates are cached in `tools/youtube-videos.json`. The app shows a Video button beside Transcript on
   rows, in the player bar and in ⋯ (`extrasHTML`, `watchVideo`): the audio pauses and the video opens
   in the in-app YouTube player, with Open in YouTube.
+  The owner then (30 Oct 2026) wanted the links put in by hand by a helper: "not all the videos were
+  attached", and Kartik Inspirations and Above the Clouds are only audio on YouTube (no Video button:
+  `AUDIO_ONLY`). He asked for a first attempt at every link, with unsure ones marked "check".
+  `--make-sheet <xlsx>` writes "Sacinandana Swami talks – YouTube links.xlsx" into the owner's synced
+  Google Drive (My Drive, account vinodagovinda@goloka-dhama.de; Drive id 1ojmBwOCnODUQcaqTrpbSPfRboWnTbAQr):
+  a Read me, every English talk (YouTube link, Check, the matched video's title, Notes, Talk ID) and
+  every channel video with a "Linked to" formula. `firstAttempt()` matches videos to talks (title words
+  incl. verse, numbers, place, date gap, length; guests and kirtan videos kept apart), and
+  `tools/youtube-review.json` holds Claude's by-eye corrections (drop / sure / add / none): on 30 Oct
+  2026 every pair was checked, giving 312 talks with a video (254 sure, 58 "Check"). It stays an .xlsx
+  (edited in Google Sheets' Office mode) so edits sync back to the Mac. `--from-sheet <xlsx> --upload`
+  makes its links the lectures' links (empty = no video; rows still marked Check wait) and marks
+  `lecturesFrom: "sheet"`, after which plain runs leave lecture links alone. Until then the app keeps 34.
 - Newest/Oldest first (oldest first plays a seminar in order); the page keeps your place when you come back;
   the Search page shows a Lectures group (and "See all") even when no kirtan matches; the queue shows the
   next 100.
