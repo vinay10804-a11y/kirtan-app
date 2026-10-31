@@ -48,6 +48,9 @@ R2 bucket `kirtans` at `/stream/*`.
 - App icon: the wave, edge to edge in every size. The maskable icon (`icons/maskable-full-512.png`) has no
   border: Macs draw a maskable icon inside their rounded tile, and the old padded one looked small there
   (owner, 24 Oct 2026). Change its file name when the icon changes, so installed apps pick it up.
+- Japa tab icon (`i-beads`, friend's feedback via the owner, 31 Oct 2026): a hanging mala like 📿 —
+  solid beads in a loose, uneven loop, a bigger head bead and a tassel. The old one, an even ring of
+  beads on a stand, looked "like a very pakka circle or like a tree".
 - Home section pictures (owner, 24 Oct 2026): the Kirtans and Japa cards' rows show square pictures from
   `site/art/sections/` (`SECTION_ART` in app.js): Sacinandana Swami (SNS42, face crop; the owner didn't like
   the old photo), Gour Krishna (the owner's pick: the cover of Radhadesh Mellows Day 1, covers/03231b3f1a82c918.jpg), and the owner's Guided Japa, Japa Inspirations and Living Name
