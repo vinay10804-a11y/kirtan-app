@@ -70,7 +70,8 @@ const checks = [
   ['Lecture player: back 15 / forward 30, own speed, no Share; lock screen skips for lectures only', html.includes('data-action="back15"') && css.includes('.player.lecture') && app.includes('LECT_SPEEDS') && app.includes("$('#player-share').hidden")],
   ['Search page shows Lectures even when no kirtan matches', !app.includes("if (!hits.length && !vids.length) return")],
   ['Lecture transcripts: follow-along sheet (tap a line to play, search), only with the password, never in site/ or git', html.includes('id="transcript-dialog"') && app.includes('function followTranscript') && read('worker/lectures.js').includes('lectures/transcripts/') && read('.gitignore').includes('build/') && !fs.existsSync(path.join(ROOT, 'site/transcripts'))
-    && read('tools/transcribe.mjs').includes("'../Lecture transcripts.nosync'") && read('tools/transcribe.mjs').includes("'--condition-on-previous-text', 'False'") && read('tools/transcribe.mjs').includes('if (r.timedOut) throw')],
+    && read('tools/transcribe.mjs').includes("'../Lecture transcripts.nosync'") && read('tools/transcribe.mjs').includes("'--condition-on-previous-text', 'False'") && read('tools/transcribe.mjs').includes('if (r.timedOut) throw')
+    && read('tools/transcribe.mjs').includes('async function refresh(waiting, tried)') && read('tools/transcribe.mjs').includes("'caffeinate', ['-s', '-w'")],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

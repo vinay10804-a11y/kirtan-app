@@ -325,11 +325,19 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   wants them kept there for use elsewhere. The owner offered this public repo instead; I advised
   against it (anyone could read every lecture, undoing the password; copyright SacinandanaSwami.com).
   `--upload` puts each in R2 (`lectures/transcripts/`) as it's done and marks the app's list (`tx`)
-  every 25. It runs on its own (nohup + caffeinate -s, from "Resume transcripts.command" in that
-  folder; "Stop transcripts.command" stops it): only on mains power, paused while the lid is shut,
+  every 25. It runs on its own (nohup, from "Resume transcripts.command" in that folder, which
+  passes `--follow`; "Stop transcripts.command" stops it; it keeps the Mac awake itself with
+  `caffeinate -s -w <pid>` only while there's work): only on mains power, paused while the lid is shut,
   downloads retried after waking, one run at a time (lock in build/transcribe-work). About 27× faster
   than listening on the M1 Pro. A lecture still going after max(20 min, a quarter of its length) of
-  awake time is stuck and stopped (one ran 28 hours, 31 Oct 2026); the next run tries it again. Never put transcripts in git or site/ (this repo is public);
+  awake time is stuck and stopped (one ran 28 hours, 31 Oct 2026); the next run tries it again.
+- New lectures (owner, 1 Nov 2026: the library adds some "sometimes daily, sometimes weekly" and
+  they should be synced to the platform): with `--follow` transcribe.mjs never finishes. Every 6
+  hours (`--every <hours>`) it runs tools/lectures.mjs, uploads the list (the app shows new lectures)
+  and puts new English lectures, plus ones skipped earlier (up to 3 tries), at the front of the
+  queue; when all are done it releases caffeinate and checks the clock each minute, so it catches up
+  when the Mac wakes. A Mac, not the cloud: the transcripts need it anyway, and it's free. New
+  lectures get no Video button until they're in the YouTube sheet (tools/youtube-links.mjs). Never put transcripts in git or site/ (this repo is public);
   `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
   Transcript sheet (player bar, ⋯ menu, a button on the row: on the Lectures page and, since a
   friend missed it on 27 Oct 2026, under the title of a lecture in playlists, Favourites, History,
