@@ -381,7 +381,13 @@ up new lectures). `worker/lectures.js` hands the list out only with a cookie ear
 `wrangler secret put LECTURES_PASSWORD` changes it and signs everyone out). Locally, `.dev.vars` (git-ignored)
 holds a test password for `wrangler dev`. The library says "All content copyright (c) by
 SacinandanaSwami.com": the owner was advised to get permission before making the section public. Place
-codes in file names are only shown when known (`PLACES` in lectures.mjs).
+codes in file names (owner, 1 Nov 2026: show them) are named from the library's help page
+(https://www.saranagati-library.net/help.html, "Locations:"), read each run and kept in
+`tools/lecture-places.json`; `NAMES` in lectures.mjs gives the kirtans' spellings (Vrindavan, Govardhan,
+Simhachalam), English names and typo fixes. The place alone, or the country when the library says
+"unknown". Codes may be any case ("Beo", "McC"). Codes not on that page (BG, MV, NYNK, RC, SCR, SF, TB,
+ZA, ZH: 54 lectures) show no place until the owner says what they are. The same page says any language
+but English or German is a translation into the local language (e.g. "KAZ_RU" is English with Russian).
 
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
