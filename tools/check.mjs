@@ -66,6 +66,7 @@ const checks = [
   ['Lecture list kept on the device and fetched again only when it changes (ETag, 304)', app.includes('const LECT_CACHE') && app.includes("'If-None-Match'") && read('worker/lectures.js').includes('onlyIf: request.headers')],
   ['Lecture dates without a day or month read properly (no "Invalid Date"), and no time zone shifts a day', app.includes('function lectDate') && /const ymd = .*\\d\{4\}/.test(app)],
   ['Lecture lengths measured for the whole list (tools/lecture-lengths.json), shown on every row', read('tools/lectures.mjs').includes('async function lengthOf') && app.includes('l.dur ||')],
+  ['Lecture places named from the library\'s help page (tools/lecture-places.json kept as the last good copy)', read('tools/lectures.mjs').includes('async function placeNames') && read('tools/lectures.mjs').includes("help.html") && Object.keys(JSON.parse(read('tools/lecture-places.json'))).length > 100],
   ['Lecture search: book names in lectNorm spelling ("srimad"), numbers match whole numbers, keys made in idle time', app.includes('also.map(lectNorm)') && app.includes('const lectHit') && app.includes('function lectKeys')],
   ['Lecture player: back 15 / forward 30, own speed, no Share; lock screen skips for lectures only', html.includes('data-action="back15"') && css.includes('.player.lecture') && app.includes('LECT_SPEEDS') && app.includes("$('#player-share').hidden")],
   ['Search page shows Lectures even when no kirtan matches', !app.includes("if (!hits.length && !vids.length) return")],

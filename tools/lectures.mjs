@@ -39,9 +39,35 @@ function verse(s) {
 }
 // A title that is only a book's initials ("SB") gets the book's name.
 const BOOK_NAMES = { SB: 'Srimad-Bhagavatam', BG: 'Bhagavad-gita', CC: 'Caitanya-caritamrta', NOI: 'Nectar of Instruction', NOD: 'Nectar of Devotion' };
-// Place codes we're sure of; the rest aren't shown until the owner says what they mean.
-const PLACES = { GD: 'Goloka Dham', RD: 'Radhadesh', NV: 'New Vrindaban', NY: 'New York', GRC: 'Govardhan Retreat Center',
-  ZG: 'Zagreb', LJ: 'Ljubljana', BEO: 'Belgrade' };
+// Place codes → names (owner, 1 Nov 2026: lectures should show where they were given). The library's
+// help page lists them ("Locations: … B - Berlin, Germany …"); it's read each time, so new codes are
+// picked up, and the last good copy is kept in tools/lecture-places.json. The place alone, as the
+// kirtans have it ("Berlin"), or the country when the place is "unknown". NAMES: the app's own
+// spellings (as for kirtans), English names, and the library's typos.
+const PLACE_FILE = path.join(ROOT, 'tools/lecture-places.json');
+const NAMES = {
+  GD: 'Goloka Dham', NV: 'New Vrindaban', V: 'Vrindavan', GV: 'Govardhan', GR: 'Govardhan', GRC: 'Govardhan Retreat Center',
+  NJNK: 'Simhachalam', MP: 'Mayapur', NM: 'New Mayapur', RK: 'Radha Kunda', KK: 'Kurukshetra', JP: 'Jagannatha Puri',
+  HI: 'Himalayas', BEO: 'Belgrade', K: 'Cologne', N: 'Nuremberg', W: 'Vienna', BB: 'Böblingen', GO: 'Göttingen',
+  TUE: 'Tübingen', GOE: 'Gothenburg', AD: 'Abu Dhabi', BEN: 'Bangalore', BN: 'Bhubaneswar', BEA: 'Beatenberg',
+  CSC: 'Croatian Summer Camp', FG: 'Fruška Gora', KL: 'Karlovac', LE: 'Leicester', NS: 'Novi Sad', SO: 'Soho, London',
+  JU: 'Juhu, Mumbai', MCC: 'Delphi University', VE: 'The Vedanta, Lincoln', IT: 'Italy',
+};
+let PLACES = {};
+async function placeNames() {
+  const saved = JSON.parse(await fs.readFile(PLACE_FILE, 'utf8').catch(() => '{}'));
+  const html = await page(`${LIBRARY}help.html`).catch(() => '');
+  const text = html.replace(/<[^>]+>/g, '\n').replace(/&amp;/g, '&').split('Locations:')[1] || '';
+  const read = {};
+  for (const m of text.matchAll(/^\s*([A-Za-z]{1,5}) - (.+?)\s*$/gm)) {
+    const [where, country] = m[2].split(/,\s*|\s+-\s+/);
+    read[m[1].toUpperCase()] = /^unknown$/i.test(where) ? country : where;
+  }
+  // A page that couldn't be read (or has changed shape) keeps the last list.
+  const found = Object.keys(read).length > 50 ? read : saved;
+  if (found === read) await fs.writeFile(PLACE_FILE, `${JSON.stringify(read, Object.keys(read).sort(), 1)}\n`);
+  return { ...found, ...NAMES };
+}
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function page(url) {
@@ -78,7 +104,7 @@ function parse(file) {
   const tongue = /^([A-Z]{2})(?:-([A-Z]{2}))?(?:edit)?$/i.exec(parts.at(-1) || '');
   const lang = tongue && LANGUAGES[tongue[1].toUpperCase()] ? (parts.pop(), tongue[1].toUpperCase()) : '';
   const into = lang && tongue[2] ? LANGUAGES[tongue[2].toUpperCase()] : '';
-  const place = parts.length > 1 && /^[A-Z0-9]{1,6}$/.test(parts.at(-1)) ? parts.pop() : '';
+  const place = parts.length > 1 && (/^[A-Z0-9]{1,6}$/.test(parts.at(-1)) || PLACES[parts.at(-1).toUpperCase()]) ? parts.pop() : '';
   const ref = verse(parts[0] || '');
   if (ref) parts.shift();
   const others = speakers.replace(/^SSNS-?/i, '');
@@ -93,7 +119,7 @@ function parse(file) {
     title,
     ref,
     with: withWhom,
-    place: PLACES[place] || '',
+    place: PLACES[place.toUpperCase()] || '',
     code: place,
     lang,
     language: LANGUAGES[lang] || 'Other',
@@ -158,6 +184,7 @@ async function measure(lectures) {
 }
 
 async function main() {
+  PLACES = await placeNames();
   const home = await page(LIBRARY);
   const years = [...new Set([...home.matchAll(/href="\/(\d{4})\/"/g)].map(m => m[1]))].sort();
   const seen = new Map();
