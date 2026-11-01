@@ -6,7 +6,10 @@
 //  - closing the lid puts the Mac to sleep and simply pauses it; it carries on when the Mac wakes
 //    (a download cut off meanwhile is tried again);
 //  - it only works on mains power: on battery it waits for the charger, and while plugged in the
-//    Mac is kept awake (caffeinate -s, started by the .command files);
+//    Mac is kept awake (caffeinate -s) while there's work;
+//  - with --follow (as "Resume transcripts" runs it) it never finishes: every 6 hours it reads the
+//    library again, the app's list gets the new lectures and new English ones are transcribed
+//    first; once everything is done the Mac may sleep, and it checks whenever the Mac is awake;
 //  - after a restart, double-click "Resume transcripts" in the Lecture transcripts folder
 //    ("Stop transcripts" stops it; either way it carries on from where it was).
 // Each lecture is downloaded from the Saranagati Library (the next one while this one is being
@@ -15,6 +18,7 @@
 //   node tools/transcribe.mjs --english                 # every English lecture not yet done, newest first
 //   node tools/transcribe.mjs --hours 10 [--year 2026]  # the newest English ones, up to 10 hours of audio
 //   node tools/transcribe.mjs <id> <id> …               # particular lectures (ids from the lecture list)
+//   node tools/transcribe.mjs --follow [--every 6]      # --english, then keep up with the library (every 6 hours)
 //   … --upload                                          # put each online as it's done (R2), mark them in the
 //                                                       # app's lecture list and save to GitHub every 25
 //   node tools/transcribe.mjs --tidy [--upload]         # tidy the transcripts already made again (see tidy())
@@ -56,16 +60,20 @@ const UA = { 'User-Agent': 'Kirtan app transcripts (private)' };
 const wrangler = path.join(ROOT, 'node_modules/.bin/wrangler');
 
 const args = process.argv.slice(2);
-const english = args.includes('--english');
+const follow = args.includes('--follow');
+const english = args.includes('--english') || follow;
 const hours = Number(args[args.indexOf('--hours') + 1]) || 0;
 const year = Number(args[args.indexOf('--year') + 1]) || 0;
 const upload = args.includes('--upload');
 const retidy = args.includes('--tidy');
 const ids = args.filter(a => /^[0-9a-f]{12}$/.test(a));
+const EVERY = (args.includes('--every') ? Number(args[args.indexOf('--every') + 1]) : 6) * 3600e3;
+const LIST = path.join(ROOT, 'build/lectures.json'); // tools/lectures.mjs makes it
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clock = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 const today = () => new Date().toISOString().slice(0, 10);
+const at = t => new Date(t).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 const log = (...a) => console.log(new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), ...a);
 // Runs a program without blocking (downloads and uploads carry on meanwhile). With `limit` (ms),
 // it's stopped once it has run that long while the Mac is awake: a gap of over a minute between
@@ -200,6 +208,14 @@ function transcript(raw) {
   return { model: 'whisper-large-v3-turbo', lang: raw.language, made: today(), segments: tidy(segments) };
 }
 
+// The Mac is kept awake on mains power (caffeinate -s) while there's work, and may sleep once
+// everything's done. caffeinate -w ends with this program.
+let awake = null;
+function keepAwake(on) {
+  if (on && !awake) awake = spawn('caffeinate', ['-s', '-w', String(process.pid)], { stdio: 'ignore' });
+  if (!on && awake) { awake.kill(); awake = null; }
+}
+
 // Only on mains power: on battery it waits for the charger.
 const onMains = () => /AC Power/.test(spawnSync('pmset', ['-g', 'ps'], { encoding: 'utf8' }).stdout || '');
 async function waitForMains() {
@@ -232,7 +248,9 @@ function putOnline(id) {
 // the transcripts folder is saved to GitHub. The list is read afresh each time, so whatever
 // else changed in it meanwhile (video links from tools/lecture-videos.mjs, a new
 // tools/lectures.mjs run) is kept; only `tx` is this job's.
+let unsaved = 0; // lectures done since the last checkpoint
 async function checkpoint(listFile) {
+  unsaved = 0;
   await uploads;
   const list = JSON.parse(await fs.readFile(listFile, 'utf8'));
   const { lectures } = list;
@@ -252,6 +270,41 @@ async function checkpoint(listFile) {
   }
 }
 
+// The English lectures to transcribe, newest first (as the list is), less those already done.
+function wanted(lectures) {
+  let total = 0;
+  return lectures.filter(l => {
+    if (l.language !== 'English' || l.into || !l.dur || (year && l.year !== year)) return false;
+    if (hours && total + l.dur > hours * 3600) return false;
+    total += l.dur;
+    return true;
+  }).filter(l => !done[l.id]);
+}
+
+// Keeping up with the library (owner, 1 Nov 2026: new lectures come sometimes daily, sometimes
+// weekly, and should be "synced to the platform"): the library is read again (tools/lectures.mjs),
+// the app's list updated, and the English lectures to do that aren't waiting in the queue are
+// returned: new ones, and ones skipped earlier (stuck, or a download failed), up to 3 tries each.
+let nextCheck = 0;
+const tries = {}; // id → times skipped
+async function refresh(waiting, tried) {
+  nextCheck = Date.now() + EVERY;
+  await uploads;
+  const r = await run(process.execPath, [path.join(ROOT, 'tools/lectures.mjs')], { cwd: ROOT });
+  if (r.status !== 0) {
+    log(`Couldn't read the library this time (${r.out.trim().split('\n').at(-1)}); next try ${at(nextCheck)}`);
+    return [];
+  }
+  const { lectures } = JSON.parse(await fs.readFile(LIST, 'utf8'));
+  nameFiles(lectures);
+  const have = new Set(waiting.map(l => l.id)), before = new Set(tried.map(l => l.id));
+  const fresh = wanted(lectures).filter(l => !have.has(l.id) && (tries[l.id] || 0) < 3);
+  const again = fresh.filter(l => before.has(l.id)).length, added = fresh.length - again;
+  log(`Library checked: ${lectures.length.toLocaleString('en-GB')} lectures; ${added ? `${added} new to transcribe first` : 'nothing new'}${again ? `, ${again} skipped earlier to try again` : ''}`);
+  await checkpoint(LIST);
+  return fresh;
+}
+
 // Progress.txt, for the owner: how many are done and roughly how long the rest will take.
 async function progress(todo, next, secs, audio) {
   const left = todo.slice(next);
@@ -259,7 +312,8 @@ async function progress(todo, next, secs, audio) {
   const days = left.reduce((s, l) => s + l.dur, 0) / rate / 86400;
   await fs.writeFile(path.join(DIR, 'Progress.txt'), [
     `Lecture transcripts: ${Object.keys(done).length.toLocaleString('en-GB')} done.`,
-    left.length ? `${left.length.toLocaleString('en-GB')} of this run's ${todo.length.toLocaleString('en-GB')} lectures still to do: about ${days < 1 ? `${Math.ceil(days * 24)} hours` : `${days.toFixed(1)} days`} of the Mac working (plugged in, lid open).` : 'This run is finished.',
+    left.length ? `${left.length.toLocaleString('en-GB')} of this run's ${todo.length.toLocaleString('en-GB')} lectures still to do: about ${days < 1 ? `${Math.ceil(days * 24)} hours` : `${days.toFixed(1)} days`} of the Mac working (plugged in, lid open).`
+      : follow ? `All caught up. New lectures in the library are transcribed as they appear (it looks every ${EVERY / 3600e3} hours while the Mac is on; next ${at(nextCheck)}).` : 'This run is finished.',
     `Updated ${new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}.`,
     '',
   ].join('\n'));
@@ -278,7 +332,7 @@ async function main() {
   for (const f of await fs.readdir(WORK)) if (f.endsWith('.mp3')) await fs.rm(path.join(WORK, f)); // cut-off downloads
 
   // The lecture list: the one tools/lectures.mjs made, else the copy in the transcripts folder.
-  const listFile = existsSync(path.join(ROOT, 'build/lectures.json')) ? path.join(ROOT, 'build/lectures.json') : path.join(DIR, 'lectures.json');
+  let listFile = existsSync(LIST) ? LIST : path.join(DIR, 'lectures.json');
   const list = JSON.parse(await fs.readFile(listFile, 'utf8'));
   const { lectures } = list;
   nameFiles(lectures);
@@ -296,15 +350,7 @@ async function main() {
   }
 
   let todo = ids.length ? lectures.filter(l => ids.includes(l.id)) : [];
-  if (english || hours) {
-    let total = 0;
-    for (const l of lectures) {
-      if (l.language !== 'English' || l.into || !l.dur || (year && l.year !== year)) continue;
-      if (hours && total + l.dur > hours * 3600) continue;
-      todo.push(l);
-      total += l.dur;
-    }
-  }
+  if (english || hours) todo.push(...wanted(lectures));
   todo = todo.filter(l => !done[l.id]);
   const audioTotal = todo.reduce((s, l) => s + (l.dur || 0), 0);
   if (todo.length) log(`Transcribing ${todo.length} lectures, ${clock(audioTotal)} hours of audio`);
@@ -313,8 +359,26 @@ async function main() {
   const need = l => l && !existsSync(jsonFile(l.id)) && !existsSync(path.join(WORK, `${l.id}.json`));
   const fetched = new Map();
   const ahead = l => { if (need(l) && !fetched.has(l.id)) fetched.set(l.id, download(l)); };
+  keepAwake(true);
   let secs = 0, audio = 0;
-  for (const [i, l] of todo.entries()) {
+  for (let i = 0; ; ) {
+    if (follow && Date.now() >= nextCheck) {
+      todo.splice(i, 0, ...await refresh(todo.slice(i), todo.slice(0, i)));
+      listFile = LIST;
+    }
+    if (i === todo.length) {
+      if (unsaved || !follow) await checkpoint(listFile);
+      await progress(todo, i, secs, audio);
+      if (!follow) break;
+      // All caught up: the Mac may sleep, and the library is read again when it's due (timers
+      // stop while the Mac sleeps, so this looks at the clock each minute).
+      keepAwake(false);
+      log(`All caught up; the library is checked again ${at(nextCheck)}`);
+      while (Date.now() < nextCheck) await sleep(60_000);
+      keepAwake(true);
+      continue;
+    }
+    const l = todo[i];
     await waitForMains();
     ahead(l);
     ahead(todo[i + 1]);
@@ -337,13 +401,14 @@ async function main() {
       if (upload) putOnline(l.id);
     } catch (err) {
       log(`  skipped: ${err.message}`);
+      tries[l.id] = (tries[l.id] || 0) + 1;
     }
     fetched.delete(l.id);
-    await progress(todo, i + 1, secs, audio);
-    if ((i + 1) % BATCH === 0) await checkpoint(listFile);
+    i++;
+    unsaved++;
+    await progress(todo, i, secs, audio);
+    if (unsaved >= BATCH) await checkpoint(listFile);
   }
-  await checkpoint(listFile);
-  await progress(todo, todo.length, secs, audio);
   log('Finished.');
 }
 
