@@ -73,6 +73,10 @@ const checks = [
   ['Lecture transcripts: follow-along sheet (tap a line to play, search), only with the password, never in site/ or git', html.includes('id="transcript-dialog"') && app.includes('function followTranscript') && read('worker/lectures.js').includes('lectures/transcripts/') && read('.gitignore').includes('build/') && !fs.existsSync(path.join(ROOT, 'site/transcripts'))
     && read('tools/transcribe.mjs').includes("'../Lecture transcripts.nosync'") && read('tools/transcribe.mjs').includes("'--condition-on-previous-text', 'False'") && read('tools/transcribe.mjs').includes('if (r.timedOut) throw')
     && read('tools/transcribe.mjs').includes('async function refresh(waiting, tried)') && read('tools/transcribe.mjs').includes("'caffeinate', ['-s', '-w'")],
+  ['Disciple meetings: a second tab in Lectures with its own password (DM_LOGIN secret), list from the library\'s public index, recordings through the Worker with the login',
+    read('worker/lectures.js').includes('async function meetings') && read('worker/lectures.js').includes('env.DM_LOGIN') && read('worker/index.js').includes("'/dm-audio/'")
+    && sw.includes('dm-audio') && app.includes('function lectTab') && app.includes("const DM_LIST = '/api/lectures/dm'") && read('tools/lectures.mjs').includes('async function discipleMeetings')
+    && read('tools/lectures.mjs').includes('start_url_file.html') && read('tools/transcribe.mjs').includes("'lectures/dm-catalog.json'")],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

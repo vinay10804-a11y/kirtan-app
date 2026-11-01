@@ -125,3 +125,8 @@ drive. Keep the folder names as they are; the app finds things by them.
    want the words shown inside the app rather than linked.
 6. **One-time on your iPhone:** delete the old home-screen shortcut, then in Safari open the site,
    tap Share → Add to Home Screen, so the new icon is picked up.
+7. **Disciple meetings: the library's login, put in Cloudflare by you** (1 Nov 2026). In the Cloudflare
+   dashboard: Workers & Pages → kirtans → Settings → Variables and Secrets → Add. Type: Secret, name
+   `DM_LOGIN`, value: the library user name, a colon, then the password (no spaces). Until then the
+   Disciple meetings tab doesn't show. The section's password is the same as the library's.
+8. **Place names for these codes**, if you know them: BG, MV, NYNK, RC, SCR, SF, TB, ZA, ZH.

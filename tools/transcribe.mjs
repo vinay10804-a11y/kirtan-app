@@ -69,6 +69,7 @@ const retidy = args.includes('--tidy');
 const ids = args.filter(a => /^[0-9a-f]{12}$/.test(a));
 const EVERY = (args.includes('--every') ? Number(args[args.indexOf('--every') + 1]) : 6) * 3600e3;
 const LIST = path.join(ROOT, 'build/lectures.json'); // tools/lectures.mjs makes it
+const DM_LIST = path.join(ROOT, 'build/disciple-meetings.json'); // …and this
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clock = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
@@ -302,8 +303,16 @@ async function refresh(waiting, tried) {
   const again = fresh.filter(l => before.has(l.id)).length, added = fresh.length - again;
   log(`Library checked: ${lectures.length.toLocaleString('en-GB')} lectures; ${added ? `${added} new to transcribe first` : 'nothing new'}${again ? `, ${again} skipped earlier to try again` : ''}`);
   await checkpoint(LIST);
+  // The disciple meetings (a part of Lectures with its own password) come from the same read.
+  const meetings = await fs.readFile(DM_LIST, 'utf8').catch(() => '');
+  if (upload && meetings && meetings.replace(/"generated":"[^"]*"/, '') !== sentMeetings) {
+    const d = await r2put('lectures/dm-catalog.json', DM_LIST);
+    if (d.status === 0) sentMeetings = meetings.replace(/"generated":"[^"]*"/, '');
+    else log(`Disciple meetings list not updated: ${d.out.slice(-200)}`);
+  }
   return fresh;
 }
+let sentMeetings = '';
 
 // Progress.txt, for the owner: how many are done and roughly how long the rest will take.
 async function progress(todo, next, secs, audio) {

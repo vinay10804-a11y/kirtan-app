@@ -84,7 +84,13 @@ const S = {
   lectState: 'unknown',
   lectures: [],
   lecturesOld: null, // the same, oldest first (lecturesOld())
-  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60, sort: store.get('lectSort', 'new') },
+  lect: { lang: store.get('lectLang', 'English'), year: 'All', q: '', shown: 60, sort: store.get('lectSort', 'new'), dm: false },
+  lectAway: { q: '', year: 'All', lang: 'All' }, // the other tab's search and menus (lectTab())
+  // Disciple meetings (a part of Lectures with its own password): the same states as lectState,
+  // and 'off' when the server hasn't been given the library's login for them.
+  dmState: 'unknown',
+  dm: [],
+  dmOld: null,
   lectDur: store.get('lectDur', {}), // lecture lengths, learnt the first time each is played
   lectBytes: store.get('lectBytes', {}), // sizes of lectures saved on this device
   saved: new Set(),
@@ -305,8 +311,8 @@ async function loadData() {
         const path = new URL(req.url).pathname;
         const t = S.bySrc.get(path);
         if (t) S.saved.add(t.id);
-        // Saved lectures are matched up when the lecture list arrives (useLectures).
-        else if (path.startsWith('/lecture-audio/')) savedLectures.add(path);
+        // Saved lectures are matched up when the lecture list arrives (useLectures, useDm).
+        else if (path.startsWith('/lecture-audio/') || path.startsWith('/dm-audio/')) savedLectures.add(path);
         // A copy no longer in the catalog (e.g. replaced by a smaller format) only takes up space.
         else if (S.tracks.length) await cache.delete(req);
       }
@@ -851,7 +857,7 @@ function libraryView(tab = 'favourites', sub) {
 
   if (tab === 'saved') {
     const kirtansSaved = S.tracks.filter(t => S.saved.has(t.id));
-    const lecturesSaved = S.lectures.filter(t => S.saved.has(t.id)); // in their own group below
+    const lecturesSaved = [...S.lectures, ...S.dm].filter(t => S.saved.has(t.id)); // in their own group below
     const list = [...kirtansSaved, ...lecturesSaved];
     const size = sum(list, t => t.size);
     body = list.length ? `<p class="page-sub" style="margin-top:16px">${plural(list.length, 'recording')} · ${fmtMB(size)} on this device
@@ -1061,7 +1067,7 @@ function route() {
     });
     lq.addEventListener('keydown', e => { if (e.key === 'Enter') lq.blur(); });
   }
-  $('#llang')?.addEventListener('change', e => { S.lect.lang = e.target.value; store.set('lectLang', S.lect.lang); S.lect.shown = LECT_PAGE; route(); });
+  $('#llang')?.addEventListener('change', e => { S.lect.lang = e.target.value; if (!S.lect.dm) store.set('lectLang', S.lect.lang); S.lect.shown = LECT_PAGE; route(); });
   $('#lyear')?.addEventListener('change', e => { S.lect.year = e.target.value; S.lect.shown = LECT_PAGE; route(); });
   watchLectureList();
   const q = $('#q');
@@ -1175,7 +1181,8 @@ async function showInSection(id) {
       Object.assign(S.lect, st);
       return lectMatches().list.findIndex(x => x.id === id);
     };
-    let i = found?.lect ? at(found.lect) : -1;
+    lectTab(!!t.dm);
+    let i = found?.lect && !!found.lect.dm === !!t.dm ? at(found.lect) : -1;
     if (i < 0) i = at({ q: '', year: String(t.year), lang: ['All', t.language].includes(S.lect.lang) ? S.lect.lang : t.language });
     if (i < 0) i = at({ q: '', year: 'All', lang: 'All' });
     S.lect.shown = Math.max(LECT_PAGE, Math.ceil((i + 1) / LECT_PAGE) * LECT_PAGE); // drawn down to it
@@ -1293,7 +1300,7 @@ function keepListening() {
   if (!t || S.repeat === 'all' || S.queue.slice(S.qi + 1).some(playable)) return;
   // Lectures carry on with the next older lectures in the same language.
   const page = t.section === 'lecture'
-    ? S.lectures.filter(x => x.language === t.language)
+    ? (t.dm ? S.dm : S.lectures).filter(x => x.language === t.language)
     : S.tracks.filter(x => x.section === t.section && x.artist === t.artist && x.type === t.type && !x.hidden)
       .sort((a, b) => (b.year || 0) - (a.year || 0) || a.title.localeCompare(b.title, undefined, { numeric: true }));
   const at = page.findIndex(x => x.id === t.id);
@@ -1342,7 +1349,7 @@ function shuffled(ids) {
 // `from` names the list (S.lists' key), so the player can say "Playing from playlist".
 function startList(ids, id = ids[0], from = null) {
   S.from = from;
-  S.foundAt = from ? { hash: location.hash, lect: location.hash.startsWith('#/lectures') ? { q: S.lect.q, lang: S.lect.lang, year: S.lect.year, sort: S.lect.sort } : null } : null;
+  S.foundAt = from ? { hash: location.hash, lect: location.hash.startsWith('#/lectures') ? { q: S.lect.q, lang: S.lect.lang, year: S.lect.year, sort: S.lect.sort, dm: S.lect.dm } : null } : null;
   if (S.shuffle) {
     S.order = ids.slice();
     S.queue = [id, ...shuffled(ids.filter(x => x !== id))];
@@ -2985,7 +2992,18 @@ document.addEventListener('click', async e => {
     case 'lect-retry': S.lectState = 'unknown'; route(); break;
     case 'lect-signout': {
       await fetch('/api/lectures/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+      if (S.dmState === 'ready') await fetch('/api/lectures/dm/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
       forgetLectures();
+      if (S.dmState !== 'off') forgetDm();
+      lectTab(false);
+      route();
+      break;
+    }
+    case 'lect-tab': lectTab(!!el.dataset.dm); route(); break;
+    case 'dm-retry': S.dmState = 'unknown'; route(); break;
+    case 'dm-signout': {
+      await fetch('/api/lectures/dm/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+      forgetDm();
       route();
       break;
     }
@@ -3227,7 +3245,8 @@ function lectKeys(all = false) {
 
 // Oldest first, made when first asked for.
 function lecturesOld() {
-  return S.lecturesOld ??= S.lectures.slice().sort((a, b) => (a.date > b.date) - (a.date < b.date) || byTitle(a, b));
+  const oldest = list => list.slice().sort((a, b) => (a.date > b.date) - (a.date < b.date) || byTitle(a, b));
+  return S.lect.dm ? (S.dmOld ??= oldest(S.dm)) : (S.lecturesOld ??= oldest(S.lectures));
 }
 
 function forgetLectures() {
@@ -3242,6 +3261,79 @@ function forgetLectures() {
   caches.open(AUDIO_CACHE).then(async cache => {
     for (const req of await cache.keys()) if (new URL(req.url).pathname.startsWith('/lecture-audio/')) await cache.delete(req);
   }).catch(() => {});
+}
+
+// Disciple meetings (owner, 1 Nov 2026): the library's private recordings of Sacinandana Swami's
+// meetings with his disciples, as a second tab in Lectures, with the library's own password for
+// them (worker/lectures.js). The list is small (~30 KB), so it's simply asked for (with the kept
+// copy's ETag) when the app starts on a device that has opened them, or when Lectures is shown.
+const DM_LIST = '/api/lectures/dm';
+let dmLoading = null;
+function loadDm() {
+  dmLoading ??= (async () => {
+    if (S.dmState !== 'ready') S.dmState = 'loading';
+    const cache = 'caches' in window ? await caches.open(LECT_CACHE).catch(() => null) : null;
+    const kept = await cache?.match(DM_LIST).catch(() => null);
+    const etag = kept?.headers.get('ETag');
+    const res = await fetch(DM_LIST, { credentials: 'same-origin', cache: 'no-store', headers: etag ? { 'If-None-Match': etag } : {} }).catch(() => null);
+    if (res?.status === 401 || res?.status === 503) {
+      if (forgetDm(res.status === 503 ? 'off' : 'locked') === 'ready') lecturesChanged();
+      return;
+    }
+    if (res?.ok) await cache?.put(DM_LIST, res.clone()).catch(() => {});
+    // Offline, the copy kept on the device.
+    const data = await (res?.ok ? res : res?.status === 304 || !res ? kept : null)?.json().catch(() => null);
+    if (data) useDm(data);
+    else if (S.dmState !== 'ready') S.dmState = 'error';
+  })().finally(() => { dmLoading = null; });
+  return dmLoading;
+}
+
+function useDm({ lectures = [] }) {
+  S.dm = lectures.map(l => ({
+    id: `dm-${l.id}`, section: 'lecture', dm: true, type: 'Disciple meeting', artist: 'Sacinandana Swami', title: l.title,
+    year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
+    src: `/dm-audio/${l.path}`, dl: `/dm-audio/${l.path}`, external: true,
+    duration: S.lectDur[`dm-${l.id}`] || 0, size: S.lectBytes[`dm-${l.id}`] || 0, cover: SECTION_ART.Lectures, tx: false,
+  }));
+  S.dmOld = null;
+  for (const t of S.dm) {
+    t.skey = lectNorm(`${t.title} ${t.ref} ${t.date} ${t.year} ${t.place} ${t.with} ${t.language} ${t.into || ''}`);
+    S.byId.set(t.id, t);
+    S.bySrc.set(t.dl, t);
+    if (savedLectures.has(t.dl)) S.saved.add(t.id);
+  }
+  S.dmState = 'ready';
+  store.set('dm', true);
+}
+
+// Returns the state it was in.
+function forgetDm(state = 'locked') {
+  const was = S.dmState;
+  S.dmState = state;
+  S.dm = [];
+  S.dmOld = null;
+  store.set('dm', false);
+  if (state === 'off') lectTab(false);
+  // Meetings saved on this device go too.
+  for (const id of [...S.saved]) if (id.startsWith('dm-')) S.saved.delete(id);
+  for (const path of [...savedLectures]) if (path.startsWith('/dm-audio/')) savedLectures.delete(path);
+  if ('caches' in window) {
+    caches.open(LECT_CACHE).then(cache => cache.delete(DM_LIST)).catch(() => {});
+    caches.open(AUDIO_CACHE).then(async cache => {
+      for (const req of await cache.keys()) if (new URL(req.url).pathname.startsWith('/dm-audio/')) await cache.delete(req);
+    }).catch(() => {});
+  }
+  return was;
+}
+
+// Which list the Lectures page shows: all lectures, or the disciple meetings. Each keeps its own
+// search and menus.
+function lectTab(dm) {
+  if (S.lect.dm === dm) return;
+  const { q, year, lang } = S.lect;
+  Object.assign(S.lect, S.lectAway, { dm, shown: LECT_PAGE });
+  S.lectAway = { q, year, lang };
 }
 
 // Lectures saved on this device (paths in the audio cache), found before the list arrives.
@@ -3312,18 +3404,14 @@ function lecturesView() {
         <p class="lect-msg" id="lect-msg" role="alert"></p>
       </form>`;
   }
-  const counts = {};
-  for (const t of S.lectures) counts[t.language] = (counts[t.language] || 0) + 1;
-  const langs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-  if (S.lect.lang !== 'All' && !counts[S.lect.lang]) S.lect.lang = 'English';
-  const inLang = S.lectures.filter(t => S.lect.lang === 'All' || t.language === S.lect.lang);
-  const yearCounts = {};
-  for (const t of inLang) yearCounts[t.year] = (yearCounts[t.year] || 0) + 1;
-  const years = Object.keys(yearCounts).map(Number).sort((a, b) => b - a);
-  if (S.lect.year !== 'All' && !yearCounts[S.lect.year]) S.lect.year = 'All';
+  // Is the server set up for the disciple meetings, and are they open here? Asked once, quietly.
+  if (S.dmState === 'unknown') loadDm().then(() => { if (location.hash.startsWith('#/lectures') && !S.lect.dm && S.dmState === 'off') route(); });
+  if (S.dmState === 'off') lectTab(false);
+  const lang = S.lect.dm ? S.lectAway.lang : S.lect.lang; // the lectures' language, also while the meetings are shown
+  const inLang = S.lectures.filter(t => lang === 'All' || t.language === lang);
   const latest = inLang[0];
   S.lists['lectures-latest'] = inLang.map(t => t.id);
-  const started = S.lectures.filter(t => S.positions[t.id]).sort((a, b) => (S.posAt[b.id] || 0) - (S.posAt[a.id] || 0)).slice(0, 12);
+  const started = [...S.lectures, ...S.dm].filter(t => S.positions[t.id]).sort((a, b) => (S.posAt[b.id] || 0) - (S.posAt[a.id] || 0)).slice(0, 12);
   S.lists['lectures-continue'] = started.map(t => t.id);
   return `<div class="lect-show">${lectArt()}<div class="lect-show-text"><h1>Lectures</h1><p class="lect-by">Sacinandana Swami</p>
       <p class="lect-about">${S.lectures.length.toLocaleString()} lectures from the Saranagati Library, ${S.lectures.at(-1)?.year} to today.</p>
@@ -3331,16 +3419,52 @@ function lecturesView() {
         <span class="lect-latest">${esc(lectDate(latest))}${latest.duration ? ` · ${fmtDur(latest.duration)}` : ''}</span></div>` : ''}</div></div>
     ${started.length ? `<section class="lect-section"><h2>Continue listening</h2><div class="lect-cards">${started.map(lectCard).join('')}</div></section>` : ''}
     <section class="lect-section">
-      <h2>All lectures</h2>
-      <div class="lect-search">${icon('search')}<input id="lq" type="search" placeholder="Search lectures, verses, years" value="${esc(S.lect.q)}" autocomplete="off" enterkeyhint="search">
+      ${S.dmState === 'off' ? '<h2>All lectures</h2>' : `<div class="lect-tabs" role="tablist">
+        <button role="tab" aria-selected="${!S.lect.dm}" data-action="lect-tab" data-dm="">All lectures</button>
+        <button role="tab" aria-selected="${S.lect.dm}" data-action="lect-tab" data-dm="1">Disciple meetings</button></div>`}
+      ${S.lect.dm ? dmPart() : lectFilters(S.lectures, 'Search lectures, verses, years')}
+    </section>
+    <p class="note">The lectures play from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>. Tap ${icon('download')} to save one for listening offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button> (removes saved lectures too)${S.lect.dm && S.dmState === 'ready' ? ` · <button class="text-btn" data-action="dm-signout">Lock disciple meetings</button>` : ''}</p>`;
+}
+
+// The search box and the Year and Language menus, over the lectures or the disciple meetings.
+function lectFilters(list, placeholder) {
+  const counts = {};
+  for (const t of list) counts[t.language] = (counts[t.language] || 0) + 1;
+  const langs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  if (S.lect.lang !== 'All' && !counts[S.lect.lang]) S.lect.lang = S.lect.dm ? 'All' : 'English';
+  const yearCounts = {};
+  for (const t of list) if (S.lect.lang === 'All' || t.language === S.lect.lang) yearCounts[t.year] = (yearCounts[t.year] || 0) + 1;
+  const years = Object.keys(yearCounts).map(Number).sort((a, b) => b - a);
+  if (S.lect.year !== 'All' && !yearCounts[S.lect.year]) S.lect.year = 'All';
+  return `<div class="lect-search">${icon('search')}<input id="lq" type="search" placeholder="${placeholder}" value="${esc(S.lect.q)}" autocomplete="off" enterkeyhint="search">
         <button class="icon-btn" id="lq-clear" data-action="lect-clear" aria-label="Clear search"${S.lect.q ? '' : ' hidden'}>${icon('x')}</button></div>
       <div class="lect-filters">
         <label class="lect-pick">${icon('calendar')}<select id="lyear" aria-label="Year"><option value="All">All years</option>${years.map(y => `<option value="${y}"${String(y) === String(S.lect.year) ? ' selected' : ''}>${y} (${yearCounts[y]})</option>`).join('')}</select></label>
         <label class="lect-pick">${icon('globe')}<select id="llang" aria-label="Language"><option value="All">All languages</option>${langs.map(l => `<option value="${esc(l)}"${l === S.lect.lang ? ' selected' : ''}>${esc(l)} (${counts[l].toLocaleString()})</option>`).join('')}</select></label>
       </div>
-      <div id="lect-results">${lectureResults()}</div>
-    </section>
-    <p class="note">The lectures play from <a href="https://www.saranagati-library.net/" target="_blank" rel="noopener">saranagati-library.net</a>. Tap ${icon('download')} to save one for listening offline. <button class="text-btn" data-action="lect-signout">Lock lectures on this device</button> (removes saved lectures too)</p>`;
+      <div id="lect-results">${lectureResults()}</div>`;
+}
+
+// The Disciple meetings tab: its password, then the meetings, listed like the lectures.
+function dmPart() {
+  if (S.dmState === 'unknown' || S.dmState === 'loading') {
+    loadDm().then(() => { if (location.hash.startsWith('#/lectures') && S.lect.dm) route(); });
+    return `<p class="page-sub">Loading…</p>`;
+  }
+  if (S.dmState === 'error') {
+    return `<p class="empty">The disciple meetings need an internet connection. <button class="text-btn" data-action="dm-retry">Try again</button></p>`;
+  }
+  if (S.dmState === 'locked') {
+    return `<form class="lect-gate" id="dm-login">
+        <p class="lect-about">Sacinandana Swami's meetings with his disciples, from the Saranagati Library. They have a password of their own.</p>
+        <label for="dm-pw">Password</label>
+        <input id="dm-pw" type="password" autocomplete="current-password" required>
+        <button class="btn" type="submit">Open disciple meetings</button>
+        <p class="lect-msg" id="dm-msg" role="alert"></p>
+      </form>`;
+  }
+  return lectFilters(S.dm, 'Search meetings, places, years');
 }
 
 function lectArt() {
@@ -3372,9 +3496,10 @@ function lectMatches() {
   const inFilters = t => (S.lect.lang === 'All' || t.language === S.lect.lang) && (S.lect.year === 'All' || t.year === Number(S.lect.year));
   const hit = t => lectHit(t, words);
   if (words.length) lectKeys(true);
-  const list = (S.lect.sort === 'old' ? lecturesOld() : S.lectures).filter(t => inFilters(t) && hit(t));
+  const all = S.lect.dm ? S.dm : S.lectures;
+  const list = (S.lect.sort === 'old' ? lecturesOld() : all).filter(t => inFilters(t) && hit(t));
   // Nothing in this language or year? Say how many are elsewhere.
-  const elsewhere = words.length && !list.length ? S.lectures.filter(hit).length : 0;
+  const elsewhere = words.length && !list.length ? all.filter(hit).length : 0;
   return { list, words, elsewhere };
 }
 
@@ -3382,16 +3507,17 @@ const LECT_PAGE = 60;
 function lectureResults() {
   const { list, words, elsewhere } = lectMatches();
   S.lists.lectures = list.map(t => t.id); // a lecture plays on through everything listed, not just what's shown
+  const noun = S.lect.dm ? 'meeting' : 'lecture';
   if (!list.length) {
-    return words.length ? `<p class="empty">No lectures found for “${esc(S.lect.q)}”${S.lect.lang !== 'All' || S.lect.year !== 'All' ? ` in ${[S.lect.year !== 'All' && S.lect.year, S.lect.lang !== 'All' && S.lect.lang].filter(Boolean).join(', ')}` : ''}.
-        ${elsewhere ? `<button class="text-btn" data-action="lect-everywhere">Show ${elsewhere} in all years and languages</button>` : 'Try a shorter word.'}</p>` : `<p class="empty">No lectures here.</p>`;
+    return words.length ? `<p class="empty">No ${noun}s found for “${esc(S.lect.q)}”${S.lect.lang !== 'All' || S.lect.year !== 'All' ? ` in ${[S.lect.year !== 'All' && S.lect.year, S.lect.lang !== 'All' && S.lect.lang].filter(Boolean).join(', ')}` : ''}.
+        ${elsewhere ? `<button class="text-btn" data-action="lect-everywhere">Show ${elsewhere} in all years and languages</button>` : 'Try a shorter word.'}</p>` : `<p class="empty">No ${noun}s here.</p>`;
   }
   // Topics with plenty of English lectures (25 Oct 2026: from about 60 to 1,400 each).
   const topics = ['Holy Name', 'Japa', 'Kirtan', 'Srimad-Bhagavatam', 'Bhagavad-gita', 'Radha', 'Caitanya', 'Vrindavan', 'Govardhan', 'Kartik', 'Retreat', 'Prabhupada', 'Vyasa Puja', 'Prayer'];
-  const suggest = !words.length && S.lect.year === 'All' && ['English', 'All'].includes(S.lect.lang)
+  const suggest = !S.lect.dm && !words.length && S.lect.year === 'All' && ['English', 'All'].includes(S.lect.lang)
     ? `<div class="lect-suggest">${topics.map(x => `<button class="chip" data-action="lect-topic" data-q="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
   S.lect.shown = Math.max(S.lect.shown || 0, LECT_PAGE);
-  return `${suggest}<div class="lect-count"><span>${list.length.toLocaleString()} lecture${list.length === 1 ? '' : 's'}${words.length ? ` for “${esc(S.lect.q)}”` : ''}</span>
+  return `${suggest}<div class="lect-count"><span>${list.length.toLocaleString()} ${noun}${list.length === 1 ? '' : 's'}${words.length ? ` for “${esc(S.lect.q)}”` : ''}</span>
       ${list.length > 1 ? `<button class="text-btn" data-action="lect-sort">${S.lect.sort === 'old' ? 'Oldest first' : 'Newest first'}${icon('down')}</button>` : ''}</div>
     <ul class="lect-list" id="lect-list">${list.slice(0, S.lect.shown).map(t => lectureRow(t, words)).join('')}</ul>
     ${list.length > S.lect.shown ? `<div class="lect-sentinel" id="lect-sentinel"><button class="btn ghost" data-action="lect-more">Show more</button></div>` : ''}`;
@@ -3618,6 +3744,27 @@ function stepFind(dir) {
   $('#tx-count').textContent = `${tx.hit + 1} of ${tx.hits.length}`;
 }
 
+// The Disciple meetings password.
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'dm-login') return;
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  $('#dm-msg').textContent = '';
+  const res = await fetch('/api/lectures/dm/login', {
+    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: $('#dm-pw').value }),
+  }).catch(() => null);
+  btn.disabled = false;
+  if (!res?.ok) {
+    $('#dm-msg').textContent = res ? (await res.json().catch(() => ({}))).error || 'That didn’t work.' : 'No connection.';
+    return;
+  }
+  S.dmState = 'unknown';
+  await loadDm();
+  route();
+});
+
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'lect-login') return;
   e.preventDefault();
@@ -3656,6 +3803,14 @@ document.addEventListener('submit', async e => {
     lecturesChanged();
     setTimeout(keepSavedTranscripts, 5000);
   });
+  // …and the disciple meetings, on a device that has opened them.
+  if (store.get('dm', false)) {
+    loadDm().then(() => {
+      if (S.dmState !== 'ready') return;
+      restoreLast();
+      lecturesChanged();
+    });
+  }
   setPlayingClass();
   accountStart();
 
