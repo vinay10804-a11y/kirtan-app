@@ -328,7 +328,8 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   every 25. It runs on its own (nohup + caffeinate -s, from "Resume transcripts.command" in that
   folder; "Stop transcripts.command" stops it): only on mains power, paused while the lid is shut,
   downloads retried after waking, one run at a time (lock in build/transcribe-work). About 27× faster
-  than listening on the M1 Pro. Never put transcripts in git or site/ (this repo is public);
+  than listening on the M1 Pro. A lecture still going after max(20 min, a quarter of its length) of
+  awake time is stuck and stopped (one ran 28 hours, 31 Oct 2026); the next run tries it again. Never put transcripts in git or site/ (this repo is public);
   `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
   Transcript sheet (player bar, ⋯ menu, a button on the row: on the Lectures page and, since a
   friend missed it on 27 Oct 2026, under the title of a lecture in playlists, Favourites, History,

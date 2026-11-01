@@ -67,15 +67,27 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clock = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 const today = () => new Date().toISOString().slice(0, 10);
 const log = (...a) => console.log(new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), ...a);
-// Runs a program without blocking (downloads and uploads carry on meanwhile).
-const run = (cmd, argv, opts = {}) => new Promise(resolve => {
+// Runs a program without blocking (downloads and uploads carry on meanwhile). With `limit` (ms),
+// it's stopped once it has run that long while the Mac is awake: a gap of over a minute between
+// the 10-second ticks is the Mac asleep, and isn't counted.
+const run = (cmd, argv, { limit, ...opts } = {}) => new Promise(resolve => {
   const p = spawn(cmd, argv, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
-  let out = '';
+  let out = '', awake = 0, last = Date.now(), timedOut = false;
   const keep = d => { out = (out + d).slice(-4000); };
   p.stdout.on('data', keep);
   p.stderr.on('data', keep);
-  p.on('close', status => resolve({ status, out }));
-  p.on('error', err => resolve({ status: -1, out: String(err) }));
+  const tick = limit && setInterval(() => {
+    const now = Date.now(), gap = now - last;
+    last = now;
+    if (gap < 60e3) awake += gap;
+    if (awake < limit) return;
+    timedOut = true;
+    clearInterval(tick);
+    p.kill();
+    setTimeout(() => p.kill('SIGKILL'), 30e3).unref();
+  }, 10e3);
+  p.on('close', status => { clearInterval(tick); resolve({ status, out, timedOut }); });
+  p.on('error', err => { clearInterval(tick); resolve({ status: -1, out: String(err) }); });
 });
 
 // Singing (kirtan, prayers) comes out as runs of "Oh", "I kiss", "Kissing"…, or as one line of
@@ -167,9 +179,14 @@ async function whisper(l, mp3) {
   const started = Date.now();
   // --condition-on-previous-text False: each stretch is transcribed on its own. Otherwise
   // Whisper locks into loops on chanting and kirtan (one word repeated for pages).
+  // A lecture normally takes a few minutes (about 27× faster than listening); one once ran for 28
+  // hours without finishing (SB 7.10.6, 31 Oct 2026). Past the limit it's stuck: it's stopped,
+  // and the next run tries it again.
+  const limit = Math.max(20 * 60, l.dur / 4) * 1000;
   const r = await run('mlx_whisper', [mp3, '--model', MODEL, '--output-format', 'json', '--output-dir', WORK,
-    '--condition-on-previous-text', 'False', '--language', LANG[l.language] || 'en', '--initial-prompt', PROMPT, '--verbose', 'False']);
+    '--condition-on-previous-text', 'False', '--language', LANG[l.language] || 'en', '--initial-prompt', PROMPT, '--verbose', 'False'], { limit });
   await fs.rm(mp3, { force: true });
+  if (r.timedOut) throw new Error(`stuck, so stopped after ${Math.round(limit / 60e3)} min (tried again next run)`);
   if (r.status !== 0) throw new Error(`whisper failed: ${r.out.slice(-300)}`);
   const took = (Date.now() - started) / 1000;
   log(`  transcribed in ${Math.round(took / 60)} min (${(l.dur / took).toFixed(1)}× faster than listening)`);
