@@ -395,7 +395,8 @@ lectures | Disciple meetings", `lectTab()`; each tab keeps its own search and me
 `S.lectAway`). Its password is the library's own for that folder (owner's choice). Worker secret `DM_LOGIN`
 = "<library user>:<password>" (the owner sets it in the Cloudflare dashboard; never write the value into
 the repo, notes or chat); the section's password is the part after the colon, compared like the lectures'
-(trimmed, any case), cookie `dm` (HMAC). `DM_PASSWORD`, if ever set, gives the section a different password.
+(trimmed, any case), cookie `dm` (HMAC). `dmLogin()` forgives slips made typing it in the dashboard (2 Nov
+2026, the owner's first tries): spaces or a line break, or the user name twice ("gurudas:gurudas:…"). `DM_PASSWORD`, if ever set, gives the section a different password.
 `/api/lectures/dm` (list, R2 `lectures/dm-catalog.json`) and `/dm-audio/<path in dm/>` (the recording,
 fetched with the login, so the login never reaches the app; SSNS .mp3 paths only). No `DM_LOGIN` → 503 and
 the tab isn't shown. The list is made by `tools/lectures.mjs` (`discipleMeetings()`) from the library's
