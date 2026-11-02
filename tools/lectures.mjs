@@ -4,6 +4,7 @@
 //
 //   node tools/lectures.mjs            # reads the library's year folders → build/lectures.json
 //   node tools/lectures.mjs --upload   # …and puts the list in R2 (kirtans/lectures/catalog.json)
+//                                      # (and the disciple meetings in kirtans/lectures/dm-catalog.json)
 //
 // The list is private: it lives in R2, not in site/, and the Worker only hands it out after
 // the Lectures password (see worker/lectures.js). File names look like
@@ -18,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'build/lectures.json');
+const DM_OUT = path.join(ROOT, 'build/disciple-meetings.json');
 const LENGTHS = path.join(ROOT, 'tools/lecture-lengths.json'); // { id: seconds }, so only new lectures are measured
 const LIBRARY = 'https://www.saranagati-library.net/';
 const UA = { 'User-Agent': 'Kirtan app lecture list (private test)' };
@@ -183,6 +185,39 @@ async function measure(lectures) {
   if (missing) console.log(`  ${missing} lectures' lengths couldn't be read (they'll be learnt when played)`);
 }
 
+// Disciple meetings (owner, 1 Nov 2026): the library's private dm/ folder, for a part of Lectures
+// with its own password. The folder needs the library's login, but its file names are in the
+// library's public index of every file (start_url_file.html), so the list is made from that,
+// with no login; the recordings come through the Worker, which has the login (/dm-audio/ in
+// worker/lectures.js). Their lengths aren't measured (that needs the login): the app learns
+// each one when it's played. When the index can't be read, the last list is kept.
+async function discipleMeetings() {
+  const index = await page(`${LIBRARY}start_url_file.html`).catch(() => '');
+  // The newest are in dm/ and in dm/<year>/ as well: one of each, the year folder's.
+  const files = new Map();
+  for (const m of index.matchAll(/href="https?:\/\/[^/"]+\/dm\/([^"]+?\.mp3)"/gi)) {
+    let file;
+    try { file = decodeURIComponent(m[1]); } catch { continue; }
+    const name = file.split('/').pop();
+    if (!files.has(name) || !files.get(name).includes('/')) files.set(name, file);
+  }
+  if (!files.size) return console.log("Disciple meetings: couldn't read the library's index; the last list is kept");
+  const meetings = [];
+  for (const [name, file] of files) {
+    const info = parse(name);
+    if (!info?.year) continue; // one recording has no date (0000.00.00)
+    const { lang, ...rest } = info;
+    // "DM – Treasures from Vrndavana" is just "Treasures from Vrndavana" here (and "Vyasapuja – DM –
+    // Authenticity" "Vyasapuja – Authenticity"); a bare "DM 1" is "Disciple meeting 1".
+    rest.title = /^DM( \d+)?$/.test(rest.title) ? `Disciple meeting${rest.title.slice(2)}`
+      : rest.title.replace(/^DM(?: –)? (?=\D)/, '').replace(/ – DM – /, ' – ');
+    meetings.push({ id: createHash('sha1').update(`dm/${file}`).digest('hex').slice(0, 12), path: encodeURI(file), ...rest });
+  }
+  meetings.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
+  await fs.writeFile(DM_OUT, JSON.stringify({ generated: new Date().toISOString(), lectures: meetings }));
+  console.log(`Disciple meetings: ${meetings.length} → ${path.relative(ROOT, DM_OUT)}`);
+}
+
 async function main() {
   PLACES = await placeNames();
   const home = await page(LIBRARY);
@@ -218,6 +253,7 @@ async function main() {
   for (const l of lectures) byLang[l.language] = (byLang[l.language] || 0) + 1;
   await fs.mkdir(path.dirname(OUT), { recursive: true });
   await fs.writeFile(OUT, JSON.stringify({ generated: new Date().toISOString(), source: LIBRARY, lectures }));
+  await discipleMeetings();
   console.log(`Lectures: ${lectures.length} (${Object.entries(byLang).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ')}); ${skipped} other files left out → ${path.relative(ROOT, OUT)}`);
 
   if (process.argv.includes('--upload')) {
@@ -226,6 +262,13 @@ async function main() {
       { cwd: ROOT, encoding: 'utf8' });
     if (r.status !== 0) throw new Error(`Upload failed: ${(r.stderr || r.stdout).slice(-400)}`);
     console.log('Uploaded the lecture list to R2 (kirtans/lectures/catalog.json).');
+    if (await fs.access(DM_OUT).then(() => true, () => false)) {
+      const dm = spawnSync(path.join(ROOT, 'node_modules/.bin/wrangler'),
+        ['r2', 'object', 'put', 'kirtans/lectures/dm-catalog.json', '--file', DM_OUT, '--content-type', 'application/json', '--remote'],
+        { cwd: ROOT, encoding: 'utf8' });
+      if (dm.status !== 0) throw new Error(`Upload failed: ${(dm.stderr || dm.stdout).slice(-400)}`);
+      console.log('Uploaded the disciple meetings to R2 (kirtans/lectures/dm-catalog.json).');
+    }
   }
 }
 

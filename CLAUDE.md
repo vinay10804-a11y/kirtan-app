@@ -389,6 +389,23 @@ Simhachalam), English names and typo fixes. The place alone, or the country when
 ZA, ZH: 54 lectures) show no place until the owner says what they are. The same page says any language
 but English or German is a translation into the local language (e.g. "KAZ_RU" is English with Russian).
 
+Disciple meetings (owner, 1 Nov 2026: "a section within lectures… keeping it clean… just a password, no
+username"): the library's private `dm/` folder (HTTP login), as a second tab on the Lectures page ("All
+lectures | Disciple meetings", `lectTab()`; each tab keeps its own search and menus, the other's in
+`S.lectAway`). Its password is the library's own for that folder (owner's choice). Worker secret `DM_LOGIN`
+= "<library user>:<password>" (the owner sets it in the Cloudflare dashboard; never write the value into
+the repo, notes or chat); the section's password is the part after the colon, compared like the lectures'
+(trimmed, any case), cookie `dm` (HMAC). `DM_PASSWORD`, if ever set, gives the section a different password.
+`/api/lectures/dm` (list, R2 `lectures/dm-catalog.json`) and `/dm-audio/<path in dm/>` (the recording,
+fetched with the login, so the login never reaches the app; SSNS .mp3 paths only). No `DM_LOGIN` → 503 and
+the tab isn't shown. The list is made by `tools/lectures.mjs` (`discipleMeetings()`) from the library's
+public index of every file (start_url_file.html; the dm/ folder itself needs the login), the newest listed
+in dm/ and dm/<year>/ counted once, "DM – " dropped from titles; no lengths (the app learns each when
+played). It goes to R2 with `--upload` and from the transcription job's 6-hourly check. Tracks: ids `dm-<id>`,
+`dm: true`, `section: 'lecture'`, `S.dm` (not in Search or the playlist dialog's Lectures tab; in Continue
+listening and Library > Saved). Loaded at start only where they were opened (`store` key `dm`); "Lock
+disciple meetings" (or Lock lectures, or a 401) forgets them and their saved copies. Not transcribed.
+
 ## Don't undo earlier fixes
 Twice an edit was made on stale copies of files and silently reverted earlier fixes (self-hosted
 font, offline covers, fresh styling/code). `tools/check.mjs` lists each fix the owner asked for; it

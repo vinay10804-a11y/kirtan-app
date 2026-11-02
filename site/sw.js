@@ -4,7 +4,7 @@
 // A slow or dead connection (e.g. on the Underground) falls back to the saved
 // copies after a few seconds instead of leaving the app blank.
 
-const VERSION = 'fa1836071e';
+const VERSION = 'ea12c711ed';
 const SHELL_CACHE = `shell-${VERSION}`;
 const AUDIO_CACHE = 'kirtan-audio';
 const RUNTIME_CACHE = 'runtime';
@@ -44,7 +44,7 @@ self.addEventListener('fetch', event => {
   // Audio: a saved recording asked for from the device (?offline=1) is served from
   // the cache; everything else streams straight from the network, untouched, which
   // starts sooner and is what iPhones handle best.
-  if (url.origin === location.origin && /^\/(stream|media|audio|lecture-audio)\//.test(url.pathname)) {
+  if (url.origin === location.origin && /^\/(stream|media|audio|lecture-audio|dm-audio)\//.test(url.pathname)) {
     if (url.searchParams.has('offline')) event.respondWith(audioResponse(req, url));
     return;
   }
