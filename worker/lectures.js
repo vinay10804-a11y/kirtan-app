@@ -38,7 +38,19 @@ async function sign(secret, label) {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 const pass = env => sign(env.LECTURES_PASSWORD, 'kirtan-app lectures v1');
-const dmPassword = env => env.DM_PASSWORD || (env.DM_LOGIN || '').slice((env.DM_LOGIN || '').indexOf(':') + 1);
+// The library login, "<user>:<password>", forgiving how it was typed into the dashboard (owner,
+// 2 Nov 2026): spaces or a line break around it, or the user name typed twice ("gurudas:gurudas:…",
+// when the box already held "gurudas:").
+function dmLogin(env) {
+  const login = (env.DM_LOGIN || '').trim();
+  const at = login.indexOf(':');
+  if (at < 1) return null;
+  const user = login.slice(0, at).trim();
+  let password = login.slice(at + 1).trim();
+  while (password.startsWith(`${user}:`)) password = password.slice(user.length + 1).trim();
+  return password ? { user, password } : null;
+}
+const dmPassword = env => env.DM_PASSWORD?.trim() || dmLogin(env)?.password || '';
 
 // Compares without stopping at the first difference, so timing gives nothing away.
 function same(a, b) {
@@ -104,7 +116,8 @@ export async function lectures(request, env, url) {
 
 // The disciple meetings: the same as the lectures above, with their own password and cookie.
 async function meetings(request, env, url) {
-  if (!env.DM_LOGIN?.includes(':') || !dmPassword(env)) return json({ error: 'Disciple meetings aren’t set up yet' }, 503);
+  const login = dmLogin(env);
+  if (!login) return json({ error: 'Disciple meetings aren’t set up yet' }, 503);
   const good = await sign(dmPassword(env), 'kirtan-app disciple meetings v1');
 
   if (url.pathname === '/api/lectures/dm/login' && request.method === 'POST') {
@@ -136,9 +149,9 @@ async function meetings(request, env, url) {
     let name = '';
     try { name = decodeURIComponent(file); } catch {}
     if (!/^(\d{4}\/)?\d{4}\.\d{2}\.\d{2}_SSNS[^/]*\.mp3$/i.test(name)) return json({ error: 'Not found' }, 404);
-    const login = btoa(String.fromCharCode(...enc.encode(env.DM_LOGIN)));
+    const basic = btoa(String.fromCharCode(...enc.encode(`${login.user}:${login.password}`)));
     const range = request.headers.get('Range');
-    const res = await fetch(`${LIBRARY}dm/${file}`, { headers: { Authorization: `Basic ${login}`, ...(range && { Range: range }) } });
+    const res = await fetch(`${LIBRARY}dm/${file}`, { headers: { Authorization: `Basic ${basic}`, ...(range && { Range: range }) } });
     if (res.status === 401) return json({ error: 'The library login didn’t work' }, 502);
     const headers = new Headers({ 'Cache-Control': 'private, no-store' });
     for (const h of ['Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified']) {
