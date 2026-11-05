@@ -77,9 +77,9 @@ const checks = [
     read('worker/lectures.js').includes('async function meetings') && read('worker/lectures.js').includes('env.DM_LOGIN') && read('worker/index.js').includes("'/dm-audio/'")
     && sw.includes('dm-audio') && app.includes('function lectTab') && app.includes("const DM_LIST = '/api/lectures/dm'") && read('tools/lectures.mjs').includes('async function discipleMeetings')
     && read('tools/lectures.mjs').includes('start_url_file.html') && read('tools/transcribe.mjs').includes("'lectures/dm-catalog.json'")],
-  ['Braj Sounds: a Japa tab of recordings by others (credited, stereo), with Save offline and Download file; four Japa tabs fit a phone',
-    app.includes("'Braj Sounds'") && app.includes('function downloadFile') && app.includes('FILE_DOWNLOADS.has(t.type)') && app.includes("'Guided Japa': 'Guided'")
-    && read('tools/classify.mjs').includes('/^braj sounds$/i') && read('worker/index.js').includes("searchParams.get('file')") && /\.tabs \{ gap: 14px; \}/.test(css)],
+  ['Braj Sounds: a Japa tab of recordings by others (credited, stereo), with Save offline and Download file; the four Japa tabs fit any phone with their full names',
+    app.includes("'Braj Sounds'") && app.includes('function downloadFile') && app.includes('FILE_DOWNLOADS.has(t.type)') && !app.includes("'Guided Japa': 'Guided'")
+    && read('tools/classify.mjs').includes('/^braj sounds$/i') && read('worker/index.js').includes("searchParams.get('file')") && /\.tabs a \{ font-size: min\(14px, 3\.5vw\); \}/.test(css)],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

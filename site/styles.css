@@ -148,8 +148,9 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs a { padding: 10px 0; font-size: 15px; color: var(--ink-3); text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs a[aria-current="true"] { color: var(--teal-deep); border-bottom-color: var(--teal-deep); }
-/* Four tabs (Japa, Library) fit across a 375-point phone. */
-@media (max-width: 400px) { .tabs { gap: 14px; } .tabs a { font-size: 14px; } }
+/* Four tabs with their full names (Guided Japa · Inspirations · Living Name · Braj Sounds) fit across
+   any phone, down to 320 points: on phones the text and gaps shrink a little with the screen. */
+@media (max-width: 460px) { .tabs { gap: min(14px, 3vw); } .tabs a { font-size: min(14px, 3.5vw); } }
 
 .actions { display: flex; gap: 8px; margin-top: 16px; }
 .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; background: var(--teal-deep); color: var(--bg); text-decoration: none; }

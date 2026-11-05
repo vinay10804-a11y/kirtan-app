@@ -11,7 +11,7 @@ const ART_CACHE = 'kirtan-art';
 const ARTIST_ORDER = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
 const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations', 'Braj Sounds'];
-const JAPA_TABS = { 'Guided Japa': 'Guided', 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
+const JAPA_TABS = { 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
 const JAPA_ABOUT = {
   'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap a session to watch it here.',
   'Japa Inspirations': 'Short talks and reflections from Sacinandana Swami to bring fresh attention to your chanting. They play here from SoundCloud.',
