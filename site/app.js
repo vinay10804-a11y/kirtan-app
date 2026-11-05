@@ -10,15 +10,18 @@ const AUDIO_CACHE = 'kirtan-audio';
 const ART_CACHE = 'kirtan-art';
 const ARTIST_ORDER = ['Sacinandana Swami', 'Gour Krishna'];
 const TYPE_ORDER = ['Mahamantra', 'Bhajans'];
-const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
-const JAPA_TABS = { 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
+const JAPA_ORDER = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations', 'Braj Sounds'];
+const JAPA_TABS = { 'Guided Japa': 'Guided', 'Japa Inspirations': 'Inspirations', 'Living Name Meditations': 'Living Name' };
 const JAPA_ABOUT = {
   'Guided Japa': 'Full sessions in which Sacinandana Swami guides you through chanting your rounds. Tap a session to watch it here.',
   'Japa Inspirations': 'Short talks and reflections from Sacinandana Swami to bring fresh attention to your chanting. They play here from SoundCloud.',
   'Living Name Meditations': 'Guided meditations from The Living Name, Sacinandana Swami’s book on chanting with attention and feeling. They play here from SoundCloud.',
+  'Braj Sounds': 'Recorded in Vrindavan and at Govardhan, to chant your rounds with. Save one to play offline, or choose Download file in its ⋯ menu.',
 };
-// What one item of a SoundCloud japa collection is called ("25 meditations").
-const JAPA_UNIT = { 'Living Name Meditations': 'meditation', 'Japa Inspirations': 'talk' };
+// What one item of a japa collection is called ("25 meditations").
+const JAPA_UNIT = { 'Living Name Meditations': 'meditation', 'Japa Inspirations': 'talk', 'Braj Sounds': 'recording' };
+// Collections whose recordings can also be downloaded as a file (owner, 5 Nov 2026), not just saved offline.
+const FILE_DOWNLOADS = new Set(['Braj Sounds']);
 // Short labels for the plain tiles shown when a recording has no cover art.
 const INITIALS = { 'Sacinandana Swami': 'SS', 'Gour Krishna': 'GK' };
 const SPEEDS = [1, 1.25, 1.5, 0.75];
@@ -203,6 +206,7 @@ const SECTION_ART = {
   'Guided Japa': 'art/sections/guided-japa.jpg',
   'Japa Inspirations': 'art/sections/japa-inspirations.jpg',
   'Living Name Meditations': 'art/sections/living-name-meditations.jpg',
+  'Braj Sounds': 'art/sections/braj-sounds.jpg',
   Lectures: 'art/sections/sacinandana-swami.jpg',
 };
 function collectionArt(name) {
@@ -224,7 +228,7 @@ async function keepArt(t) {
   } catch {}
 }
 function collectionName(t) {
-  return t.section === 'japa' ? `${t.type} · Sacinandana Swami` : t.artist;
+  return t.section === 'japa' ? `${t.type} · ${t.artist}` : t.artist;
 }
 
 // In-page confirmation, since native browser dialogs are clunky and blocked in some views.
@@ -386,6 +390,7 @@ function trackMeta(t, opts = {}) {
       !pos && S.played.has(t.id) && `<span class="played">${icon('tick')}Played</span>`].filter(Boolean).join(' · ');
   }
   if (opts.source) parts.push(esc(t.section === 'japa' ? t.type : t.artist));
+  if (opts.by) parts.push(esc(t.artist));
   if (opts.year && t.year) parts.push(t.year);
   if (opts.place && (t.place || t.album)) parts.push(esc(t.place || t.album));
   if (opts.date && t.date) parts.push(fmtDate(t.date));
@@ -534,7 +539,7 @@ function homeView() {
     const n = vids || allJapa.filter(t => t.type === c).length;
     const art = SECTION_ART[c] ? collectionArt(c) : `<span class="tile" aria-hidden="true">${icon(vids ? 'play' : 'beads')}</span>`;
     const sc = S.videos.some(v => v.collection === c && isSC(v));
-    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, sc ? JAPA_UNIT[c] || 'recording' : vids ? 'video' : 'session'));
+    return entryLink(`#/japa/${slug(c)}`, art, c, plural(n, JAPA_UNIT[c] || (sc ? 'recording' : vids ? 'video' : 'session')));
   }).join('');
 
   return `${topbar()}
@@ -560,7 +565,7 @@ function homeView() {
       </div>
       <div class="entry">
         <a class="entry-head" href="#/japa"><h2>Japa</h2>${icon('right')}</a>
-        <p>Chant your rounds with Sacinandana Swami. Guided japa sessions play here from YouTube; Japa Inspirations and Living Name meditations play here from SoundCloud.</p>
+        <p>Chant your rounds with Sacinandana Swami. Guided japa sessions play here from YouTube; Japa Inspirations and Living Name meditations play here from SoundCloud. Braj Sounds, recorded in the holy places, are here to chant with.</p>
         <div class="entry-links">${japaLinks || '<p class="muted">Japa sessions appear here once they’re published.</p>'}</div>
       </div>
       <div class="entry">
@@ -667,10 +672,12 @@ function japaView(colSlug) {
   }
 
   const list = audioTracks.filter(t => t.type === col);
-  const groups = groupedList(list, key, JAPA_MODE);
+  // Undated recordings (Braj Sounds) are one short list, each with who recorded it;
+  // a list that short needs no Play and Shuffle buttons.
+  const body = list.some(t => t.year) ? groupedList(list, key, JAPA_MODE) : trackList(list, key, { by: true });
   return `${header}${tabBar}${about}
-    <div class="list-head"><p class="page-sub">${plural(list.length, 'session')} · ${fmtHours(sum(list, t => t.duration))}</p>${playActions(key)}</div>
-    ${groups}`;
+    <div class="list-head"><p class="page-sub">${plural(list.length, JAPA_UNIT[col] || 'session')} · ${fmtHours(sum(list, t => t.duration))}</p>${list.length > 3 ? playActions(key) : ''}</div>
+    ${body}`;
 }
 
 function videoCard(v, track, listKey) {
@@ -1166,7 +1173,7 @@ function closePlayer({ instant = false, fromHistory = false } = {}) {
 // page by year.
 function homeOf(t) {
   if (isLecture(t)) return { name: 'Lectures', icon: 'book', prefix: '#/lectures', hash: '#/lectures' };
-  if (t.section === 'japa') return { name: 'Japa', icon: 'beads', prefix: '#/japa', hash: '#/japa' };
+  if (t.section === 'japa') return { name: 'Japa', icon: 'beads', prefix: '#/japa', hash: `#/japa/${slug(t.type)}` };
   return { name: 'Kirtans', icon: 'music', prefix: '#/kirtans', hash: `#/kirtans/${slug(t.artist)}/${slug(t.type)}/year` };
 }
 async function showInSection(id) {
@@ -2321,6 +2328,7 @@ function openTrackMenu(id, row) {
     ${item('add-to-playlist', 'playlist', 'Add to playlist')}
     ${item('toggle-fav', 'heart', S.favs.has(id) ? 'Remove from Favourites' : 'Add to Favourites')}
     ${'caches' in window && (!t.external || t.dl) ? item('download', S.saved.has(id) ? 'check' : 'download', S.saved.has(id) ? 'Remove offline copy' : 'Save offline') : ''}
+    ${t.section === 'japa' && FILE_DOWNLOADS.has(t.type) ? item('download-file', 'download', 'Download file') : ''}
     ${p && i > 0 ? item('pl-move', 'up', 'Move up', `data-pl="${p.id}" data-dir="-1"`) : ''}
     ${p && i >= 0 && i < shown.length - 1 ? item('pl-move', 'down', 'Move down', `data-pl="${p.id}" data-dir="1"`) : ''}
     ${p ? item('pl-remove', 'x', `Remove from ${esc(p.name)}`, `data-pl="${p.id}"`) : ''}
@@ -2875,6 +2883,21 @@ async function onDownloadTap(id) {
   }
 }
 
+// "Download file" (FILE_DOWNLOADS): the recording itself, to keep on the phone or computer or
+// play in another app. The Worker sends it as a download, named by ?file=.
+function downloadFile(t) {
+  if (!t) return;
+  if (!isOnline()) return toast('Connect to the internet to download');
+  const name = `${t.title} – ${t.artist}.m4a`;
+  const a = document.createElement('a');
+  a.href = `${t.src}?file=${encodeURIComponent(name)}`;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  toast(`Downloading “${t.title}”`);
+}
+
 /* ---------------- events ---------------- */
 
 document.addEventListener('click', async e => {
@@ -2924,6 +2947,7 @@ document.addEventListener('click', async e => {
     case 'close-player': closePlayer(); break;
     case 'download': onDownloadTap(id); break;
     case 'download-current': if (S.current) onDownloadTap(S.current); break;
+    case 'download-file': downloadFile(S.byId.get(id)); break;
     case 'save-list': {
       if (!isOnline()) return toast('Connect to the internet to save');
       const ids = (S.lists[list] || []).filter(x => !S.saved.has(x));

@@ -3,6 +3,7 @@
 // the wrong place, then re-run the build.
 //
 //   Kirtans/Japa/<Collection>/...   → section "japa", type = collection name
+//     (Braj Sounds: "<Who> | <Title>", recordings by others, credited to them)
 //   Kirtans/<anything else>         → section "kirtan", type = Mahamantra | Bhajans
 //
 // Only Sacinandana Swami and Gour Krishna appear in the app; a kirtan that
@@ -20,7 +21,7 @@ export const ARTISTS = [
 ];
 
 // Order the Japa collections appear in the app; unknown folders sort after.
-export const JAPA_COLLECTIONS = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations'];
+export const JAPA_COLLECTIONS = ['Guided Japa', 'Japa Inspirations', 'Living Name Meditations', 'Braj Sounds'];
 
 // Holy places and temples that show up in kirtan titles and folder names.
 // More specific names come first ("New Vrindaban" before "Vrindavan").
@@ -59,8 +60,13 @@ const DATE_PART = /^(?:(?:\d{1,2}[-.\/])?\d{1,2}[-.\/])?(?:19|20)\d\d$|^\d{6}$/;
 const DMY = /(?:^|\|)\s*(\d{2})-(\d{2})-((?:19|20)\d\d)\s*(?:\||$)/;
 const DMY_SHORT = /(?:^|\|)\s*\d{4}(\d{2})\s*(?:\||$)/;
 
-export function isSpeech(rel) {
+export function isJapa(rel) {
   return /^japa$/i.test(rel.split(path.sep)[0]);
+}
+// Japa sessions are mostly voice (a lighter, mono encode); Braj Sounds, recorded in
+// the holy places, keep their stereo like the kirtans.
+export function isSpeech(rel) {
+  return isJapa(rel) && !/^braj sounds$/i.test(rel.split(path.sep)[1] || '');
 }
 
 export function classify(rel, tagTitle = '') {
@@ -78,8 +84,13 @@ export function classify(rel, tagTitle = '') {
   const named = base.includes('|');
   const title = cleanTitle(named ? base : tagTitle || base.replace(DATE_PREFIX, '').replace(/^undated\s+/, ''), place);
 
-  if (isSpeech(rel)) {
+  if (isJapa(rel)) {
     const type = folders[1] || 'Japa';
+    // Someone else's recording (Braj Sounds) is named "<Who> | <Title>" and credits them.
+    if (named) {
+      const [who, name] = base.split('|').map(tidy);
+      return { section: 'japa', title: name || who, artist: who, type, year, date, album: null, place: null };
+    }
     // "Guided Japa – Day 3" inside the Guided Japa collection reads better as "Day 3".
     const short = tidy(title.replace(new RegExp(type.replace(/s$/, '') + 's?', 'i'), ' '));
     return { section: 'japa', title: short.length >= 3 ? short : title, artist: 'Sacinandana Swami', type, year, date, album: null, place: null };

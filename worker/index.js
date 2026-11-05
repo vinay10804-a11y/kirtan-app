@@ -31,6 +31,9 @@ async function serveAudio(request, env, key) {
     'Accept-Ranges': 'bytes',
     'Cache-Control': 'public, max-age=31536000, immutable',
   });
+  // The app's "Download file": ?file=<name> saves the recording instead of playing it.
+  const name = new URL(request.url).searchParams.get('file');
+  if (name) headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(name.replace(/[\\/]/g, '-'))}`);
 
   if (request.method === 'HEAD') {
     const head = await env.AUDIO.head(key);
