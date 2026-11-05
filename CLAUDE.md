@@ -45,6 +45,17 @@ R2 bucket `kirtans` at `/stream/*`.
   SoundCloud tracks, each row with its artwork, that open SoundCloud's player under the title.
   `tools/videos.mjs` writes the list to `site/videos.json`. Guided Japa videos are listed in
   `tools/guided-japa.txt`. If audio copies are ever added (Kirtans/Japa), "Listen here" uses them instead.
+- Braj Sounds (owner, 5 Nov 2026: first "Vrindavan sounds", "download it… in a way that it doesn't take too
+  much space in the japa section", "also want a download option", "rename it to Braj sounds"): a fourth Japa
+  tab of recordings by others, downloaded from SoundCloud and hosted here like the kirtans (R2 `stream/`).
+  Both SoundCloud uploads say "all rights reserved"; the owner said he has both uploaders' permission. Files
+  in `Kirtans/Japa/Braj Sounds/` are named "<Who> | <Title>" (classify.mjs credits them; stereo music encode,
+  not the mono speech one): Bhaktin Birute's "Vrindavan Sounds" (her Kusum Sarovar picture is also the
+  section's, art/sections/braj-sounds.jpg) and Pran Krishna das Babaji's "The Sounds of Govardhan" (his
+  SoundCloud blocks embedding). One short list (no year groups, no Play/Shuffle), ⬇ Save offline, and
+  "Download file" in ⋯ (`FILE_DOWNLOADS`, `downloadFile`: `/stream/…?file=<name>` makes the Worker send it as
+  an attachment). To fit four tabs on a 375-point phone, the Guided Japa tab reads "Guided" and tab bars
+  are 14px with 14px gaps under 400px.
 - App icon: the wave, edge to edge in every size. The maskable icon (`icons/maskable-full-512.png`) has no
   border: Macs draw a maskable icon inside their rounded tile, and the old padded one looked small there
   (owner, 24 Oct 2026). Change its file name when the icon changes, so installed apps pick it up.
