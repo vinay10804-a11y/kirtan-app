@@ -80,6 +80,15 @@ const checks = [
   ['Braj Sounds: a Japa tab of recordings by others (credited, stereo), with Save offline and Download file; the four Japa tabs fit any phone with their full names',
     app.includes("'Braj Sounds'") && app.includes('function downloadFile') && app.includes('FILE_DOWNLOADS.has(t.type)') && !app.includes("'Guided Japa': 'Guided'")
     && read('tools/classify.mjs').includes('/^braj sounds$/i') && read('worker/index.js').includes("searchParams.get('file')") && /\.tabs a \{ font-size: min\(14px, 3\.5vw\); \}/.test(css)],
+  // Phone polish (owner, 7 Nov 2026: "quality-of-life issues" seen using the app on his phone).
+  ['Phone polish: tapped buttons don\'t stay highlighted (hover only with a mouse); small text buttons have finger-sized tap areas; the page behind a menu stays still; long presses don\'t select words; Lectures menus don\'t zoom an iPhone',
+    !/^[^@\s][^\n]*:hover[^\n]*\{/m.test(css) && css.includes('.text-btn::after, .player-find::after') && css.includes('body:has(dialog[open]) { overflow: hidden; }')
+    && css.includes('-webkit-touch-callout: none') && /\.lect-pick select \{[^}]*font: 500 16px/.test(css)],
+  ['Phone polish: each bottom-menu part remembers its page and place (Back and ‹ links too), tapping it again goes to the top; a playlist opens at the top; the chosen chip never moves the page',
+    app.includes('const navAt = {}') && app.includes('scrollAt[location.hash]') && app.includes("history.scrollRestoration = 'manual'") && app.includes("parts[1] === 'playlists' && parts[2]")
+    && app.includes('only the row moves, never the page') && !app.includes("scrollIntoView({ block: 'nearest', inline: 'center' })")],
+  ['Phone polish: scrolling a list puts the keyboard away; the status bar is dark with the player; a recording that won\'t load is tried 4 more times, then says so (not every 1.5 s forever)',
+    app.includes("field?.matches?.('input[type=\"search\"]')") && app.includes("playerOpen ? '#13272a'") && app.includes('if (!retry) recovery.tries = 0;') && app.includes('retry: true })')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

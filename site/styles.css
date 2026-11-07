@@ -141,7 +141,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
 .row-title { display: block; font: 500 19px/1.25 var(--serif); }
 .row-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-3); }
 .row > svg { color: var(--ink-3); width: 18px; height: 18px; }
-a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
+@media (hover: hover) { a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); } }
 
 /* ---------- Controls ---------- */
 .tabs { display: flex; gap: 22px; margin-top: 18px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
@@ -158,7 +158,7 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .btn svg { width: 17px; height: 17px; }
 .text-btn { font-size: 13px; color: var(--teal); }
 .icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--ink-2); flex: none; }
-.icon-btn:hover { background: var(--surface-2); }
+@media (hover: hover) { .icon-btn:hover { background: var(--surface-2); } }
 
 .search { position: relative; margin-top: 18px; }
 .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-3); width: 19px; height: 19px; }
@@ -188,7 +188,7 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .track.playing { background: var(--teal-soft); border-radius: 12px; margin-inline: -10px; padding-inline: 10px; border-bottom-color: transparent; box-shadow: 0 -1px 0 var(--bg); }
 .track.playing .track-title { color: var(--teal-deep); font-weight: 600; }
 .track.playing .track-meta, .track.playing .dl, .track.playing .more { color: var(--teal-deep); }
-.track-main:hover .track-title { color: var(--teal-deep); }
+@media (hover: hover) { .track-main:hover .track-title { color: var(--teal-deep); } }
 .dl { color: var(--ink-3); }
 .track .more { color: var(--ink-3); }
 .track .more svg { width: 20px; height: 20px; }
@@ -209,7 +209,7 @@ a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); }
 .pl-text { min-width: 0; display: flex; flex-direction: column; }
 .pl-name { font: 500 19px/1.25 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-sub { margin-top: 2px; font-size: 13.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pl-row:hover .pl-name { color: var(--teal-deep); }
+@media (hover: hover) { .pl-row:hover .pl-name { color: var(--teal-deep); } }
 .pl-hero { margin-top: 6px; }
 .pl-cover { display: grid; place-items: center; width: min(64vw, 240px); aspect-ratio: 1; margin: 6px auto 20px; border-radius: 6px; overflow: hidden; background: var(--surface-2); box-shadow: 0 14px 40px rgba(20, 40, 42, .28); }
 .pl-cover .tile { font-size: 64px; }
@@ -432,7 +432,8 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .scrub-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 3px; background: rgba(255, 255, 255, .24); overflow: hidden; transition: height .15s; }
 .scrub-fill { width: var(--pct); height: 100%; background: #fff; }
 .scrub-knob { position: absolute; top: 50%; left: var(--pct); width: 13px; height: 13px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); transition: width .15s, height .15s; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
-.scrub-bar.dragging .scrub-track, .scrub-bar:hover .scrub-track { height: 6px; }
+.scrub-bar.dragging .scrub-track { height: 6px; }
+@media (hover: hover) { .scrub-bar:hover .scrub-track { height: 6px; } }
 .scrub-bar.dragging .scrub-knob { width: 18px; height: 18px; }
 .scrub-bar.dragging + .scrub-times { color: var(--ink); }
 .scrub-times { display: flex; justify-content: space-between; margin-top: -4px; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
@@ -475,7 +476,7 @@ dialog::backdrop { background: rgba(16, 40, 43, .4); opacity: var(--pull, 1); } 
 dialog.menu form { display: flex; flex-direction: column; }
 dialog.menu h3 { font-size: 20px; padding: 10px 12px 6px; }
 dialog.menu button { text-align: left; padding: 12px; border-radius: 10px; font-size: 16px; }
-dialog.menu button:hover { background: var(--surface-2); }
+@media (hover: hover) { dialog.menu button:hover { background: var(--surface-2); } }
 dialog.menu button.muted { color: var(--ink-3); }
 /* Menus with icons: the "⋯" menu and the playlist picker */
 dialog.menu button:has(svg) { display: flex; align-items: center; gap: 14px; }
@@ -587,9 +588,9 @@ dialog.video-sheet::backdrop { background: #000; }
 .thumb-play svg { filter: drop-shadow(0 1px 6px rgba(0, 0, 0, .45)); }
 .thumb:not(:has(img)) .thumb-play { color: var(--teal-deep); }
 .thumb-play svg { width: 44px; height: 44px; }
-.thumb:hover img { filter: brightness(.9); }
+@media (hover: hover) { .thumb:hover img { filter: brightness(.9); } }
 .video-title { margin-top: 6px; font: 500 17px/1.3 var(--serif); text-decoration: none; color: var(--ink); }
-.video-title:hover { color: var(--teal-deep); }
+@media (hover: hover) { .video-title:hover { color: var(--teal-deep); } }
 .video-meta { font-size: 12.5px; color: var(--ink-3); }
 .video-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
 .video-actions .text-btn { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
@@ -603,7 +604,7 @@ dialog.video-sheet::backdrop { background: #000; }
 .sc-play { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); color: var(--teal-deep); }
 .sc-play svg { width: 15px; height: 15px; }
 .sc-thumb { flex: none; width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--surface-2); }
-.sc-track:hover .track-title { color: var(--teal-deep); }
+@media (hover: hover) { .sc-track:hover .track-title { color: var(--teal-deep); } }
 .sc-item:has(.sc-slot.playing) .track-title { color: var(--teal-deep); }
 .sc-slot.playing { padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
 .sc-slot.playing iframe { height: 120px; border-radius: 10px; }
@@ -625,7 +626,7 @@ dialog.video-sheet::backdrop { background: #000; }
 .entry-name { flex: 1; min-width: 0; font: 500 17px/1.25 var(--serif); }
 .entry-links small { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 .entry-links a > svg { width: 16px; height: 16px; color: var(--ink-3); }
-.entry-links a:hover .entry-name { color: var(--teal-deep); }
+@media (hover: hover) { .entry-links a:hover .entry-name { color: var(--teal-deep); } }
 .entry-links .muted { margin: 0; padding: 10px 0 12px; font-size: 14px; }
 .howto { margin-top: 34px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .howto summary { padding: 14px 0; font: 500 19px var(--serif); cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
@@ -637,7 +638,7 @@ dialog.video-sheet::backdrop { background: #000; }
 /* Home: the "Install the app" button near the top, and the steps further down */
 .install-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: left; color: var(--ink); transition: var(--press); }
 .install-cta:active { transform: scale(.98); }
-.install-cta:hover { border-color: var(--teal); }
+@media (hover: hover) { .install-cta:hover { border-color: var(--teal); } }
 .install-cta-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--teal-deep); color: var(--bg); }
 .install-cta-icon svg { width: 20px; height: 20px; }
 .install-cta-text { flex: 1; min-width: 0; }
@@ -673,7 +674,7 @@ dialog.video-sheet::backdrop { background: #000; }
 .chips::-webkit-scrollbar { display: none; }
 .chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
 .chip { flex: none; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; color: var(--ink-2); text-decoration: none; white-space: nowrap; }
-.chip:hover { border-color: var(--teal); color: var(--teal-deep); }
+@media (hover: hover) { .chip:hover { border-color: var(--teal); color: var(--teal-deep); } }
 .chip[aria-current="true"] { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--bg); }
 @media (min-width: 960px) { .chips { margin: 0; padding-left: 0; padding-right: 0; flex-wrap: wrap; } }
 .list-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-top: 18px; }
@@ -707,7 +708,7 @@ dialog.video-sheet::backdrop { background: #000; }
 .lyrics-label { display: block; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--teal); }
 .lyrics-name { display: block; margin-top: 2px; font: 500 17px/1.25 var(--serif); }
 .lyrics-by { display: block; margin-top: 1px; font-size: 12.5px; color: var(--ink-3); }
-.lyrics-card:hover .lyrics-name { color: var(--teal-deep); }
+@media (hover: hover) { .lyrics-card:hover .lyrics-name { color: var(--teal-deep); } }
 dialog.sheet { border: 0; padding: 0; width: min(560px, 100%); max-width: 100%; max-height: min(86dvh, 820px); margin: auto auto 0; border-radius: 18px 18px 0 0; background: var(--bg); color: var(--ink); overflow: hidden; }
 dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-up .34s var(--ease-out); }
 @media (min-width: 640px) { dialog.sheet { margin: auto; border-radius: 18px; } }
@@ -738,7 +739,7 @@ dialog.sheet.web iframe { flex: 1; width: 100%; border: 0; background: #fff; }
 body:has(.player:not([hidden])) .toast { top: calc(env(safe-area-inset-top, 0px) + 60px); bottom: auto; transform: translate(-50%, -12px); }
 body:has(.player:not([hidden])) .toast.show { transform: translate(-50%, 0); }
 @media (min-width: 960px) { body:has(.player:not([hidden])) .toast { left: 50%; } }
-dialog.menu .btn:hover { background: var(--teal-deep); }
+@media (hover: hover) { dialog.menu .btn:hover { background: var(--teal-deep); } }
 
 /* Loading: a ring turns around the play buttons while a recording buffers. */
 .is-buffering .play-big, .is-buffering .mini .play-btn { position: relative; }
@@ -805,7 +806,7 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 .lect-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .lect-pick { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; height: 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
 .lect-pick svg { width: 16px; height: 16px; color: var(--teal); flex: none; }
-.lect-pick select { appearance: none; -webkit-appearance: none; border: 0; background: none; color: var(--ink); font: 500 14px var(--sans); padding: 0 22px 0 0; cursor: pointer; outline: none;
+.lect-pick select { appearance: none; -webkit-appearance: none; border: 0; background: none; color: var(--ink); font: 500 16px var(--sans); height: 34px; padding: 0 22px 0 0; cursor: pointer; outline: none;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
   background-position: calc(100% - 9px) 52%, calc(100% - 5px) 52%; background-size: 4px 4px; background-repeat: no-repeat; }
 .lect-suggest { display: flex; gap: 6px; overflow-x: auto; margin: 14px -16px 0; padding: 0 16px 2px; scrollbar-width: none; }
@@ -846,3 +847,18 @@ dialog.menu .btn:hover { background: var(--teal-deep); }
 .is-playing .lect-row.playing .when-paused { display: none; }
 .lect-foot .more { color: var(--ink-3); }
 .lect-sentinel { display: flex; justify-content: center; padding: 18px 0 4px; }
+
+/* ---------- Phone polish (audit, 7 Nov 2026) ---------- */
+/* Small text buttons get a finger-sized tap area without looking any different. */
+.modes a, .text-btn, .lect-tabs button, .player-find { position: relative; }
+.modes a::after, .lect-tabs button::after { content: ""; position: absolute; inset: -8px -6px; }
+.text-btn::after, .player-find::after { content: ""; position: absolute; inset: -10px -4px; }
+@media (pointer: coarse) {
+  /* While a menu or sheet is open, the page behind it stays still (on iPhone it scrolled as you dragged). */
+  body:has(dialog[open]) { overflow: hidden; }
+}
+@media (hover: none) {
+  /* A long press on a button, link or row doesn't select its words or pop up the link menu. */
+  .nav a, .tabs a, .switch a, .modes a, .chip, .entry-links a, .back, .mini, .row, .track-main, .lect-main, .pl-row,
+  .lect-play, .lect-tx, .icon-btn, .btn, .text-btn, .player-find, .sc-track, .thumb, .video-title { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+}
