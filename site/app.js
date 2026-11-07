@@ -490,8 +490,9 @@ function applyTheme() {
   if (S.theme === 'light' || S.theme === 'dark') root.dataset.theme = S.theme;
   else delete root.dataset.theme;
   root.classList.toggle('is-dark', isDark());
-  // The phone's status bar matches the app.
-  for (const m of $$('meta[name="theme-color"]')) m.content = isDark() ? '#0e2427' : '#eeecd9';
+  // The phone's status bar matches the app, and is dark while the (always dark) player is open.
+  const playerOpen = document.getElementById('player')?.hidden === false;
+  for (const m of $$('meta[name="theme-color"]')) m.content = playerOpen ? '#13272a' : isDark() ? '#0e2427' : '#eeecd9';
 }
 function setTheme(theme) {
   S.theme = theme;
@@ -1025,10 +1026,44 @@ let lastViewKey = null;
 let lectScroll = 0;
 
 // Which "page" a link is on: filters and tabs inside the Kirtans page count as the same page.
+// A playlist is a page of its own (it opens at the top, not as far down as the list of playlists was).
 function viewKeyFor(hash) {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  if (parts[0] === 'library' && parts[1] === 'playlists' && parts[2]) return parts.slice(0, 3).join('/');
   return parts[0] === 'kirtans' ? parts.slice(0, 3).join('/') : parts[0] || '';
 }
+
+// Each part of the bottom menu remembers where you were in it (phone polish, 7 Nov 2026), like
+// Spotify: go from Gour Krishna's bhajans to Search and back, and Kirtans opens on the same tab,
+// filter and place down the page. Tapping the part you're already in scrolls back to the top.
+// The phone's back button and a page's own "‹ Back" link also return to the place you left; other
+// links open a page at the top. (Browsers report every link to a #address as a history step, so a
+// real Back is told apart by the page number route() writes into each step it has shown.)
+const navAt = {};       // part of the menu → the page last open in it
+const scrollAt = {};    // page (its address) → how far down it was
+let lastHash = null;
+let backToPlace = false;
+let pageNo = 0;
+// The browser's own scroll restoring on Back would move the page before route() notes where it was.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+const toPlace = () => {
+  backToPlace = true;
+  setTimeout(() => { backToPlace = false; }, 300); // only for the page change this makes
+};
+const navOf = hash => {
+  const section = hash.replace(/^#\/?/, '').split('/')[0];
+  return section === 'play' || !section ? 'home' : section;
+};
+for (const link of $$('[data-nav]')) {
+  link.addEventListener('click', e => {
+    if (navOf(location.hash) === link.dataset.nav && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    } else toPlace();
+  });
+}
+document.addEventListener('click', e => { if (e.target.closest?.('a.back')) toPlace(); });
+window.addEventListener('popstate', e => { if (e.state?.page != null) toPlace(); });
 
 // Going somewhere new draws the page at once and fades it up (.page-enter);
 // filters and tabs inside a page switch instantly, keeping your place.
@@ -1047,8 +1082,12 @@ function route() {
     case 'play': html = homeView(); break;
     default: html = notFound();
   }
-  const navKey = section === 'play' || !section ? 'home' : section;
+  const navKey = navOf(location.hash);
+  // A shared link (#/play/…) or an unknown address isn't a place to come back to.
+  if (section !== 'play' && html !== notFound()) navAt[navKey] = location.hash;
   for (const link of $$('[data-nav]')) {
+    link.dataset.home ??= link.getAttribute('href');
+    link.setAttribute('href', navAt[link.dataset.nav] || link.dataset.home);
     link.toggleAttribute('aria-current', false);
     if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
   }
@@ -1056,13 +1095,22 @@ function route() {
   // Changing a filter or tab within the same list keeps your place on the page.
   const viewKey = viewKeyFor(location.hash);
   if (lastViewKey === 'lectures' && viewKey !== 'lectures') lectScroll = window.scrollY; // come back to the same place
+  if (lastHash !== null && lastHash !== location.hash) scrollAt[lastHash] = window.scrollY;
   const enter = viewKey !== lastViewKey && lastViewKey !== null ? ' page-enter' : '';
   view.innerHTML = `<div class="page${enter}">${offline}${html}</div>`;
 
-  if (viewKey !== lastViewKey) window.scrollTo(0, viewKey === 'lectures' ? lectScroll : 0);
+  if (viewKey !== lastViewKey) window.scrollTo(0, viewKey === 'lectures' ? lectScroll : backToPlace ? scrollAt[location.hash] || 0 : 0);
+  backToPlace = false;
+  lastHash = location.hash;
+  if (history.state?.page == null) history.replaceState({ ...history.state, page: ++pageNo }, '');
   if ($('#storage-note')) showStorage();
   lastViewKey = viewKey;
-  $('.chips [aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  // The chosen chip slides into the middle of its row; only the row moves, never the page.
+  const chosen = $('.chips [aria-current="true"]');
+  if (chosen) {
+    const row = chosen.parentElement;
+    row.scrollLeft += chosen.getBoundingClientRect().left - row.getBoundingClientRect().left - (row.clientWidth - chosen.offsetWidth) / 2;
+  }
 
   const lq = $('#lq');
   if (lq) {
@@ -1143,6 +1191,7 @@ function openPlayer() {
   if (!$('#player').hidden) return;
   $('#player').hidden = false;
   document.body.style.overflow = 'hidden';
+  applyTheme(); // dark status bar
   if (!history.state?.player) history.pushState({ player: true }, '');
 }
 window.addEventListener('popstate', () => {
@@ -1159,6 +1208,7 @@ function closePlayer({ instant = false, fromHistory = false } = {}) {
     player.style.transition = '';
     player.style.transform = '';
     document.body.style.overflow = '';
+    applyTheme();
   };
   if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
   player.classList.add('closing');
@@ -1247,7 +1297,7 @@ async function sourceFor(t) {
 // Only the latest load counts: skipping quickly through recordings (or swiping)
 // must never leave an earlier one playing, or start one at another's position.
 let loadSeq = 0;
-async function load(id, { autoplay = true, at } = {}) {
+async function load(id, { autoplay = true, at, retry = false } = {}) {
   const t = S.byId.get(id);
   if (!t) return;
   if (!playable(id)) {
@@ -1265,7 +1315,9 @@ async function load(id, { autoplay = true, at } = {}) {
   S.current = id;
   S.sessionListened = 0;
   S.counted = false;
-  recovery.tries = 0;
+  // A retry after a dropped connection keeps counting, so a recording that won't load is tried 4 times,
+  // further apart each time, then says so (it used to start again from 0 and retry every 1.5 s forever).
+  if (!retry) recovery.tries = 0;
   store.set('last', id);
   S.lastAt = Date.now();
   store.set('lastAt', S.lastAt);
@@ -1874,7 +1926,7 @@ audio.addEventListener('error', () => {
 function resumeAfterDrop() {
   recovery.waiting = false;
   if (!S.current) return;
-  load(S.current, { at: recovery.at || audio.currentTime });
+  load(S.current, { at: recovery.at || audio.currentTime, retry: true });
 }
 window.addEventListener('online', () => { if (recovery.waiting) resumeAfterDrop(); });
 
@@ -3166,6 +3218,11 @@ function onConnectivity() {
 window.addEventListener('online', onConnectivity);
 window.addEventListener('offline', onConnectivity);
 window.addEventListener('hashchange', route);
+// Scrolling the results puts the keyboard away (iPhone), as in Spotify; what was typed stays.
+document.addEventListener('touchmove', e => {
+  const field = document.activeElement;
+  if (field?.matches?.('input[type="search"]') && !field.contains(e.target)) field.blur();
+}, { passive: true });
 window.addEventListener('pagehide', savePosition);
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installEvent = e; });
 

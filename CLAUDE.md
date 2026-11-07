@@ -176,6 +176,27 @@ R2 bucket `kirtans` at `/stream/*`.
   player and phone menus slide up as bottom sheets and slide down to close, and a new page is drawn at
   once and fades up (`.page-enter`). No View Transitions API: its snapshot step delayed some page
   changes by ~300 ms. Keep interactions instant; motion only decorates.
+- Phone polish (owner, 7 Nov 2026: "more and more glitches… quality-of-life issues" using it on his phone;
+  an audit at iPhone size, light and dark):
+  - Hover styles are only for mice (`@media (hover: hover)`); on a phone, a tapped heart or ⋯ kept its grey
+    circle.
+  - Small text buttons (Year/Place/Length, Save all offline, Show in…, the Lectures tabs) have invisible
+    finger-sized tap areas (`::after`).
+  - On touch screens the page behind an open menu or sheet doesn't scroll (`body:has(dialog[open])`).
+  - Long presses don't select words or pop up the link menu.
+  - The Lectures Year/Language menus are 16px, because iPhones zoom into smaller ones.
+  - Scrolling a list puts the keyboard away.
+  - The status bar's theme-color is dark while the player is open.
+  - Each part of the bottom menu remembers its page and place (`navAt`, `scrollAt`), like Spotify:
+    - That place is restored by the menu, the phone's Back (history steps carry a `page` number, since
+      browsers report every #link as popstate) and "‹" back links. Other links open at the top.
+    - Tapping the part you're in scrolls to the top.
+    - A playlist is its own page (it used to open as far down as the list was).
+    - The chosen chip centres within its row without moving the page.
+  - A recording that won't load is retried 4 times, further apart, then says "Couldn't play this
+    recording". `load()` used to reset the count, so it retried every 1.5 s forever.
+  - Lecture rows with a Video button still wrap onto two lines on phones (tightening them didn't fit talks
+    over an hour); left as it was.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
