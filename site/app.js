@@ -2122,8 +2122,8 @@ function setMediaHandlers() {
   const ms = navigator.mediaSession;
   const handlers = {
     play: () => resume(),
-    pause: () => { audio.pause(); keepAwake.start(); }, // so Play there still works later (see keepAwake)
-    stop: () => { audio.pause(); keepAwake.start(); },
+    pause: () => audio.pause(),
+    stop: () => audio.pause(),
     previoustrack: () => prev(),
     nexttrack: () => next(),
     seekto: e => seekTo(e.seekTime),
@@ -2141,40 +2141,6 @@ function setMediaHandlers() {
 setMediaHandlers();
 // Plays like a music app: through the silent switch, and on with the screen locked.
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
-
-// Play in Control Centre after pausing there (owner, 8 Nov 2026: "when i pause the audio outside of the
-// app and play it again from control centre it doesnt work"). An iPhone freezes a home-screen app a few
-// seconds after its sound stops (logged on his iPhone: about 15 seconds after a pause), and Play can't
-// reach a frozen app (WebKit bug 261858); it only arrives once the app is opened. So a pause from the
-// lock screen, Control Centre or headphones while the app is in the background plays a second of
-// silence on a loop for up to 20 minutes, which keeps the app awake for Play (owner: Play worked after
-// a 2-minute pause). It stops as soon as anything plays, the app is opened, or the 20 minutes are up
-// (then the iPhone freezes the app as before).
-const keepAwake = (() => {
-  let el = null, timer = 0;
-  const silence = () => { // one second of silence as a WAV, made here (no download)
-    const rate = 8000, n = rate, v = new DataView(new ArrayBuffer(44 + n * 2));
-    const text = (at, str) => [...str].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-    text(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); text(8, 'WAVE'); text(12, 'fmt ');
-    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
-    v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); text(36, 'data'); v.setUint32(40, n * 2, true);
-    return URL.createObjectURL(new Blob([v.buffer], { type: 'audio/wav' }));
-  };
-  const stop = () => {
-    clearTimeout(timer);
-    if (el && !el.paused) el.pause();
-  };
-  const start = () => {
-    if (!/iPhone|iPad/.test(navigator.userAgent) || !document.hidden || !S.current) return;
-    el ??= Object.assign(new Audio(silence()), { loop: true });
-    el.play().catch(() => {});
-    clearTimeout(timer);
-    timer = setTimeout(stop, 20 * 60e3);
-  };
-  audio.addEventListener('play', stop);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) stop(); });
-  return { start, stop };
-})();
 
 /* ---------------- updates ---------------- */
 

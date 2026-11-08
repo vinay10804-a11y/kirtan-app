@@ -146,13 +146,13 @@ R2 bucket `kirtans` at `/stream/*`.
   beacon read with `wrangler tail`, since removed): after a pause with the app in the background, the
   audio session goes inactive about 10 seconds later and the app freezes about 15 seconds after the
   pause; a Play pressed after that only arrives when the app is opened (it then starts by itself).
-  Within those seconds Play works. Fix (`keepAwake`): a pause from the lock screen, Control Centre or
-  headphones (the media session's pause/stop) while the app is hidden plays a second of silence (a WAV
-  made in the page) on a loop for up to 20 minutes, keeping the app awake; it stops when anything
-  plays, the app is opened, or after 20 minutes. iPhone/iPad only. Owner tested: Play worked after a
-  2-minute pause. Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but
-  its `state` reads as undefined, so the interruption carry-on above (which waits for "interrupted")
-  doesn't trigger there.
+  Within those seconds Play works. Tried and taken out the same day (`keepAwake`): after such a pause,
+  a second of silence (a WAV made in the page) looped for up to 20 minutes to keep the app awake. Play
+  did then work after 2 minutes, but iOS showed the silence as what was playing: the owner's Pause in
+  Control Centre "turns it off but plays in the background with no audio". Don't try a second audio
+  element again. No fix for now: Apple's limit (WebKit bug 261858). Also seen in that log:
+  `navigator.audioSession` fires `statechange` on his iPhone but its `state` reads as undefined, so the
+  interruption carry-on above (which waits for "interrupted") doesn't trigger there.
 - "Show in Lectures / Kirtans" (owner, 27 Oct 2026, asked for as "Find/Show in Library"; named for the
   section, since Library here is Favourites and Playlists): a button under the player's title and an
   item in ⋯ menus (not on that section's own page). It goes back to the page the recording was
