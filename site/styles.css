@@ -862,3 +862,18 @@ body:has(.player:not([hidden])) .toast.show { transform: translate(-50%, 0); }
   .nav a, .tabs a, .switch a, .modes a, .chip, .entry-links a, .back, .mini, .row, .track-main, .lect-main, .pl-row,
   .lect-play, .lect-tx, .icon-btn, .btn, .text-btn, .player-find, .sc-track, .thumb, .video-title { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 }
+
+/* ---------- Phone run-through (owner's iPhone, 8 Nov 2026) ---------- */
+@media (display-mode: standalone) {
+  /* The top of the full player blends into the dark status bar above it, with no visible edge. */
+  .player-bg::after {
+    background: linear-gradient(180deg, #13272a 0, rgba(19, 39, 42, 0) 72px),
+      linear-gradient(180deg, rgba(0, 0, 0, .12) 0%, rgba(0, 0, 0, .38) 45%, rgba(0, 0, 0, .78) 100%);
+  }
+}
+/* A picture still loading shows a soft square, not an empty gap. */
+.track-thumb > img { background: var(--surface-2); }
+@media (hover: none) and (pointer: coarse) {
+  /* A menu opened with a finger doesn't ring its first item as if it were chosen. */
+  dialog :focus-visible { outline: none; }
+}
