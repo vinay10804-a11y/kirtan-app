@@ -146,13 +146,32 @@ R2 bucket `kirtans` at `/stream/*`.
   beacon read with `wrangler tail`, since removed): after a pause with the app in the background, the
   audio session goes inactive about 10 seconds later and the app freezes about 15 seconds after the
   pause; a Play pressed after that only arrives when the app is opened (it then starts by itself).
-  Within those seconds Play works. Fix (`keepAwake`): a pause from the lock screen, Control Centre or
-  headphones (the media session's pause/stop) while the app is hidden plays a second of silence (a WAV
-  made in the page) on a loop for up to 20 minutes, keeping the app awake; it stops when anything
-  plays, the app is opened, or after 20 minutes. iPhone/iPad only. Owner tested: Play worked after a
-  2-minute pause. Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but
-  its `state` reads as undefined, so the interruption carry-on above (which waits for "interrupted")
-  doesn't trigger there.
+  Within those seconds Play works (WebKit bug 261858). Worked on the same day through iPhone Mirroring
+  with the beacon:
+  - Tried first and taken out: a second `<audio>` looping a second of silence. It kept the app awake,
+    but iOS showed the silence as what was playing ("turns it off but plays in the background with
+    no audio"). Never use a second playing audio element for this.
+  - Shipped, `keepAwake`: after a pause from Control Centre / lock screen / headphones while hidden,
+    Web Audio plays a 1 Hz tone at -80 dB (WebKit doesn't count true silence as playing) for up to 20
+    minutes; it stops on any play or on opening the app. The iPhone keeps the app awake and still shows
+    the paused recording. While it runs the audio session type is "auto", not "playback": with
+    "playback" Control Centre's Play went to the tone instead. Tested 4 times: Play after 90+ seconds
+    resumed at the same moment and played on; Pause/Play worked afterwards; the app showed it right.
+  - A copy of the app closed from the app switcher keeps running while the tone holds it (no
+    pagehide/freeze/unload; it never receives BroadcastChannel messages or newer localStorage, though
+    it can write both), and Control Centre's Play then played from it with no app open. So each copy
+    opened on the home screen puts its id in the Cache API (`kk-open-copy`, read fresh); an older hidden
+    copy that finds a newer id (checked every 5 s) unloads, drops its Control Centre buttons and stops
+    the tone. Seen working once (one second after the new copy opened). A retired copy shown again reloads.
+  - Not fixed: pause inside the app, leave it, Play in Control Centre later. WebKit marks a media element
+    that's paused when the page is hidden as interrupted (`MediaElementSession::visibilityChanged`) and
+    holds play() until the page is visible, so it plays when the app is opened. Tried: holding the app
+    awake on leaving plus moving the recording into a fresh `<audio>` made in a blank document on Play.
+    It worked 2 times out of 5; in the other runs Control Centre switched to another app. Taken out.
+    Control Centre presses do count as taps (`userActivation.isActive` was true).
+  Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but its `state`
+  reads as undefined, so the interruption carry-on above (which waits for "interrupted") doesn't
+  trigger there.
 - "Show in Lectures / Kirtans" (owner, 27 Oct 2026, asked for as "Find/Show in Library"; named for the
   section, since Library here is Favourites and Playlists): a button under the player's title and an
   item in ⋯ menus (not on that section's own page). It goes back to the page the recording was

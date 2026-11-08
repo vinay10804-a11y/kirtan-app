@@ -39,6 +39,15 @@ const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const view = $('#view');
 const audio = $('#audio');
+// Every lasting listener on the player, so a closed copy of the app can drop them (see keepAwake).
+const audioListeners = [];
+const recordListeners = el => {
+  el.addEventListener = (type, fn, opts) => {
+    if (!opts?.once) audioListeners.push([type, fn, opts]);
+    EventTarget.prototype.addEventListener.call(el, type, fn, opts);
+  };
+};
+recordListeners(audio);
 
 const store = {
   get(key, fallback) {
@@ -2129,7 +2138,7 @@ function setMediaHandlers() {
     seekto: e => seekTo(e.seekTime),
   };
   for (const [action, fn] of Object.entries(handlers)) {
-    try { ms.setActionHandler(action, fn); } catch {}
+    try { ms.setActionHandler(action, e => { if (!keepAwake.closedCopy()) fn(e); }); } catch {}
   }
   // Kirtans show previous/next on the lock screen (owner, 24 Oct 2026: iPhones show skips
   // instead whenever these are set). Lectures skip back and forward, as in Apple Podcasts.
@@ -2142,38 +2151,81 @@ setMediaHandlers();
 // Plays like a music app: through the silent switch, and on with the screen locked.
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
 
-// Play in Control Centre after pausing there (owner, 8 Nov 2026: "when i pause the audio outside of the
-// app and play it again from control centre it doesnt work"). An iPhone freezes a home-screen app a few
-// seconds after its sound stops (logged on his iPhone: about 15 seconds after a pause), and Play can't
-// reach a frozen app (WebKit bug 261858); it only arrives once the app is opened. So a pause from the
-// lock screen, Control Centre or headphones while the app is in the background plays a second of
-// silence on a loop for up to 20 minutes, which keeps the app awake for Play (owner: Play worked after
-// a 2-minute pause). It stops as soon as anything plays, the app is opened, or the 20 minutes are up
-// (then the iPhone freezes the app as before).
+// Play in Control Centre after a pause (owner, 8 Nov 2026: "when i pause the audio outside of the app
+// and play it again from control centre it doesnt work"). Logged on his iPhone: about 15 seconds after a
+// pause with the app in the background, the iPhone freezes the app, and a Play pressed after that only
+// arrives once the app is opened (WebKit bug 261858). A second <audio> playing silence kept it awake but
+// became what Control Centre showed (owner: Pause "turns it off but plays in the background with no
+// audio"), so that was taken out. This uses Web Audio instead: the iPhone counts it as playing (so the
+// app stays awake), but shows a real recording in Control Centre before Web Audio, so the paused one
+// stays there with its Play button. The sound is a 1 Hz tone at -80 dB: nothing to hear, but not silence
+// (WebKit doesn't count silence). It starts on a pause from the lock screen, Control Centre or headphones
+// while the app is in the background (that counts as a tap), and stops when anything plays, the app is
+// opened, or after 20 minutes. A pause in the app before leaving it isn't covered (see CLAUDE.md).
 const keepAwake = (() => {
-  let el = null, timer = 0;
-  const silence = () => { // one second of silence as a WAV, made here (no download)
-    const rate = 8000, n = rate, v = new DataView(new ArrayBuffer(44 + n * 2));
-    const text = (at, str) => [...str].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-    text(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); text(8, 'WAVE'); text(12, 'fmt ');
-    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
-    v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); text(36, 'data'); v.setUint32(40, n * 2, true);
-    return URL.createObjectURL(new Blob([v.buffer], { type: 'audio/wav' }));
-  };
+  let ctx = null, timer = 0;
+  const setType = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   const stop = () => {
     clearTimeout(timer);
-    if (el && !el.paused) el.pause();
+    if (!ctx) return;
+    const done = ctx;
+    ctx = null;
+    done.close().catch(() => {});
+    setType('playback'); // as the app always has it (see above)
   };
   const start = () => {
-    if (!/iPhone|iPad/.test(navigator.userAgent) || !document.hidden || !S.current) return;
-    el ??= Object.assign(new Audio(silence()), { loop: true });
-    el.play().catch(() => {});
-    clearTimeout(timer);
+    if (!/iPhone|iPad/.test(navigator.userAgent) || !document.hidden || !S.current || ctx || retired) return;
+    try {
+      // While it runs, the audio session isn't "playback": WebKit only gives Control Centre's buttons to
+      // Web Audio in a "playback" session (tried first: Play went to the tone, not the recording).
+      setType('auto');
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const tone = ctx.createOscillator(), level = ctx.createGain();
+      tone.frequency.value = 1;
+      level.gain.value = 1e-4;
+      tone.connect(level).connect(ctx.destination);
+      tone.start();
+      ctx.resume().catch(() => {});
+    } catch {}
     timer = setTimeout(stop, 20 * 60e3);
   };
   audio.addEventListener('play', stop);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) stop(); });
-  return { start, stop };
+
+  // A copy of the app closed from the app switcher lives on while this holds it awake (seen on his
+  // iPhone): nothing tells it it was closed, and Control Centre's Play then played from it, with no app
+  // open. So each copy that opens on a home screen notes itself in a cache, and an older copy that finds
+  // a newer one there lets go: no hold, no recording, no Control Centre. (A cache, because a closed copy
+  // never hears of BroadcastChannel messages or newer localStorage: both tried.)
+  const me = Math.random().toString(36).slice(2);
+  const homeScreen = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const copies = () => caches.open('kk-open-copy');
+  if (homeScreen && 'caches' in window) copies().then(c => c.put('/__open-copy__', new Response(me))).catch(() => {});
+  let retired = false;
+  const retire = () => {
+    retired = true;
+    stop();
+    for (const [type, fn, opts] of audioListeners) audio.removeEventListener(type, fn, opts);
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = null;
+    for (const action of ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward']) {
+      try { navigator.mediaSession.setActionHandler(action, null); } catch {}
+    }
+  };
+  setInterval(async () => {
+    if (!homeScreen || !document.hidden || retired || !('caches' in window)) return;
+    try {
+      const open = await (await (await copies()).match('/__open-copy__'))?.text();
+      if (open && open !== me && document.hidden) retire();
+    } catch {}
+  }, 5000);
+  // Should a retired copy be shown again after all, it starts afresh.
+  document.addEventListener('visibilitychange', () => { if (retired && !document.hidden) location.reload(); });
+
+  return { start, stop, closedCopy: () => retired };
 })();
 
 /* ---------------- updates ---------------- */
