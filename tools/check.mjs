@@ -89,6 +89,13 @@ const checks = [
     && app.includes('only the row moves, never the page') && !app.includes("scrollIntoView({ block: 'nearest', inline: 'center' })")],
   ['Phone polish: scrolling a list puts the keyboard away; the status bar is dark with the player; a recording that won\'t load is tried 4 more times, then says so (not every 1.5 s forever)',
     app.includes("field?.matches?.('input[type=\"search\"]')") && app.includes("playerOpen ? '#13272a'") && app.includes('if (!retry) recovery.tries = 0;') && app.includes('retry: true })')],
+  // Run-through on the owner's own iPhone (8 Nov 2026, through iPhone Mirroring).
+  ['Phone run-through: the player blends into the dark status bar; the restored player shows its saved place, not 0:00 / 0:00; a stray selected word clears on the next page; pictures show a soft square while loading; a menu opened by touch doesn\'t ring its first item',
+    css.includes('linear-gradient(180deg, #13272a 0, rgba(19, 39, 42, 0) 72px)') && app.includes('const cur = saved > 10 && saved < dur - 10 ? saved : 0;') && app.includes('getSelection()?.removeAllRanges()')
+    && css.includes('.track-thumb > img { background: var(--surface-2); }') && css.includes('dialog :focus-visible { outline: none; }')],
+  ['iPhone: after a pause from the lock screen or Control Centre with the app in the background, a looping second of silence keeps the app awake for up to 20 minutes, so Play there works (owner, 8 Nov 2026)',
+    app.includes('const keepAwake = (() => {') && app.includes('pause: () => { audio.pause(); keepAwake.start(); }') && app.includes('timer = setTimeout(stop, 20 * 60e3);')
+    && app.includes("audio.addEventListener('play', stop);") && !app.includes('PBDBG') && !read('worker/index.js').includes('pb-debug')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

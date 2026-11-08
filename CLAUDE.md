@@ -141,6 +141,18 @@ R2 bucket `kirtans` at `/stream/*`.
   Centre opens it). Only after an interruption (audioSession state "interrupted" while it was playing),
   never after the person's own pause. The update check waits while it's pending and never reloads
   once something plays. Tested with a stand-in audio session in Chromium, not on an iPhone.
+- Play in Control Centre after pausing there (owner, 8 Nov 2026: "when i pause the audio outside of the
+  app and play it again from control centre it doesnt work"). Logged live from his iPhone (a temporary
+  beacon read with `wrangler tail`, since removed): after a pause with the app in the background, the
+  audio session goes inactive about 10 seconds later and the app freezes about 15 seconds after the
+  pause; a Play pressed after that only arrives when the app is opened (it then starts by itself).
+  Within those seconds Play works. Fix (`keepAwake`): a pause from the lock screen, Control Centre or
+  headphones (the media session's pause/stop) while the app is hidden plays a second of silence (a WAV
+  made in the page) on a loop for up to 20 minutes, keeping the app awake; it stops when anything
+  plays, the app is opened, or after 20 minutes. iPhone/iPad only. Owner tested: Play worked after a
+  2-minute pause. Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but
+  its `state` reads as undefined, so the interruption carry-on above (which waits for "interrupted")
+  doesn't trigger there.
 - "Show in Lectures / Kirtans" (owner, 27 Oct 2026, asked for as "Find/Show in Library"; named for the
   section, since Library here is Favourites and Playlists): a button under the player's title and an
   item in ⋯ menus (not on that section's own page). It goes back to the page the recording was
@@ -197,6 +209,18 @@ R2 bucket `kirtans` at `/stream/*`.
     recording". `load()` used to reset the count, so it retried every 1.5 s forever.
   - Lecture rows with a Video button still wrap onto two lines on phones (tightening them didn't fit talks
     over an hour); left as it was.
+- Phone run-through on the owner's own iPhone (8 Nov 2026, through iPhone Mirroring on his Mac):
+  - The top of the full player blends from the status bar's colour (#13272a) into the blurred cover
+    (`display-mode: standalone` only); there was a visible edge.
+  - The restored player (and mini player bar) shows the saved place and time left before Play, as
+    `load()` will use it (`updateNowPlaying`), not 0:00 / 0:00.
+  - A word selected by a long press is unselected on the next page, so its iOS bubble doesn't follow you.
+  - Thumbnails show a soft square (`--surface-2`) while loading, not an empty gap.
+  - A menu opened by touch doesn't ring its first item (`dialog :focus-visible`, touch screens only).
+  - Testing through Mirroring: taps work in the background (app_* tools); mouse drags reach the page's
+    own touch handlers (sheets and the player follow them) but never scroll a page or row; the scroll
+    wheel scrolls, slowly, only with full-screen control. Audio plays on the Mac. Control Centre and the
+    Home Screen are in Mirroring's View menu.
 - Appearance: Automatic (follows the device), Light or Dark, in Library and as a sun/moon button
   (home top bar on phones, side menu on laptops). Stored as `kk.theme`; an inline script in index.html
   applies it before first paint.
