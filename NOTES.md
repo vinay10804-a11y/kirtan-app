@@ -5,6 +5,12 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **To fix: Play in Control Centre after pausing inside the app** (owner, 8 Nov). If you pause in
+  the app, leave it, and later press Play in Control Centre or on the lock screen, it only starts
+  once you open the app. Pausing from Control Centre itself already works (fixed 8 Nov). The cause
+  is an iPhone limit on web apps; what was tried and why it was taken out is in CLAUDE.md, under
+  "Play in Control Centre after pausing there". Test it on the iPhone through iPhone Mirroring.
+
 - **YouTube videos for talks: a helper fills in the sheet** (30 Oct). "Sacinandana Swami talks –
   YouTube links" in your Google Drive lists every English talk; paste a talk's YouTube link next to
   it (Kartik Inspirations and Above the Clouds are left out, as they're audio only). Share it with
