@@ -129,6 +129,8 @@ const checks = [
   ['Recent searches and storage used on the Saved tab', app.includes('function rememberSearch') && app.includes('function showStorage')],
   ['Continue listening across devices (positions sync with the account)', read('site/library.js').includes('positions:') && app.includes('S.posAt')],
   ['Every kirtan levelled to the same loudness', read('tools/build.mjs').includes('TARGET_LUFS') && read('tools/build.mjs').includes('function levelling')],
+  // The Cloudflare key that never runs out (owner, 10 Nov 2026) lives in .env; the repo is public.
+  ['Cloudflare key in .env never goes to GitHub', read('.gitignore').split('\n').includes('.env')],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);

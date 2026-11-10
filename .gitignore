@@ -4,3 +4,4 @@ build/
 source/
 *.zip
 .dev.vars
+.env
