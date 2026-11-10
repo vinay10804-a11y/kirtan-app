@@ -11,6 +11,11 @@ Tick items off (or delete them) as they're done.
   is an iPhone limit on web apps; what was tried and why it was taken out is in CLAUDE.md, under
   "Play in Control Centre after pausing there". Test it on the iPhone through iPhone Mirroring.
 
+- **Cloudflare sign-in: done for good** (10 Nov). On 9 Nov the Mac's Cloudflare sign-in ran out, so for
+  two days new lectures were found and transcribed but didn't reach the app. The Mac now uses a key that
+  never runs out (you made it in Cloudflare and pasted it into `kirtan-app/.env`; it never goes to
+  GitHub). If you ever delete that key in Cloudflare, ask Claude to set up a new one.
+
 - **YouTube videos for talks: a helper fills in the sheet** (30 Oct). "Sacinandana Swami talks –
   YouTube links" in your Google Drive lists every English talk; paste a talk's YouTube link next to
   it (Kartik Inspirations and Above the Clouds are left out, as they're audio only). Share it with

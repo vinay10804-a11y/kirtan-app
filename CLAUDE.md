@@ -261,8 +261,15 @@ The owner is not technical: explain in plain English, one step at a time, and do
    `tools/classify.mjs` until every kirtan sits under the right artist, type, year and place.
 4. Ask which photos are Gour Krishna and which are Sacinandana Swami; rename them so `tools/photos.mjs`
    tags them (names containing "gour" or "sns").
-5. Run `./publish.sh` (add `--download` only to download Japa/Spotify audio). `wrangler login` opens a browser for the owner to click Allow; no API keys are
-   needed on the Mac. If YouTube or Spotify downloads fail, debug them (spotdl may need the owner's own
+5. Run `./publish.sh` (add `--download` only to download Japa/Spotify audio). Cloudflare sign-in: the Mac uses a Cloudflare API token that never
+   expires, in `.env` (git-ignored, checked by check.mjs; Wrangler reads `.env` by itself, so publishing
+   and the lecture job pick it up with no restart). The owner made it (dash.cloudflare.com/profile/api-tokens,
+   template "Edit Cloudflare Workers" plus Account · D1 · Edit, all zones, no expiry) and pasted it after
+   `CLOUDFLARE_API_TOKEN=` in `.env` (10 Nov 2026); never print, copy or commit it. Why: the `wrangler login`
+   sign-in ran out on 9 Nov (its refresh failed while the Mac was offline), and for two days the lecture job
+   found and transcribed new lectures but couldn't put them in the app, with nothing telling the owner. If
+   `wrangler whoami` ever says not logged in again, the token was deleted or revoked: the owner makes a new
+   one the same way. If YouTube or Spotify downloads fail, debug them (spotdl may need the owner's own
    Spotify client ID/secret).
 6. Give the owner the live link, and remind them about Add to Home Screen on their phone.
 
