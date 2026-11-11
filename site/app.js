@@ -2212,10 +2212,11 @@ try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } ca
 // while the app is in the background (that counts as a tap), and stops when anything plays, the app is
 // opened, or after 20 minutes. A pause in the app before leaving it isn't covered (see CLAUDE.md).
 const keepAwake = (() => {
-  let ctx = null, timer = 0;
+  let ctx = null, timer = 0, settle = 0, hiddenAt = 0;
   const setType = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   const stop = () => {
     clearTimeout(timer);
+    clearTimeout(settle);
     if (!ctx) return;
     const done = ctx;
     ctx = null;
@@ -2223,27 +2224,59 @@ const keepAwake = (() => {
     done.close().catch(() => {});
     setType('playback'); // as the app always has it (see above)
   };
+  // Makes the tone (in place of the one before, if any).
+  const tone = () => {
+    const old = ctx, mine = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = mine;
+    const osc = mine.createOscillator(), level = mine.createGain();
+    osc.frequency.value = 1;
+    level.gain.value = 1e-4;
+    osc.connect(level).connect(mine.destination);
+    osc.start();
+    mine.resume().catch(() => {});
+    mine.onstatechange = () => {
+      DBG('awake:ctx', `ctx=${mine.state} mine=${+(mine === ctx)}`);
+      // Silenced by something else (another app's sound, a call): let go, so that it is never started
+      // again over another app's sound. Not in the two seconds of leaving the app: see leave().
+      if (mine !== ctx || mine.state !== 'interrupted') return;
+      if (!document.hidden || (hiddenAt && Date.now() - hiddenAt > 2000)) stop();
+    };
+    old?.close().catch(() => {});
+    DBG('awake:tone', `ctx=${mine.state}`);
+  };
+  // The audio session's type decides two things for the tone (WebKit, AudioContext.cpp). "playback": it
+  // survives the app going to the background and can start there (shouldOverrideBackgroundPlayback-
+  // Restriction), but Control Centre's buttons go to the tone, not the recording (isNowPlayingEligible).
+  // "auto": the buttons go to the recording, but a tone that is there as the app goes to the background,
+  // or starts there, is silenced and the app freezes 10 seconds later (all seen on his iPhone, 11 Nov
+  // 2026). So: "auto" while the app is on screen; on leaving, a new tone under "playback" (the old one
+  // may be silenced already), and "auto" again once that is safely running.
+  const leave = () => {
+    clearTimeout(settle);
+    setType('playback');
+    tone();
+    settle = setTimeout(() => { if (ctx && document.hidden) { setType('auto'); DBG('awake:auto', `ctx=${ctx.state}`); } }, 1500);
+  };
   const start = () => {
     if (!onIOS || !S.current || ctx || retired) return;
     try {
-      // While it runs, the audio session isn't "playback": WebKit only gives Control Centre's buttons to
-      // Web Audio in a "playback" session (tried first: Play went to the tone, not the recording).
-      setType('auto');
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const tone = ctx.createOscillator(), level = ctx.createGain();
-      tone.frequency.value = 1;
-      level.gain.value = 1e-4;
-      tone.connect(level).connect(ctx.destination);
-      tone.start();
-      ctx.resume().catch(() => {});
-      DBG('awake:start', `ctx=${ctx.state}`);
-      ctx.onstatechange = () => DBG('awake:ctx', `ctx=${ctx?.state}`);
+      if (document.hidden) leave();
+      else {
+        setType('auto');
+        tone();
+      }
     } catch {}
     timer = setTimeout(stop, 20 * 60e3);
   };
   audio.addEventListener('play', stop);
   document.addEventListener('visibilitychange', () => {
-    DBG('vis2', `ctx=${ctx?.state || 'none'}`);
+    hiddenAt = document.hidden ? Date.now() : 0;
+    clearTimeout(settle);
+    if (!ctx) return;
+    try {
+      if (document.hidden) leave();
+      else setType('auto');
+    } catch {}
   });
   setInterval(() => { if (document.hidden) DBG('tick', `ctx=${ctx?.state || 'none'}`); }, 5000); // TEMPORARY
 

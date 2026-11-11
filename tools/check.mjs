@@ -94,7 +94,7 @@ const checks = [
     css.includes('linear-gradient(180deg, #13272a 0, rgba(19, 39, 42, 0) 72px)') && app.includes('const cur = saved > 10 && saved < dur - 10 ? saved : 0;') && app.includes('getSelection()?.removeAllRanges()')
     && css.includes('.track-thumb > img { background: var(--surface-2); }') && css.includes('dialog :focus-visible { outline: none; }')],
   ['iPhone, Play in Control Centre after a pause there (tested on the owner\'s iPhone, 8 Nov 2026): Web Audio, never a second playing <audio> (that took over Control Centre), keeps the app awake for up to 20 minutes; a copy closed from the app switcher lets go once a newer copy opens; no swapped <audio> (unreliable)',
-    app.includes('const keepAwake = (() => {') && app.includes('ctx.createOscillator()') && app.includes('pause: () => { audio.pause(); keepAwake.start(); }')
+    app.includes('const keepAwake = (() => {') && app.includes('.createOscillator()') && app.includes('pause: () => { audio.pause(); keepAwake.start(); }')
     && app.includes('timer = setTimeout(stop, 20 * 60e3);') && !app.includes('audio/wav') && !app.includes('new Audio(')
     && app.includes("c.put('/__open-copy__', new Response(me))") && app.includes('if (!keepAwake.closedCopy()) fn(e);')
     && !app.includes('freshAudio') && !app.includes('pb-debug') && !read('worker/index.js').includes('pb-debug')],

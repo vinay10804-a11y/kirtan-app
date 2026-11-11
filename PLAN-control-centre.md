@@ -259,3 +259,26 @@ Tested on the owner's iPhone through Mirroring with a beacon (`/api/ccdbg`, `DBG
   `ctx.resume()` from the `statechange` to "interrupted" brings the tone back; (3) otherwise accept the
   limit and make "tap the recording in Control Centre to open the app, it plays by itself" reliable.
 - Also seen: Control Centre shows 10-second skip buttons for a paused kirtan, not previous/next.
+
+## Result, 11 Nov late evening: the in-app pause case works on the branch (not yet published)
+
+The fix on `control-centre-fix` (site/app.js: `onIOS` video player, `keepPlayerVisible`, `keepAwake`):
+1. On iPhones the player is a `<video>` drawn once to a 1-pixel canvas after each load, so WebKit never
+   counts it as hidden and never interrupts it when the app is left paused.
+2. The stay-awake tone starts at the in-app pause too (`togglePlay`). Its survival depends on
+   `navigator.audioSession.type` (WebKit AudioContext.cpp): "playback" lets it survive going to the
+   background but sends Control Centre's buttons to the tone; "auto" sends them to the recording but the
+   tone is silenced on leaving. So: "auto" on screen; on leaving, a new tone under "playback", then "auto"
+   1.5 s later.
+Passed on his iPhone with the earlier variant (tone under "playback" on screen): in-app pause, leave,
+Play after 85 s, 95 s and 4 min; Next after 100 s; Control Centre pause then Play after 85 s; next
+recording starts by itself in the background; kirtans show previous/next, lectures 15/30 s skips.
+That variant failed one case (Control Centre opened over the app: Play went to the tone), hence the
+"auto on screen" version, which passed: Play with Control Centre over the app, and Control Centre pause
+then Play after 90 s. STILL TO RUN with this final version: in-app pause, leave, Play (5 runs); close
+from the app switcher and reopen (one copy only); a lecture; then remove the temporary logging (`DBG`,
+`/api/ccdbg`, the 5 s tick), update check.mjs/CLAUDE.md/NOTES.md, publish and merge.
+Automation note: the first click sent straight after opening Control Centre is often lost; take a
+screenshot first.
+Not fixable from a web app: Play after another app's sound once the app is frozen (no way to stay awake
+while another app holds the sound; `audioSession.state` is unreadable on his phone).
