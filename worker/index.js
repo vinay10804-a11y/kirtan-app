@@ -13,6 +13,8 @@ export default {
     const url = new URL(request.url);
     // The password-protected Lectures test section (worker/lectures.js).
     if (url.pathname === '/api/lectures' || url.pathname.startsWith('/api/lectures/') || url.pathname.startsWith('/lecture-audio/') || url.pathname.startsWith('/dm-audio/')) return lectures(request, env, url);
+    // TEMPORARY (Control Centre testing): the phone's log lines, read with `wrangler tail`.
+    if (url.pathname === '/api/ccdbg') { console.log('CCDBG ' + (await request.text()).slice(0, 400)); return new Response(null, { status: 204 }); }
     if (url.pathname.startsWith('/api/')) return api(request, env, url);
     if (url.pathname.startsWith('/k/') && request.method === 'GET') return sharePage(request, env, url);
     if (AUDIO_PATH.test(url.pathname)) {

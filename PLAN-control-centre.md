@@ -235,3 +235,27 @@ keepAwake gives up after 20 minutes to save battery. Ask the owner whether he wa
   "Switching to another app on iPhone").
 - Known, left as it was: on phones, lecture rows with a Video button wrap onto two lines.
 -
+
+## Findings, 11 Nov evening (work in progress on branch `control-centre-fix`)
+
+Tested on the owner's iPhone through Mirroring with a beacon (`/api/ccdbg`, `DBG()` in app.js, both temporary).
+- The simulator can't test this: its Control Centre has no player and its lock screen shows no buttons.
+- `navigator.audioSession.state` reads `undefined` on his iPhone; `statechange` does fire.
+- Cause, from WebKit's source: `MediaElementSession::visibilityChanged` interrupts a player that isn't
+  playing when the page is hidden. That also clears `hasPlayedAudiblySinceLastInterruption`, so the app
+  stops counting as one that plays sound; the iPhone freezes it about 10 s later and Play never arrives
+  (the log shows no `action:play`, and Control Centre may switch to another app).
+- Tried: the player as a `<video>` drawn to a canvas (`elementIsHidden()` is false while
+  `isVisibleForCanvas`; `drawImage(video,0,0,1,1,0,0,1,1)` didn't throw). Can't yet tell if it stops the
+  interruption, because the app still froze.
+- The stay-awake tone is the blocker. Started 2 s after leaving: `ctx.state` is "interrupted" at once.
+  Started at the in-app pause (state "running"): it turns "interrupted" the moment the app is left
+  (WebKit: Web Audio has BackgroundProcessPlaybackRestricted). It only survives when started in the
+  background from a Control Centre press, which is why pausing there works.
+- Next ideas: (1) on leaving after an in-app pause, keep the app "playing" another way than Web Audio,
+  e.g. the `<video>` itself playing on at a point where it is silent is not possible, so test whether the
+  canvas-visible `<video>` alone keeps Control Centre's Play arriving in the ~10 s before the freeze, and
+  whether a Play that arrives late (on opening the app) can be made to start at once; (2) check if
+  `ctx.resume()` from the `statechange` to "interrupted" brings the tone back; (3) otherwise accept the
+  limit and make "tap the recording in Control Centre to open the app, it plays by itself" reliable.
+- Also seen: Control Centre shows 10-second skip buttons for a paused kirtan, not previous/next.

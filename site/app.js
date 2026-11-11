@@ -38,7 +38,29 @@ const LENGTHS = [
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const view = $('#view');
-const audio = $('#audio');
+// The player. On iPhones and iPads it is a <video> (playing sound only), kept "visible through a canvas":
+// see keepPlayerVisible below.
+const onIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const audio = (() => {
+  const el = $('#audio');
+  if (!onIOS) return el;
+  const video = document.createElement('video');
+  video.id = el.id;
+  video.preload = el.preload;
+  video.playsInline = true;
+  video.setAttribute('playsinline', '');
+  video.hidden = true;
+  el.replaceWith(video);
+  return video;
+})();
+// TEMPORARY (Control Centre testing, Nov 2026): what the phone does, sent to the Worker's log.
+const DBGID = Math.random().toString(36).slice(2, 6);
+const DBG = (tag, extra = '') => {
+  try {
+    const line = `${DBGID} ${new Date().toISOString().slice(11, 23)} ${tag} hid=${+document.hidden} paused=${+audio.paused} t=${(audio.currentTime || 0).toFixed(1)} rs=${audio.readyState} as=${navigator.audioSession?.type}/${navigator.audioSession?.state} ua=${+(navigator.userActivation?.isActive || false)} ${extra}`;
+    navigator.sendBeacon('/api/ccdbg', line);
+  } catch {}
+};
 // Every lasting listener on the player, so a closed copy of the app can drop them (see keepAwake).
 const audioListeners = [];
 const recordListeners = el => {
@@ -48,6 +70,30 @@ const recordListeners = el => {
   };
 };
 recordListeners(audio);
+for (const type of ['play', 'playing', 'pause', 'waiting', 'stalled', 'error', 'emptied', 'loadedmetadata']) audio.addEventListener(type, () => DBG(`audio:${type}`, type === 'error' ? `code=${audio.error?.code}` : ''));
+try { navigator.audioSession?.addEventListener('statechange', () => DBG('as:statechange')); } catch {}
+document.addEventListener('visibilitychange', () => DBG('vis'));
+
+// Play in Control Centre after pausing in the app and then leaving it (owner, 8 and 11 Nov 2026). WebKit
+// marks a player that isn't playing when the app goes to the background as interrupted ("Suspending
+// silent playback", MediaElementSession::visibilityChanged): it then holds back any Play until the app
+// is on screen again, and stops counting the app as one that plays sound, so the iPhone freezes it and
+// gives Control Centre to another app. A player only counts as hidden while it isn't drawn to a canvas
+// (HTMLMediaElement::elementIsHidden, HTMLVideoElement::paintCurrentFrameInContext), and only a <video>
+// can be drawn. So on iPhones the player is a <video>, drawn once to a 1-pixel canvas each time a
+// recording has loaded: it is never marked, and a pause in the app is like a pause in Control Centre.
+const keepPlayerVisible = (() => {
+  if (!onIOS) return () => {};
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d');
+  return () => {
+    if (audio.readyState < 2) return;
+    try { ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1); DBG('visible:drawn'); } catch (e) { DBG('visible:failed', e.name); }
+  };
+})();
+for (const type of ['loadeddata', 'canplay', 'playing', 'pause']) audio.addEventListener(type, keepPlayerVisible);
+document.addEventListener('visibilitychange', keepPlayerVisible);
 
 const store = {
   get(key, fallback) {
@@ -1468,7 +1514,10 @@ function togglePlay() {
   if (!S.current) return;
   interruption.at = 0;
   if (audio.paused) resume();
-  else audio.pause();
+  else {
+    audio.pause();
+    keepAwake.start(); // so Play in Control Centre works after leaving the app (see keepAwake)
+  }
 }
 // Plays on from where it is. A recording whose connection broke while it sat paused in the
 // background (see the 'error' handler) is loaded again from the same moment.
@@ -2138,7 +2187,7 @@ function setMediaHandlers() {
     seekto: e => seekTo(e.seekTime),
   };
   for (const [action, fn] of Object.entries(handlers)) {
-    try { ms.setActionHandler(action, e => { if (!keepAwake.closedCopy()) fn(e); }); } catch {}
+    try { ms.setActionHandler(action, e => { DBG(`action:${action}`); if (!keepAwake.closedCopy()) fn(e); }); } catch {}
   }
   // Kirtans show previous/next on the lock screen (owner, 24 Oct 2026: iPhones show skips
   // instead whenever these are set). Lectures skip back and forward, as in Apple Podcasts.
@@ -2170,11 +2219,12 @@ const keepAwake = (() => {
     if (!ctx) return;
     const done = ctx;
     ctx = null;
+    DBG('awake:stop');
     done.close().catch(() => {});
     setType('playback'); // as the app always has it (see above)
   };
   const start = () => {
-    if (!/iPhone|iPad/.test(navigator.userAgent) || !document.hidden || !S.current || ctx || retired) return;
+    if (!onIOS || !S.current || ctx || retired) return;
     try {
       // While it runs, the audio session isn't "playback": WebKit only gives Control Centre's buttons to
       // Web Audio in a "playback" session (tried first: Play went to the tone, not the recording).
@@ -2186,11 +2236,16 @@ const keepAwake = (() => {
       tone.connect(level).connect(ctx.destination);
       tone.start();
       ctx.resume().catch(() => {});
+      DBG('awake:start', `ctx=${ctx.state}`);
+      ctx.onstatechange = () => DBG('awake:ctx', `ctx=${ctx?.state}`);
     } catch {}
     timer = setTimeout(stop, 20 * 60e3);
   };
   audio.addEventListener('play', stop);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) stop(); });
+  document.addEventListener('visibilitychange', () => {
+    DBG('vis2', `ctx=${ctx?.state || 'none'}`);
+  });
+  setInterval(() => { if (document.hidden) DBG('tick', `ctx=${ctx?.state || 'none'}`); }, 5000); // TEMPORARY
 
   // A copy of the app closed from the app switcher lives on while this holds it awake (seen on his
   // iPhone): nothing tells it it was closed, and Control Centre's Play then played from it, with no app
@@ -2204,6 +2259,7 @@ const keepAwake = (() => {
   let retired = false;
   const retire = () => {
     retired = true;
+    DBG('retire');
     stop();
     for (const [type, fn, opts] of audioListeners) audio.removeEventListener(type, fn, opts);
     audio.pause();
