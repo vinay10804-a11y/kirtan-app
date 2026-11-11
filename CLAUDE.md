@@ -169,6 +169,8 @@ R2 bucket `kirtans` at `/stream/*`.
     awake on leaving plus moving the recording into a fresh `<audio>` made in a blank document on Play.
     It worked 2 times out of 5; in the other runs Control Centre switched to another app. Taken out.
     Control Centre presses do count as taps (`userActivation.isActive` was true).
+    **Next attempt: follow `PLAN-control-centre.md`** (11 Nov 2026). It has the test scenarios, the
+    logging, the ideas not yet tried, the iOS Simulator's place in testing, and the pass marks.
   Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but its `state`
   reads as undefined, so the interruption carry-on above (which waits for "interrupted") doesn't
   trigger there.

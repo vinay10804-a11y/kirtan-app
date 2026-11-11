@@ -10,6 +10,9 @@ Tick items off (or delete them) as they're done.
   once you open the app. Pausing from Control Centre itself already works (fixed 8 Nov). The cause
   is an iPhone limit on web apps; what was tried and why it was taken out is in CLAUDE.md, under
   "Play in Control Centre after pausing there". Test it on the iPhone through iPhone Mirroring.
+  **Plan for fixing it (11 Nov): PLAN-control-centre.md** in the kirtan-app folder. Start a session
+  there and say "Read PLAN-control-centre.md and work through it with iPhone Mirroring"; add any
+  other bugs you've seen at the bottom of that file first.
 
 - **Cloudflare sign-in: done for good** (10 Nov). On 9 Nov the Mac's Cloudflare sign-in ran out, so for
   two days new lectures were found and transcribed but didn't reach the app. The Mac now uses a key that
