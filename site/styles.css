@@ -237,8 +237,18 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
 .pl-edit .icon-btn[disabled] { opacity: .25; }
 .pl-edit .icon-btn { color: var(--ink-3); }
 .pl-grip { touch-action: none; cursor: grab; }
-.pl-edit.sorting .track { transition: transform .18s var(--ease-out); }
-.pl-edit .track.dragging { position: relative; z-index: 2; transition: none; cursor: grabbing; background: var(--surface); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, .28); }
+.tracks.sorting .track { transition: transform .18s var(--ease-out); }
+.tracks .track.dragging { position: relative; z-index: 2; transition: none; cursor: grabbing; background: var(--surface); border-radius: 10px; box-shadow: 0 10px 28px rgba(0, 0, 0, .28); }
+/* A playlist's rows can be held and dragged (see dragToReorder): no long-press text selection. */
+.tracks[data-pl] .track { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* Choosing a playlist's cover (the ⋯ menu's Choose cover). */
+.cover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 10px; max-height: 50vh; overflow-y: auto; }
+#track-menu .cover-choice { display: grid; gap: 4px; width: auto; padding: 4px; margin: 0; border: 0; background: none; border-radius: 10px; }
+.cover-choice .pic { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+.cover-choice .pic > img, .cover-choice .pic > .tile { width: 100%; height: 100%; border-radius: 0; object-fit: cover; }
+.cover-choice.chosen .pic { outline: 2px solid var(--teal); outline-offset: 2px; }
+.cover-choice .lbl { font-size: 11px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .pl-hint { margin: 0 0 8px; }
 .pl-hint svg { width: 15px; height: 15px; vertical-align: -3px; }
 .btn.small { padding: 7px 14px; font-size: 14px; }

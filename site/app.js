@@ -478,7 +478,7 @@ function extrasHTML(t) {
 
 function trackList(tracks, listKey, opts) {
   S.lists[listKey] = tracks.map(t => t.id);
-  return `<ul class="tracks">${tracks.map((t, i) => trackRow(t, i, listKey, opts)).join('')}</ul>`;
+  return `<ul class="tracks"${opts.pl ? ` data-pl="${opts.pl}"` : ''}>${tracks.map((t, i) => trackRow(t, i, listKey, opts)).join('')}</ul>`;
 }
 
 function saveListButton(listKey) {
@@ -898,7 +898,7 @@ function libraryView(tab = 'favourites', sub) {
     // Like Spotify's library: a row per playlist with its cover, name and size.
     const rows = S.playlists.map(p => {
       const list = playlistTracks(p);
-      return `<a class="pl-row" href="#/library/playlists/${p.id}"><span class="pl-thumb">${playlistCover(list)}</span>
+      return `<a class="pl-row" href="#/library/playlists/${p.id}"><span class="pl-thumb">${playlistCover(list, p)}</span>
         <span class="pl-text"><span class="pl-name">${esc(p.name)}</span>
         <span class="pl-sub">Playlist · ${sizeOf(list)}</span></span></a>`;
     }).join('');
@@ -966,7 +966,7 @@ function playlistView(id) {
   const what = S.lectState === 'ready' ? 'kirtans or lectures' : 'kirtans';
   return `<a class="back" href="#/library/playlists">${icon('left')}Playlists</a>
     <div class="pl-hero">
-      <span class="pl-cover">${playlistCover(list)}</span>
+      <span class="pl-cover">${playlistCover(list, p)}</span>
       <h1 class="pl-title">${esc(p.name)}</h1>
       <p class="page-sub">Playlist · ${sizeOf(list)}</p>
     </div>
@@ -980,8 +980,11 @@ function playlistView(id) {
 }
 
 // A playlist's cover, as on Spotify: four of its kirtans' pictures in a square, or
-// one picture; an empty playlist gets the playlist icon.
-function playlistCover(list) {
+// one picture; an empty playlist gets the playlist icon. The owner of a playlist can
+// choose one of its recordings' pictures instead (p.cover, the recording's id).
+function playlistCover(list, p) {
+  const chosen = p?.cover && S.byId.get(p.cover);
+  if (chosen && artFor(chosen)) return artHTML(chosen);
   const pics = [...new Set(list.map(artFor).filter(Boolean))];
   if (pics.length >= 4) return `<span class="pl-mosaic">${pics.slice(0, 4).map(src => `<img src="${esc(src)}" alt="" data-fallback="">`).join('')}</span>`;
   if (pics.length) return `<img src="${esc(pics[0])}" alt="" data-fallback="${esc(initialsFor(list[0].artist))}">`;
@@ -999,9 +1002,29 @@ function openPlaylistMenu(id) {
   $('#track-menu').innerHTML = `<h3 class="menu-title">${esc(p.name)}<small>Playlist · ${list.length ? countOf(list) : 'Empty'}</small></h3>
     ${item('pl-add', 'plus', 'Add to this playlist')}
     ${list.length ? item('pl-edit', 'queue', 'Edit playlist') : ''}
+    ${list.length ? item('pl-cover-menu', 'photo', 'Choose cover') : ''}
     ${'caches' in window && unsaved ? item('save-list', 'download', `Save ${unsaved === list.length ? 'all' : unsaved} offline`, `data-list="${key}"`) : ''}
     ${item('pl-rename', 'playlist', 'Rename')}
     ${item('pl-delete', 'trash', 'Delete playlist', 'class="danger"')}
+    <button value="cancel" class="muted">Cancel</button>`;
+  $('#track-dialog').showModal();
+}
+
+// Choosing a playlist's cover (owner, 13 Nov 2026): Automatic (its recordings' pictures
+// in a mosaic) or any one recording's picture. The choice is stored as the recording's
+// id, so it syncs with the playlist and keeps working if picture files move.
+function openCoverPicker(id) {
+  const p = playlistById(id);
+  if (!p) return;
+  const list = playlistTracks(p);
+  const seen = new Set();
+  const choices = list.filter(t => { const a = artFor(t); return a && !seen.has(a) && seen.add(a); });
+  const tileFor = (t, chosen, label, inner) => `<button value="pl-cover" data-action="pl-cover" data-pl="${p.id}"${t ? ` data-id="${t.id}"` : ''} class="cover-choice${chosen ? ' chosen' : ''}" aria-pressed="${chosen}"><span class="pic">${inner}</span><span class="lbl">${esc(label)}</span></button>`;
+  $('#track-menu').innerHTML = `<h3 class="menu-title">Choose a cover<small>${esc(p.name)}</small></h3>
+    <div class="cover-grid">
+      ${tileFor(null, !p.cover, 'Automatic', playlistCover(list))}
+      ${choices.map(t => tileFor(t, p.cover === t.id, t.title, artHTML(t, true))).join('')}
+    </div>
     <button value="cancel" class="muted">Cancel</button>`;
   $('#track-dialog').showModal();
 }
@@ -2395,7 +2418,7 @@ function playingFrom() {
 // Saves playlists on this device, noting which ones changed or were deleted so
 // an account can merge them with other devices.
 let plShape = null;
-const shapeOf = p => JSON.stringify([p.name, p.ids]);
+const shapeOf = p => JSON.stringify([p.name, p.ids, p.cover ?? null]);
 function savePlaylists() {
   const now = Date.now();
   plShape ??= new Map();
@@ -2453,7 +2476,7 @@ function movePlaylistItem(p, id, dir) {
 // The row follows the finger and the others make room; near the top or bottom of the screen
 // the page scrolls along. The up and down arrow keys on a handle move it one place.
 (function dragToReorder() {
-  let drag = null;
+  let drag = null, press = null, lifted = false;
   const place = () => {
     const { rows, from, mids, h } = drag;
     const dy = drag.y - drag.y0 + (scrollY - drag.s0);
@@ -2477,29 +2500,50 @@ function movePlaylistItem(p, id, dir) {
     }
     requestAnimationFrame(scroll);
   };
-  document.addEventListener('pointerdown', e => {
-    const grip = e.target.closest('.pl-grip');
-    if (!grip || e.button > 0) return;
-    e.preventDefault();
-    const li = grip.closest('li'), rows = [...li.parentElement.children];
+  const lift = (li, e, hold) => {
+    const rows = [...li.parentElement.children];
     drag = {
-      ul: li.parentElement, li, rows, from: rows.indexOf(li), to: rows.indexOf(li), y: e.clientY, y0: e.clientY, s0: scrollY,
+      ul: li.parentElement, li, rows, from: rows.indexOf(li), to: rows.indexOf(li), y: e.clientY, y0: e.clientY, s0: scrollY, hold,
       mids: rows.map(r => { const b = r.getBoundingClientRect(); return b.top + b.height / 2; }), h: li.getBoundingClientRect().height,
     };
-    try { grip.setPointerCapture(e.pointerId); } catch {} // so the finger can leave the handle
+    try { li.setPointerCapture(e.pointerId); } catch {} // so the finger can leave the row
     li.classList.add('dragging');
     drag.ul.classList.add('sorting');
     requestAnimationFrame(scroll);
+  };
+  document.addEventListener('pointerdown', e => {
+    const grip = e.target.closest('.pl-grip');
+    if (grip && e.button === 0) {
+      e.preventDefault();
+      lift(grip.closest('li'), e, false);
+      return;
+    }
+    // Holding a recording in a playlist for a moment lifts it too, so the order can be
+    // changed right in the playlist, without opening Edit (owner, 13 Nov 2026). A hold
+    // that moves early is a scroll, and buttons and links keep working as before.
+    const li = e.target.closest('ul[data-pl] > li');
+    if (!li || drag || e.button > 0 || e.target.closest('button, a')) return;
+    press = { x: e.clientX, y: e.clientY, t: setTimeout(() => { press = null; lift(li, e, true); }, 350) };
   });
   document.addEventListener('pointermove', e => {
+    if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) { clearTimeout(press.t); press = null; }
     if (!drag) return;
     drag.y = e.clientY;
     place();
   });
+  // While a row is lifted, the finger moves the row, never the page; and the tap that
+  // ends the hold doesn't also open or play what's under it.
+  document.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });
+  document.addEventListener('click', e => { if (lifted) { lifted = false; e.preventDefault(); e.stopPropagation(); } }, true);
   const drop = () => {
+    if (press) { clearTimeout(press.t); press = null; }
     if (!drag) return;
-    const { ul, li, rows, from, to } = drag;
+    const { ul, li, rows, from, to, hold } = drag;
     drag = null;
+    if (hold) {
+      lifted = true;
+      setTimeout(() => { lifted = false; }, 0);
+    }
     ul.classList.remove('sorting');
     li.classList.remove('dragging');
     for (const r of rows) r.style.transform = '';
@@ -2511,6 +2555,8 @@ function movePlaylistItem(p, id, dir) {
     savePlaylists();
     li.remove();
     ul.insertBefore(li, ul.children[to] || null); // in place, so the page doesn't jump
+    S.lists[`pl:${p.id}`] = playlistTracks(p).map(t => t.id);
+    [...ul.children].forEach((r, j) => { if ('i' in r.dataset) r.dataset.i = j; });
   };
   document.addEventListener('pointerup', drop);
   document.addEventListener('pointercancel', drop);
@@ -3286,6 +3332,12 @@ document.addEventListener('click', async e => {
       $('#add-body').scrollTop = 0;
       break;
     case 'pl-menu': openPlaylistMenu(el.dataset.pl); break;
+    case 'pl-cover-menu': openCoverPicker(el.dataset.pl); break;
+    case 'pl-cover': {
+      const p = playlistById(el.dataset.pl);
+      if (p) { el.dataset.id ? (p.cover = el.dataset.id) : delete p.cover; savePlaylists(); route(); }
+      break;
+    }
     case 'pl-add-toggle': {
       const p = playlistById(el.dataset.pl);
       if (!p) break;
