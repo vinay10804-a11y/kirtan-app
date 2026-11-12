@@ -98,6 +98,10 @@ const checks = [
     && app.includes('timer = setTimeout(stop, 20 * 60e3);') && !app.includes('audio/wav') && !app.includes('new Audio(')
     && app.includes("c.put('/__open-copy__', new Response(me))") && app.includes('if (!keepAwake.closedCopy()) fn(e);')
     && !app.includes('freshAudio') && !app.includes('pb-debug') && !read('worker/index.js').includes('pb-debug')],
+  ['iPhone, Play in Control Centre after a pause in the app and then leaving it (tested on the owner\'s iPhone, 12 Nov 2026): the player is a <video> drawn to a 1-pixel canvas so it is never marked hidden; the tone starts at an in-app pause, under "auto" while on screen and made afresh under "playback" on leaving; no test logging left in',
+    app.includes('const keepPlayerVisible = (() => {') && app.includes("document.createElement('video')") && app.includes('ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1)')
+    && app.includes('    audio.pause();\n    keepAwake.start(); // so Play in Control Centre') && app.includes('const leave = () => {') && app.includes("setType('auto')")
+    && !app.includes('ccdbg') && !app.includes('DBG(') && !read('worker/index.js').includes('ccdbg')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],

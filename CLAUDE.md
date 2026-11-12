@@ -163,14 +163,16 @@ R2 bucket `kirtans` at `/stream/*`.
     opened on the home screen puts its id in the Cache API (`kk-open-copy`, read fresh); an older hidden
     copy that finds a newer id (checked every 5 s) unloads, drops its Control Centre buttons and stops
     the tone. Seen working once (one second after the new copy opened). A retired copy shown again reloads.
-  - Not fixed: pause inside the app, leave it, Play in Control Centre later. WebKit marks a media element
-    that's paused when the page is hidden as interrupted (`MediaElementSession::visibilityChanged`) and
-    holds play() until the page is visible, so it plays when the app is opened. Tried: holding the app
-    awake on leaving plus moving the recording into a fresh `<audio>` made in a blank document on Play.
-    It worked 2 times out of 5; in the other runs Control Centre switched to another app. Taken out.
-    Control Centre presses do count as taps (`userActivation.isActive` was true).
-    **Next attempt: follow `PLAN-control-centre.md`** (11 Nov 2026). It has the test scenarios, the
-    logging, the ideas not yet tried, the iOS Simulator's place in testing, and the pass marks.
+  - Pause inside the app, leave it, Play in Control Centre later: fixed 12 Nov 2026 when the app is left
+    within a few seconds of the pause. WebKit marks a media element that's paused when the page is hidden
+    as interrupted (`MediaElementSession::visibilityChanged`) unless it is drawn to a canvas
+    (`elementIsHidden`), so on iPhones the player is a `<video>` drawn to a 1-pixel canvas
+    (`keepPlayerVisible`). The tone starts at the in-app pause under audio session "auto" (so Control
+    Centre over the app still controls the recording) and is made afresh under "playback" on leaving
+    (`leave`). Passed on his iPhone: Play after 70 s to 4 min, Next, Control Centre over the app.
+    Still failing: staying in the app more than a few seconds after pausing, then leaving. The new tone
+    needs a recent tap and stays suspended, so the app freezes; resuming the pause's own tone was worse
+    ("Not Playing"). Details and ideas: `PLAN-control-centre.md`, "Result, 12 Nov".
   Also seen in that log: `navigator.audioSession` fires `statechange` on his iPhone but its `state`
   reads as undefined, so the interruption carry-on above (which waits for "interrupted") doesn't
   trigger there.

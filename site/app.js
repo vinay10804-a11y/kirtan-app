@@ -53,14 +53,6 @@ const audio = (() => {
   el.replaceWith(video);
   return video;
 })();
-// TEMPORARY (Control Centre testing, Nov 2026): what the phone does, sent to the Worker's log.
-const DBGID = Math.random().toString(36).slice(2, 6);
-const DBG = (tag, extra = '') => {
-  try {
-    const line = `${DBGID} ${new Date().toISOString().slice(11, 23)} ${tag} hid=${+document.hidden} paused=${+audio.paused} t=${(audio.currentTime || 0).toFixed(1)} rs=${audio.readyState} as=${navigator.audioSession?.type}/${navigator.audioSession?.state} ua=${+(navigator.userActivation?.isActive || false)} ${extra}`;
-    navigator.sendBeacon('/api/ccdbg', line);
-  } catch {}
-};
 // Every lasting listener on the player, so a closed copy of the app can drop them (see keepAwake).
 const audioListeners = [];
 const recordListeners = el => {
@@ -70,9 +62,6 @@ const recordListeners = el => {
   };
 };
 recordListeners(audio);
-for (const type of ['play', 'playing', 'pause', 'waiting', 'stalled', 'error', 'emptied', 'loadedmetadata']) audio.addEventListener(type, () => DBG(`audio:${type}`, type === 'error' ? `code=${audio.error?.code}` : ''));
-try { navigator.audioSession?.addEventListener('statechange', () => DBG('as:statechange')); } catch {}
-document.addEventListener('visibilitychange', () => DBG('vis'));
 
 // Play in Control Centre after pausing in the app and then leaving it (owner, 8 and 11 Nov 2026). WebKit
 // marks a player that isn't playing when the app goes to the background as interrupted ("Suspending
@@ -89,7 +78,7 @@ const keepPlayerVisible = (() => {
   const ctx = canvas.getContext('2d');
   return () => {
     if (audio.readyState < 2) return;
-    try { ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1); DBG('visible:drawn'); } catch (e) { DBG('visible:failed', e.name); }
+    try { ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1); } catch {}
   };
 })();
 for (const type of ['loadeddata', 'canplay', 'playing', 'pause']) audio.addEventListener(type, keepPlayerVisible);
@@ -2187,7 +2176,7 @@ function setMediaHandlers() {
     seekto: e => seekTo(e.seekTime),
   };
   for (const [action, fn] of Object.entries(handlers)) {
-    try { ms.setActionHandler(action, e => { DBG(`action:${action}`); if (!keepAwake.closedCopy()) fn(e); }); } catch {}
+    try { ms.setActionHandler(action, e => { if (!keepAwake.closedCopy()) fn(e); }); } catch {}
   }
   // Kirtans show previous/next on the lock screen (owner, 24 Oct 2026: iPhones show skips
   // instead whenever these are set). Lectures skip back and forward, as in Apple Podcasts.
@@ -2209,10 +2198,10 @@ try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } ca
 // app stays awake), but shows a real recording in Control Centre before Web Audio, so the paused one
 // stays there with its Play button. The sound is a 1 Hz tone at -80 dB: nothing to hear, but not silence
 // (WebKit doesn't count silence). It starts on a pause from the lock screen, Control Centre or headphones
-// while the app is in the background (that counts as a tap), and stops when anything plays, the app is
-// opened, or after 20 minutes. A pause in the app before leaving it isn't covered (see CLAUDE.md).
+// while the app is in the background (that counts as a tap), or on a pause in the app (then it is made
+// afresh as the app is left, see leave below), and stops when anything plays or after 20 minutes.
 const keepAwake = (() => {
-  let ctx = null, timer = 0, settle = 0, hiddenAt = 0;
+  let ctx = null, timer = 0, settle = 0;
   const setType = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   const stop = () => {
     clearTimeout(timer);
@@ -2220,7 +2209,6 @@ const keepAwake = (() => {
     if (!ctx) return;
     const done = ctx;
     ctx = null;
-    DBG('awake:stop');
     done.close().catch(() => {});
     setType('playback'); // as the app always has it (see above)
   };
@@ -2235,14 +2223,14 @@ const keepAwake = (() => {
     osc.start();
     mine.resume().catch(() => {});
     mine.onstatechange = () => {
-      DBG('awake:ctx', `ctx=${mine.state} mine=${+(mine === ctx)}`);
-      // Silenced by something else (another app's sound, a call): let go, so that it is never started
-      // again over another app's sound. Not in the two seconds of leaving the app: see leave().
+      // Silenced. As the app is left that is expected, and can come a moment before the page hears that
+      // it is hidden (seen 12 Nov: 6 ms before): leave() then puts a new tone in its place. Still
+      // silenced after that: something else took the sound (another app, a call), so let go, and it is
+      // never started again over another app's sound.
       if (mine !== ctx || mine.state !== 'interrupted') return;
-      if (!document.hidden || (hiddenAt && Date.now() - hiddenAt > 2000)) stop();
+      setTimeout(() => { if (mine === ctx && mine.state === 'interrupted') stop(); }, 2500);
     };
     old?.close().catch(() => {});
-    DBG('awake:tone', `ctx=${mine.state}`);
   };
   // The audio session's type decides two things for the tone (WebKit, AudioContext.cpp). "playback": it
   // survives the app going to the background and can start there (shouldOverrideBackgroundPlayback-
@@ -2254,8 +2242,11 @@ const keepAwake = (() => {
   const leave = () => {
     clearTimeout(settle);
     setType('playback');
+    // A new tone only starts within a few seconds of a tap (Web Audio needs one): left 45 seconds after
+    // the pause, it never started and the app froze (12 Nov). Waking the pause's own tone instead was
+    // tried and was worse (Control Centre then showed "Not Playing"). See PLAN-control-centre.md.
     tone();
-    settle = setTimeout(() => { if (ctx && document.hidden) { setType('auto'); DBG('awake:auto', `ctx=${ctx.state}`); } }, 1500);
+    settle = setTimeout(() => { if (ctx && document.hidden) setType('auto'); }, 1500);
   };
   const start = () => {
     if (!onIOS || !S.current || ctx || retired) return;
@@ -2270,7 +2261,6 @@ const keepAwake = (() => {
   };
   audio.addEventListener('play', stop);
   document.addEventListener('visibilitychange', () => {
-    hiddenAt = document.hidden ? Date.now() : 0;
     clearTimeout(settle);
     if (!ctx) return;
     try {
@@ -2278,7 +2268,6 @@ const keepAwake = (() => {
       else setType('auto');
     } catch {}
   });
-  setInterval(() => { if (document.hidden) DBG('tick', `ctx=${ctx?.state || 'none'}`); }, 5000); // TEMPORARY
 
   // A copy of the app closed from the app switcher lives on while this holds it awake (seen on his
   // iPhone): nothing tells it it was closed, and Control Centre's Play then played from it, with no app
@@ -2292,7 +2281,6 @@ const keepAwake = (() => {
   let retired = false;
   const retire = () => {
     retired = true;
-    DBG('retire');
     stop();
     for (const [type, fn, opts] of audioListeners) audio.removeEventListener(type, fn, opts);
     audio.pause();

@@ -282,3 +282,21 @@ Automation note: the first click sent straight after opening Control Centre is o
 screenshot first.
 Not fixable from a web app: Play after another app's sound once the app is frozen (no way to stay awake
 while another app holds the sound; `audioSession.state` is unreadable on his phone).
+
+## Result, 12 Nov: published; one case still open
+
+Published (temporary logging removed; check.mjs guards the fix and forbids `ccdbg`/`DBG(`).
+- Passes: pause in the app, leave within a few seconds, Play in Control Centre after 70 s (and the
+  earlier runs: 85 s, 95 s, 4 min, Next, Control Centre over the app, Control Centre pause then Play).
+- Fails: pause in the app, stay about 45 s, then leave. Log: `navigator.userActivation.isActive` was
+  false at leaving, so the new AudioContext made in `leave()` stayed "suspended" (Web Audio needs a
+  recent tap), and the app froze about 10 s later. Run 1 passed only because it left 4 s after the tap.
+- Tried and taken out: in that case, resume the pause's own AudioContext instead (it was started by a
+  tap). Control Centre then showed "Not Playing" when Play was pressed.
+- Ideas not yet tried: (a) on visibilitychange to visible after the pause, or on any later tap in the
+  app, remake the tone so it is always "fresh" within the tap window, e.g. make a new tone under
+  "playback" at every `pointerdown` while paused (the leaving swipe isn't a tap, so that alone won't
+  do); (b) keep one tone under "playback" from the pause, and switch to "auto" only while Control Centre
+  is likely open over the app (no event for that: probably a dead end); (c) accept it: opening the app
+  plays at once.
+- Not run yet: close from the app switcher and reopen (one copy only), and a lecture, with this build.
