@@ -5,6 +5,10 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **New (13 Nov): playlists are easier to arrange.** In any playlist you make, press and hold a
+  recording for a moment, then drag it to a new place (no need for Edit). And in the playlist's
+  ... menu there is now **Choose cover**: pick any of its recordings' pictures as the playlist's
+  cover, or go back to Automatic.
 - **Mostly fixed (12 Nov): Play in Control Centre after pausing inside the app.** If you pause in the
   app and leave it straight away, Play in Control Centre or on the lock screen now works, even
   minutes later. Still not working: pause, stay in the app for more than a few seconds, then leave.
