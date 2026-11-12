@@ -38,7 +38,21 @@ const LENGTHS = [
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const view = $('#view');
-const audio = $('#audio');
+// The player. On iPhones and iPads it is a <video> (playing sound only), kept "visible through a canvas":
+// see keepPlayerVisible below.
+const onIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const audio = (() => {
+  const el = $('#audio');
+  if (!onIOS) return el;
+  const video = document.createElement('video');
+  video.id = el.id;
+  video.preload = el.preload;
+  video.playsInline = true;
+  video.setAttribute('playsinline', '');
+  video.hidden = true;
+  el.replaceWith(video);
+  return video;
+})();
 // Every lasting listener on the player, so a closed copy of the app can drop them (see keepAwake).
 const audioListeners = [];
 const recordListeners = el => {
@@ -48,6 +62,27 @@ const recordListeners = el => {
   };
 };
 recordListeners(audio);
+
+// Play in Control Centre after pausing in the app and then leaving it (owner, 8 and 11 Nov 2026). WebKit
+// marks a player that isn't playing when the app goes to the background as interrupted ("Suspending
+// silent playback", MediaElementSession::visibilityChanged): it then holds back any Play until the app
+// is on screen again, and stops counting the app as one that plays sound, so the iPhone freezes it and
+// gives Control Centre to another app. A player only counts as hidden while it isn't drawn to a canvas
+// (HTMLMediaElement::elementIsHidden, HTMLVideoElement::paintCurrentFrameInContext), and only a <video>
+// can be drawn. So on iPhones the player is a <video>, drawn once to a 1-pixel canvas each time a
+// recording has loaded: it is never marked, and a pause in the app is like a pause in Control Centre.
+const keepPlayerVisible = (() => {
+  if (!onIOS) return () => {};
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const ctx = canvas.getContext('2d');
+  return () => {
+    if (audio.readyState < 2) return;
+    try { ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1); } catch {}
+  };
+})();
+for (const type of ['loadeddata', 'canplay', 'playing', 'pause']) audio.addEventListener(type, keepPlayerVisible);
+document.addEventListener('visibilitychange', keepPlayerVisible);
 
 const store = {
   get(key, fallback) {
@@ -1468,7 +1503,10 @@ function togglePlay() {
   if (!S.current) return;
   interruption.at = 0;
   if (audio.paused) resume();
-  else audio.pause();
+  else {
+    audio.pause();
+    keepAwake.start(); // so Play in Control Centre works after leaving the app (see keepAwake)
+  }
 }
 // Plays on from where it is. A recording whose connection broke while it sat paused in the
 // background (see the 'error' handler) is loaded again from the same moment.
@@ -2160,37 +2198,76 @@ try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } ca
 // app stays awake), but shows a real recording in Control Centre before Web Audio, so the paused one
 // stays there with its Play button. The sound is a 1 Hz tone at -80 dB: nothing to hear, but not silence
 // (WebKit doesn't count silence). It starts on a pause from the lock screen, Control Centre or headphones
-// while the app is in the background (that counts as a tap), and stops when anything plays, the app is
-// opened, or after 20 minutes. A pause in the app before leaving it isn't covered (see CLAUDE.md).
+// while the app is in the background (that counts as a tap), or on a pause in the app (then it is made
+// afresh as the app is left, see leave below), and stops when anything plays or after 20 minutes.
 const keepAwake = (() => {
-  let ctx = null, timer = 0;
+  let ctx = null, timer = 0, settle = 0;
   const setType = type => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch {} };
   const stop = () => {
     clearTimeout(timer);
+    clearTimeout(settle);
     if (!ctx) return;
     const done = ctx;
     ctx = null;
     done.close().catch(() => {});
     setType('playback'); // as the app always has it (see above)
   };
+  // Makes the tone (in place of the one before, if any).
+  const tone = () => {
+    const old = ctx, mine = new (window.AudioContext || window.webkitAudioContext)();
+    ctx = mine;
+    const osc = mine.createOscillator(), level = mine.createGain();
+    osc.frequency.value = 1;
+    level.gain.value = 1e-4;
+    osc.connect(level).connect(mine.destination);
+    osc.start();
+    mine.resume().catch(() => {});
+    mine.onstatechange = () => {
+      // Silenced. As the app is left that is expected, and can come a moment before the page hears that
+      // it is hidden (seen 12 Nov: 6 ms before): leave() then puts a new tone in its place. Still
+      // silenced after that: something else took the sound (another app, a call), so let go, and it is
+      // never started again over another app's sound.
+      if (mine !== ctx || mine.state !== 'interrupted') return;
+      setTimeout(() => { if (mine === ctx && mine.state === 'interrupted') stop(); }, 2500);
+    };
+    old?.close().catch(() => {});
+  };
+  // The audio session's type decides two things for the tone (WebKit, AudioContext.cpp). "playback": it
+  // survives the app going to the background and can start there (shouldOverrideBackgroundPlayback-
+  // Restriction), but Control Centre's buttons go to the tone, not the recording (isNowPlayingEligible).
+  // "auto": the buttons go to the recording, but a tone that is there as the app goes to the background,
+  // or starts there, is silenced and the app freezes 10 seconds later (all seen on his iPhone, 11 Nov
+  // 2026). So: "auto" while the app is on screen; on leaving, a new tone under "playback" (the old one
+  // may be silenced already), and "auto" again once that is safely running.
+  const leave = () => {
+    clearTimeout(settle);
+    setType('playback');
+    // A new tone only starts within a few seconds of a tap (Web Audio needs one): left 45 seconds after
+    // the pause, it never started and the app froze (12 Nov). Waking the pause's own tone instead was
+    // tried and was worse (Control Centre then showed "Not Playing"). See PLAN-control-centre.md.
+    tone();
+    settle = setTimeout(() => { if (ctx && document.hidden) setType('auto'); }, 1500);
+  };
   const start = () => {
-    if (!/iPhone|iPad/.test(navigator.userAgent) || !document.hidden || !S.current || ctx || retired) return;
+    if (!onIOS || !S.current || ctx || retired) return;
     try {
-      // While it runs, the audio session isn't "playback": WebKit only gives Control Centre's buttons to
-      // Web Audio in a "playback" session (tried first: Play went to the tone, not the recording).
-      setType('auto');
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const tone = ctx.createOscillator(), level = ctx.createGain();
-      tone.frequency.value = 1;
-      level.gain.value = 1e-4;
-      tone.connect(level).connect(ctx.destination);
-      tone.start();
-      ctx.resume().catch(() => {});
+      if (document.hidden) leave();
+      else {
+        setType('auto');
+        tone();
+      }
     } catch {}
     timer = setTimeout(stop, 20 * 60e3);
   };
   audio.addEventListener('play', stop);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) stop(); });
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(settle);
+    if (!ctx) return;
+    try {
+      if (document.hidden) leave();
+      else setType('auto');
+    } catch {}
+  });
 
   // A copy of the app closed from the app switcher lives on while this holds it awake (seen on his
   // iPhone): nothing tells it it was closed, and Control Centre's Play then played from it, with no app

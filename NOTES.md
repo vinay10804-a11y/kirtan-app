@@ -5,14 +5,11 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
-- **To fix: Play in Control Centre after pausing inside the app** (owner, 8 Nov). If you pause in
-  the app, leave it, and later press Play in Control Centre or on the lock screen, it only starts
-  once you open the app. Pausing from Control Centre itself already works (fixed 8 Nov). The cause
-  is an iPhone limit on web apps; what was tried and why it was taken out is in CLAUDE.md, under
-  "Play in Control Centre after pausing there". Test it on the iPhone through iPhone Mirroring.
-  **Plan for fixing it (11 Nov): PLAN-control-centre.md** in the kirtan-app folder. Start a session
-  there and say "Read PLAN-control-centre.md and work through it with iPhone Mirroring"; add any
-  other bugs you've seen at the bottom of that file first.
+- **Mostly fixed (12 Nov): Play in Control Centre after pausing inside the app.** If you pause in the
+  app and leave it straight away, Play in Control Centre or on the lock screen now works, even
+  minutes later. Still not working: pause, stay in the app for more than a few seconds, then leave.
+  Then Play only starts once you open the app. Next steps are in PLAN-control-centre.md
+  ("Result, 12 Nov"). Start a session there and say "Read PLAN-control-centre.md and carry on".
 
 - **Cloudflare sign-in: done for good** (10 Nov). On 9 Nov the Mac's Cloudflare sign-in ran out, so for
   two days new lectures were found and transcribed but didn't reach the app. The Mac now uses a key that

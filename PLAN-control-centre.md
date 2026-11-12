@@ -235,3 +235,68 @@ keepAwake gives up after 20 minutes to save battery. Ask the owner whether he wa
   "Switching to another app on iPhone").
 - Known, left as it was: on phones, lecture rows with a Video button wrap onto two lines.
 -
+
+## Findings, 11 Nov evening (work in progress on branch `control-centre-fix`)
+
+Tested on the owner's iPhone through Mirroring with a beacon (`/api/ccdbg`, `DBG()` in app.js, both temporary).
+- The simulator can't test this: its Control Centre has no player and its lock screen shows no buttons.
+- `navigator.audioSession.state` reads `undefined` on his iPhone; `statechange` does fire.
+- Cause, from WebKit's source: `MediaElementSession::visibilityChanged` interrupts a player that isn't
+  playing when the page is hidden. That also clears `hasPlayedAudiblySinceLastInterruption`, so the app
+  stops counting as one that plays sound; the iPhone freezes it about 10 s later and Play never arrives
+  (the log shows no `action:play`, and Control Centre may switch to another app).
+- Tried: the player as a `<video>` drawn to a canvas (`elementIsHidden()` is false while
+  `isVisibleForCanvas`; `drawImage(video,0,0,1,1,0,0,1,1)` didn't throw). Can't yet tell if it stops the
+  interruption, because the app still froze.
+- The stay-awake tone is the blocker. Started 2 s after leaving: `ctx.state` is "interrupted" at once.
+  Started at the in-app pause (state "running"): it turns "interrupted" the moment the app is left
+  (WebKit: Web Audio has BackgroundProcessPlaybackRestricted). It only survives when started in the
+  background from a Control Centre press, which is why pausing there works.
+- Next ideas: (1) on leaving after an in-app pause, keep the app "playing" another way than Web Audio,
+  e.g. the `<video>` itself playing on at a point where it is silent is not possible, so test whether the
+  canvas-visible `<video>` alone keeps Control Centre's Play arriving in the ~10 s before the freeze, and
+  whether a Play that arrives late (on opening the app) can be made to start at once; (2) check if
+  `ctx.resume()` from the `statechange` to "interrupted" brings the tone back; (3) otherwise accept the
+  limit and make "tap the recording in Control Centre to open the app, it plays by itself" reliable.
+- Also seen: Control Centre shows 10-second skip buttons for a paused kirtan, not previous/next.
+
+## Result, 11 Nov late evening: the in-app pause case works on the branch (not yet published)
+
+The fix on `control-centre-fix` (site/app.js: `onIOS` video player, `keepPlayerVisible`, `keepAwake`):
+1. On iPhones the player is a `<video>` drawn once to a 1-pixel canvas after each load, so WebKit never
+   counts it as hidden and never interrupts it when the app is left paused.
+2. The stay-awake tone starts at the in-app pause too (`togglePlay`). Its survival depends on
+   `navigator.audioSession.type` (WebKit AudioContext.cpp): "playback" lets it survive going to the
+   background but sends Control Centre's buttons to the tone; "auto" sends them to the recording but the
+   tone is silenced on leaving. So: "auto" on screen; on leaving, a new tone under "playback", then "auto"
+   1.5 s later.
+Passed on his iPhone with the earlier variant (tone under "playback" on screen): in-app pause, leave,
+Play after 85 s, 95 s and 4 min; Next after 100 s; Control Centre pause then Play after 85 s; next
+recording starts by itself in the background; kirtans show previous/next, lectures 15/30 s skips.
+That variant failed one case (Control Centre opened over the app: Play went to the tone), hence the
+"auto on screen" version, which passed: Play with Control Centre over the app, and Control Centre pause
+then Play after 90 s. STILL TO RUN with this final version: in-app pause, leave, Play (5 runs); close
+from the app switcher and reopen (one copy only); a lecture; then remove the temporary logging (`DBG`,
+`/api/ccdbg`, the 5 s tick), update check.mjs/CLAUDE.md/NOTES.md, publish and merge.
+Automation note: the first click sent straight after opening Control Centre is often lost; take a
+screenshot first.
+Not fixable from a web app: Play after another app's sound once the app is frozen (no way to stay awake
+while another app holds the sound; `audioSession.state` is unreadable on his phone).
+
+## Result, 12 Nov: published; one case still open
+
+Published (temporary logging removed; check.mjs guards the fix and forbids `ccdbg`/`DBG(`).
+- Passes: pause in the app, leave within a few seconds, Play in Control Centre after 70 s (and the
+  earlier runs: 85 s, 95 s, 4 min, Next, Control Centre over the app, Control Centre pause then Play).
+- Fails: pause in the app, stay about 45 s, then leave. Log: `navigator.userActivation.isActive` was
+  false at leaving, so the new AudioContext made in `leave()` stayed "suspended" (Web Audio needs a
+  recent tap), and the app froze about 10 s later. Run 1 passed only because it left 4 s after the tap.
+- Tried and taken out: in that case, resume the pause's own AudioContext instead (it was started by a
+  tap). Control Centre then showed "Not Playing" when Play was pressed.
+- Ideas not yet tried: (a) on visibilitychange to visible after the pause, or on any later tap in the
+  app, remake the tone so it is always "fresh" within the tap window, e.g. make a new tone under
+  "playback" at every `pointerdown` while paused (the leaving swipe isn't a tap, so that alone won't
+  do); (b) keep one tone under "playback" from the pause, and switch to "auto" only while Control Centre
+  is likely open over the app (no event for that: probably a dead end); (c) accept it: opening the app
+  plays at once.
+- Not run yet: close from the app switcher and reopen (one copy only), and a lecture, with this build.
