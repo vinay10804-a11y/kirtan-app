@@ -1132,6 +1132,13 @@ for (const link of $$('[data-nav]')) {
 document.addEventListener('click', e => { if (e.target.closest?.('a.back')) toPlace(); });
 window.addEventListener('popstate', e => { if (e.state?.page != null) toPlace(); });
 
+// A chip row that can still scroll sideways fades out at its right edge, a hint that
+// there is more (audit, 13 Nov 2026); the fade goes once the end is reached.
+const chipFade = el => el.classList.toggle('fade-r', el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+const chipFades = () => { for (const el of $$('.chips:not(.wrap)')) chipFade(el); };
+document.addEventListener('scroll', e => { if (e.target.classList?.contains('chips')) chipFade(e.target); }, true);
+window.addEventListener('resize', chipFades);
+
 // Going somewhere new draws the page at once and fades it up (.page-enter);
 // filters and tabs inside a page switch instantly, keeping your place.
 function route() {
@@ -1180,6 +1187,7 @@ function route() {
     const row = chosen.parentElement;
     row.scrollLeft += chosen.getBoundingClientRect().left - row.getBoundingClientRect().left - (row.clientWidth - chosen.offsetWidth) / 2;
   }
+  chipFades();
 
   const lq = $('#lq');
   if (lq) {
