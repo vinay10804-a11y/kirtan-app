@@ -140,6 +140,9 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 500; margin: 0; }
 .row-text { flex: 1; min-width: 0; }
 .row-title { display: block; font: 500 19px/1.25 var(--serif); }
 .row-sub { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-3); }
+/* Continue listening on Home: how far through, as on the lecture cards (audit, 13 Nov 2026) */
+.row-bar { display: block; width: min(190px, 90%); height: 3px; margin-top: 7px; border-radius: 2px; background: rgba(120, 140, 140, .3); overflow: hidden; }
+.row-bar b { display: block; height: 100%; background: var(--teal); border-radius: 2px; }
 .row > svg { color: var(--ink-3); width: 18px; height: 18px; }
 @media (hover: hover) { a.row:hover .row-title, button.row:hover .row-title { color: var(--teal-deep); } }
 

@@ -600,7 +600,8 @@ function homeView() {
     ${last && lastPos ? `<section class="section"><h2>Continue listening</h2><div class="rows">
       <button class="row" data-action="resume" data-id="${last.id}">
         ${artHTML(last)}<span class="row-text"><span class="row-title">${esc(last.title)}</span>
-        <span class="row-sub">${esc(collectionName(last))} · ${fmtDur(last.duration - lastPos)} left</span></span>${icon('play')}
+        <span class="row-sub">${esc(collectionName(last))} · ${fmtDur(last.duration - lastPos)} left</span>
+        ${last.duration ? `<i class="row-bar"><b style="width:${Math.min(100, Math.round((lastPos / last.duration) * 100))}%"></b></i>` : ''}</span>${icon('play')}
       </button></div></section>` : ''}
     <section class="section entries">
       <div class="entry">
