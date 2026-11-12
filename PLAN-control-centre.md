@@ -299,4 +299,6 @@ Published (temporary logging removed; check.mjs guards the fix and forbids `ccdb
   do); (b) keep one tone under "playback" from the pause, and switch to "auto" only while Control Centre
   is likely open over the app (no event for that: probably a dead end); (c) accept it: opening the app
   plays at once.
-- Not run yet: close from the app switcher and reopen (one copy only), and a lecture, with this build.
+- Run 12 Nov, both passed with this build: close from the app switcher and reopen (one copy, Control
+  Centre pause/play controls it); a lecture (Kartik katha 12: paused in the app, left, Play in Control
+  Centre after ~2.5 min worked, with the skip buttons shown).
