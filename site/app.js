@@ -472,8 +472,8 @@ function trackRow(t, i, listKey, opts = {}) {
 // The Transcript and Video buttons a recording has (Video: the same talk or kirtan on
 // Sacinandana Swami's YouTube channel, matched by tools/lecture-videos.mjs).
 function extrasHTML(t) {
-  return `${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}Transcript</button>` : ''}${
-    t.yt ? `<button class="lect-tx" data-action="watch" data-id="${t.id}" aria-label="Watch ${esc(t.title)} on YouTube">${icon('video')}Video</button>` : ''}`;
+  return `${t.tx ? `<button class="lect-tx" data-action="transcript" data-id="${t.id}" aria-label="Transcript of ${esc(t.title)}">${icon('transcript')}<span>Transcript</span></button>` : ''}${
+    t.yt ? `<button class="lect-tx" data-action="watch" data-id="${t.id}" aria-label="Watch ${esc(t.title)} on YouTube">${icon('video')}<span>Video</span></button>` : ''}`;
 }
 
 function trackList(tracks, listKey, opts) {

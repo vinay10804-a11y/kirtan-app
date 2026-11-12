@@ -233,7 +233,7 @@ keepAwake gives up after 20 minutes to save battery. Ask the owner whether he wa
 
 - Known, never tested on a real iPhone: playing from Instagram, then coming back (CLAUDE.md,
   "Switching to another app on iPhone").
-- Known, left as it was: on phones, lecture rows with a Video button wrap onto two lines.
+- Fixed 13 Nov: on phones, lecture rows with a Video button wrapped onto two lines; the Transcript and Video chips now show just their icons on narrow screens.
 -
 
 ## Findings, 11 Nov evening (work in progress on branch `control-centre-fix`)
