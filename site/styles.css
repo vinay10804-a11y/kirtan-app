@@ -682,6 +682,8 @@ dialog.video-sheet::backdrop { background: #000; }
 .modes a[aria-current="true"] { color: var(--teal-deep); font-weight: 600; border-bottom-color: var(--teal-deep); }
 .chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
+/* More chips off-screen to the right: the row fades out at that edge (see chipFades) */
+.chips.fade-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 44px), transparent); }
 .chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
 .chip { flex: none; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13.5px; color: var(--ink-2); text-decoration: none; white-space: nowrap; }
 @media (hover: hover) { .chip:hover { border-color: var(--teal); color: var(--teal-deep); } }

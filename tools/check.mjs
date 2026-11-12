@@ -102,6 +102,11 @@ const checks = [
     app.includes('const keepPlayerVisible = (() => {') && app.includes("document.createElement('video')") && app.includes('ctx.drawImage(audio, 0, 0, 1, 1, 0, 0, 1, 1)')
     && app.includes('    audio.pause();\n    keepAwake.start(); // so Play in Control Centre') && app.includes('const leave = () => {') && app.includes("setType('auto')")
     && !app.includes('ccdbg') && !app.includes('DBG(') && !read('worker/index.js').includes('ccdbg')],
+  ['Playlists: a chosen cover (the recording\'s id, so it syncs), and holding a row lifts it for dragging (owner, 13 Nov 2026)',
+    app.includes('function openCoverPicker(') && app.includes('function playlistCover(list, p)') && app.includes('[p.name, p.ids, p.cover ?? null]')
+    && app.includes("e.target.closest('ul[data-pl] > li')") && app.includes("if (drag) e.preventDefault();")],
+  ['Lectures\' Transcript and Video chips keep to one line on phones (labels in spans, hidden under 480px)',
+    app.includes("${icon('transcript')}<span>Transcript</span>") && read('site/styles.css').includes('.lect-foot .lect-tx > span { display: none; }')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
     read('worker/lectures.js').includes("url.pathname.startsWith('/lecture-audio/')") && read('worker/lectures.js').includes('_SSNS') && sw.includes('lecture-audio')
     && app.includes('savedLectures.add(path)') && app.includes('function keepTranscript') && app.includes('lecturesSaved')],
