@@ -837,9 +837,16 @@ body:has(.player:not([hidden])) .toast.show { transform: translate(-50%, 0); }
 .lect-title mark { background: rgba(124, 195, 187, .32); color: inherit; border-radius: 3px; padding: 0 1px; }
 .lect-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
 .lect-btns { display: flex; align-items: center; gap: 8px; }
-/* Play, Transcript and Video wrap onto a second line on a narrow phone; save and ⋯ stay put */
+/* Play, Transcript and Video stay on one line: on a narrow phone the Transcript and
+   Video chips show just their icons (the labels return on anything wider), instead of
+   wrapping onto a second line (owner, 13 Nov 2026). Save and ⋯ stay put. */
 .lect-foot { gap: 8px; }
 .lect-foot > .lect-btns:first-child { flex-wrap: wrap; gap: 6px; min-width: 0; }
+@media (max-width: 480px) {
+  .lect-foot .lect-tx > span { display: none; }
+  .lect-foot .lect-tx { width: 34px; padding: 0; justify-content: center; }
+  .lect-foot .lect-tx svg { width: 17px; height: 17px; }
+}
 .lect-foot > .lect-btns:last-child { flex: none; gap: 0; }
 .lect-play { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--teal-soft); color: var(--teal-deep); font: 600 13px var(--sans); transition: var(--press); }
 .lect-play:active { transform: scale(.94); }
