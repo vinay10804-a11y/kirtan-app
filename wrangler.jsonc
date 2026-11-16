@@ -9,5 +9,8 @@
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "kirtans" }],
   // Accounts: users, sessions and each person's favourites and playlists.
   "d1_databases": [{ "binding": "DB", "database_name": "kirtan-accounts", "database_id": "109947eb-cd46-4b46-8a2d-816c91cf01db", "migrations_dir": "migrations" }],
-  "workers_dev": true
+  "workers_dev": true,
+  // New lectures from the Saranagati Library every 6 hours, even with the Mac off
+  // (worker/recent-lectures.js). Cron Triggers are free.
+  "triggers": { "crons": ["17 */6 * * *"] }
 }

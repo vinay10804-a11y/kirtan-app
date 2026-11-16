@@ -101,10 +101,11 @@ export async function lectures(request, env, url) {
   }
 
   const transcript = /^\/api\/lectures\/transcript\/([0-9a-f]{12})$/.exec(url.pathname);
-  if ((url.pathname === '/api/lectures' || transcript) && request.method === 'GET') {
+  const recent = url.pathname === '/api/lectures/recent'; // the newest lectures (worker/recent-lectures.js)
+  if ((url.pathname === '/api/lectures' || transcript || recent) && request.method === 'GET') {
     if (!signedIn()) return json({ error: 'Password needed' }, 401);
     // The app keeps what it fetched and asks with its ETag, so an unchanged file costs a 304.
-    const key = transcript ? `lectures/transcripts/${transcript[1]}.json` : 'lectures/catalog.json';
+    const key = transcript ? `lectures/transcripts/${transcript[1]}.json` : recent ? 'lectures/recent.json' : 'lectures/catalog.json';
     const file = await env.AUDIO.get(key, { onlyIf: request.headers });
     if (!file) return json({ error: transcript ? 'No transcript for this lecture yet' : 'No lecture list yet' }, 404);
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-cache', ETag: file.httpEtag };

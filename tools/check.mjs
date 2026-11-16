@@ -65,7 +65,7 @@ const checks = [
   // Lectures audit (25 Oct 2026).
   ['Lecture list kept on the device and fetched again only when it changes (ETag, 304)', app.includes('const LECT_CACHE') && app.includes("'If-None-Match'") && read('worker/lectures.js').includes('onlyIf: request.headers')],
   ['Lecture dates without a day or month read properly (no "Invalid Date"), and no time zone shifts a day', app.includes('function lectDate') && /const ymd = .*\\d\{4\}/.test(app)],
-  ['Lecture lengths measured for the whole list (tools/lecture-lengths.json), shown on every row', read('tools/lectures.mjs').includes('async function lengthOf') && app.includes('l.dur ||')],
+  ['Lecture lengths measured for the whole list (tools/lecture-lengths.json), shown on every row', read('tools/lecture-parse.mjs').includes('export async function lengthOf') && read('tools/lectures.mjs').includes('lengthOf(l.url)') && app.includes('l.dur ||')],
   ['Lecture places named from the library\'s help page (tools/lecture-places.json kept as the last good copy)', read('tools/lectures.mjs').includes('async function placeNames') && read('tools/lectures.mjs').includes("help.html") && Object.keys(JSON.parse(read('tools/lecture-places.json'))).length > 100],
   ['Lecture search: book names in lectNorm spelling ("srimad"), numbers match whole numbers, keys made in idle time', app.includes('also.map(lectNorm)') && app.includes('const lectHit') && app.includes('function lectKeys')],
   ['Lecture player: back 15 / forward 30, own speed, no Share; lock screen skips for lectures only', html.includes('data-action="back15"') && css.includes('.player.lecture') && app.includes('LECT_SPEEDS') && app.includes("$('#player-share').hidden")],
@@ -105,6 +105,10 @@ const checks = [
   ['Playlists: a chosen cover (the recording\'s id, so it syncs), and holding a row lifts it for dragging (owner, 13 Nov 2026)',
     app.includes('function openCoverPicker(') && app.includes('function playlistCover(list, p)') && app.includes('[p.name, p.ids, p.cover ?? null]')
     && app.includes("e.target.closest('ul[data-pl] > li')") && app.includes("if (drag) e.preventDefault();")],
+  ['New lectures without the Mac (owner, 16 Nov 2026): Cloudflare checks the library every 6 hours into R2 lectures/recent.json, served at /api/lectures/recent and merged into the list by the app; one parser shared with tools/lectures.mjs',
+    read('wrangler.jsonc').includes('"crons"') && read('worker/index.js').includes('checkRecentLectures(env)') && read('worker/lectures.js').includes("'lectures/recent.json'")
+    && app.includes("const LECT_RECENT = '/api/lectures/recent'") && app.includes('function mergeRecent()')
+    && read('tools/lectures.mjs').includes("from './lecture-parse.mjs'") && read('worker/recent-lectures.js').includes("from '../tools/lecture-parse.mjs'")],
   ['Lectures\' Transcript and Video chips keep to one line on phones (labels in spans, hidden under 480px)',
     app.includes("${icon('transcript')}<span>Transcript</span>") && read('site/styles.css').includes('.lect-foot .lect-tx > span { display: none; }')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',

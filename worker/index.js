@@ -5,10 +5,15 @@
 // /stream/ holds the current, volume-levelled AAC files; /media/ and /audio/ older ones.
 import { api } from './api.js';
 import { lectures } from './lectures.js';
+import { checkRecentLectures } from './recent-lectures.js';
 import { sharePage } from './share.js';
 
 const AUDIO_PATH = /^\/(stream|media|audio)\//;
 export default {
+  // Every 6 hours (wrangler.jsonc "triggers"): new lectures from the library, without the Mac.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(checkRecentLectures(env).then(r => console.log('Recent lectures', JSON.stringify(r))));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
     // The password-protected Lectures test section (worker/lectures.js).

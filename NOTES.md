@@ -5,6 +5,11 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **Fixed (16 Nov): new lectures now appear even when the Mac is off.** The Mac restarted on
+  11 Nov and its lecture job didn't start again, so Kartik katha 13–16 and the offering for
+  Srila Prabhupada's disappearance day were missing. They're online now, and Cloudflare itself
+  checks the library every 6 hours from now on. Transcripts still come from the Mac: after a
+  restart, double-click "Resume transcripts.command" in the Lecture transcripts folder.
 - **New (13 Nov): playlists are easier to arrange.** In any playlist you make, press and hold a
   recording for a moment, then drag it to a new place (no need for Edit). And in the playlist's
   ... menu there is now **Choose cover**: pick any of its recordings' pictures as the playlist's
