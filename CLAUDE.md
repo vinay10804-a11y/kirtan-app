@@ -297,6 +297,20 @@ peak limiter for gains up to 8 dB, and loudnorm only for very quiet recordings (
 Cloudflare: the published files are the only copy once local files are deleted, so a future format
 change can only re-encode files whose originals are on the Mac (others are kept as they are).
 
+## Another laptop (16 Nov 2026)
+Owner: "make sure all of this project is accessible from a different laptop … put it into GitHub".
+`NEW-LAPTOP.md` is the guide. Three GitHub repositories: this one (public), `lecture-transcripts`
+(private) and `sns-kirtan-originals` (private: Thumbnails, Photos of SNS, Kirtans list.xlsx and the
+READ ME, which live loose in "SNS Kirtan Platform"). The Desktop syncs to iCloud, which breaks `.git`
+folders, so the originals' git data is in `../originals-git.nosync` with that folder as its work
+tree and a whitelist in its `info/exclude` (`.pdf` left out: the owner keeps a personal one in
+Thumbnails). `tools/originals.sh save` (run at the end of every publish, never stopping it) and
+`restore` (new laptop: fills in only missing files). Not on GitHub: `.env`, `.dev.vars`, "Lectures
+password.txt", and the 8 GB Kirtans originals (not needed: audio is in R2 and the build keeps
+entries whose originals are absent). Commit `tools/lecture-transcripts.json` and
+`tools/lecture-lengths.json` now and then (ids/dates and seconds only, no transcript text): a new
+laptop needs them, or its lecture list would lose its Transcript buttons and re-measure 6,900 files.
+
 ## Working in the cloud (no Mac)
 There are no originals in the cloud (the `kirtans-source` backup was removed at the owner's request;
 `tools/pull-source.mjs` only matters if it's ever recreated). Sorting changes need no recordings.

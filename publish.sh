@@ -80,5 +80,9 @@ node tools/upload.mjs
 
 echo "== Publishing the app"
 $W deploy
+
+# The pictures and the kirtan list, to the private GitHub backup (NEW-LAPTOP.md). Never stops a publish.
+echo "== Backing up the originals"
+tools/originals.sh save || echo "(Couldn't back up the originals this time; the next publish tries again.)"
 echo
 echo "Done. Open the workers.dev link above on your laptop and phone."

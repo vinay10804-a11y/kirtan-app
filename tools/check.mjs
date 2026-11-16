@@ -109,6 +109,9 @@ const checks = [
     read('wrangler.jsonc').includes('"crons"') && read('worker/index.js').includes('checkRecentLectures(env)') && read('worker/lectures.js').includes("'lectures/recent.json'")
     && app.includes("const LECT_RECENT = '/api/lectures/recent'") && app.includes('function mergeRecent()')
     && read('tools/lectures.mjs').includes("from './lecture-parse.mjs'") && read('worker/recent-lectures.js').includes("from '../tools/lecture-parse.mjs'")],
+  ['Another laptop (16 Nov 2026): NEW-LAPTOP.md, and publish backs up the originals to the private repo without ever stopping a publish; the personal PDF stays out',
+    read('NEW-LAPTOP.md').includes('sns-kirtan-originals') && read('publish.sh').includes('tools/originals.sh save ||')
+    && read('tools/originals.sh').includes('*.pdf') && read('tools/originals.sh').includes('ls-files -z --deleted')],
   ['Lectures\' Transcript and Video chips keep to one line on phones (labels in spans, hidden under 480px)',
     app.includes("${icon('transcript')}<span>Transcript</span>") && read('site/styles.css').includes('.lect-foot .lect-tx > span { display: none; }')],
   ['Save offline for lectures: through the Worker (/lecture-audio/, password and Sacinandana Swami files only), kept across restarts, transcript kept too, in Library > Saved',
