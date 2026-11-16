@@ -423,7 +423,17 @@ Audit (owner: "run smoothly and be as good as possible", 25 Oct 2026):
   hours (`--every <hours>`) it runs tools/lectures.mjs, uploads the list (the app shows new lectures)
   and puts new English lectures, plus ones skipped earlier (up to 3 tries), at the front of the
   queue; when all are done it releases caffeinate and checks the clock each minute, so it catches up
-  when the Mac wakes. A Mac, not the cloud: the transcripts need it anyway, and it's free. New
+  when the Mac wakes. A Mac, not the cloud: the transcripts need it anyway, and it's free.
+  The Mac job is started by hand and does not survive a restart: the Mac restarted on 11 Nov 2026
+  and five lectures were missed until 16 Nov (owner: "the lectures aren't updating … create a
+  remote daily scrub"). So Cloudflare checks too, with no Mac: a cron (wrangler.jsonc, every 6 h at
+  :17) runs worker/recent-lectures.js, which reads the library's home page and this year's folder
+  (last year's too in January) into R2 `lectures/recent.json` (about 130 lectures, lengths read 15
+  per run). The app fetches it at `/api/lectures/recent` after the full list and adds lectures the
+  full list doesn't have (`mergeRecent`); the full list's copy wins once the Mac adds it. The 2 MB
+  full list is never read in the Worker (the free plan's CPU limit). File-name parsing and lengths
+  are in `tools/lecture-parse.mjs`, shared by lectures.mjs and the Worker (checked identical on all
+  6,935 lectures). If the Mac job isn't running, restart it with "Resume transcripts.command". New
   lectures get no Video button until they're in the YouTube sheet (tools/youtube-links.mjs). Never put transcripts in git or site/ (this repo is public);
   `tools/lecture-transcripts.json` lists only which ids are done and online. The app's
   Transcript sheet (player bar, ⋯ menu, a button on the row: on the Lectures page and, since a

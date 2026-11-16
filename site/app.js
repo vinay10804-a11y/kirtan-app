@@ -3500,10 +3500,45 @@ function loadLectures() {
       const data = await kept.clone().json().catch(() => null);
       if (data) useLectures(data);
     }
-    const fresh = refreshLectures(cache, kept?.headers.get('ETag'));
+    const fresh = refreshLectures(cache, kept?.headers.get('ETag')).then(() => loadRecent(cache));
     if (S.lectState !== 'ready') await fresh; // nothing kept: wait for the network
   })().finally(() => { lectLoading = null; });
   return lectLoading;
+}
+
+// The newest lectures, which Cloudflare checks for every 6 hours (worker/recent-lectures.js),
+// so one shows here even when the Mac that makes the full list is off (owner, 16 Nov 2026).
+// Any the full list doesn't have yet go in at the top; once the full list has them (with their
+// transcripts and videos), its copy is the one used.
+const LECT_RECENT = '/api/lectures/recent';
+let lectRecent = [];
+async function loadRecent(cache) {
+  if (S.lectState !== 'ready') return;
+  const kept = await cache?.match(LECT_RECENT).catch(() => null);
+  const etag = kept?.headers.get('ETag');
+  const res = await fetch(LECT_RECENT, { credentials: 'same-origin', cache: 'no-store', headers: etag ? { 'If-None-Match': etag } : {} }).catch(() => null);
+  let data = null;
+  if (res?.ok) {
+    data = await res.clone().json().catch(() => null);
+    if (data) await cache?.put(LECT_RECENT, res).catch(() => {});
+  } else if (kept) data = await kept.json().catch(() => null);
+  lectRecent = data?.lectures || [];
+  if (mergeRecent()) lecturesChanged();
+}
+function mergeRecent() {
+  const have = new Set(S.lectures.map(t => t.id));
+  const extra = lectRecent.filter(l => !have.has(`lec-${l.id}`)).map(lectureTrack);
+  if (!extra.length) return false;
+  for (const t of extra) {
+    S.byId.set(t.id, t);
+    S.bySrc.set(t.dl, t);
+    if (savedLectures.has(t.dl)) S.saved.add(t.id);
+  }
+  S.lectures = [...extra, ...S.lectures].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  S.lecturesOld = null;
+  lectKeyAt = 0;
+  lectKeys();
+  return true;
 }
 
 async function refreshLectures(cache, etag) {
@@ -3526,13 +3561,14 @@ async function refreshLectures(cache, etag) {
   if (was === 'ready') lecturesChanged();
 }
 
+const lectureTrack = l => ({
+  id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
+  year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
+  src: l.url, dl: `/lecture-audio/${l.url.replace(/^https:\/\/www\.saranagati-library\.net\//, '')}`, external: true,
+  duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, size: S.lectBytes[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx, yt: l.yt,
+});
 function useLectures({ lectures = [] }) {
-  S.lectures = lectures.map(l => ({
-    id: `lec-${l.id}`, section: 'lecture', type: 'Lecture', artist: 'Sacinandana Swami', title: l.title,
-    year: l.year, date: l.date, ref: l.ref, place: l.place, with: l.with, language: l.language, into: l.into,
-    src: l.url, dl: `/lecture-audio/${l.url.replace(/^https:\/\/www\.saranagati-library\.net\//, '')}`, external: true,
-    duration: l.dur || S.lectDur[`lec-${l.id}`] || 0, size: S.lectBytes[`lec-${l.id}`] || 0, cover: SECTION_ART.Lectures, skey: '', tx: !!l.tx, yt: l.yt,
-  }));
+  S.lectures = lectures.map(lectureTrack);
   S.lecturesOld = null;
   for (const t of S.lectures) {
     S.byId.set(t.id, t);
@@ -3540,8 +3576,10 @@ function useLectures({ lectures = [] }) {
     if (savedLectures.has(t.dl)) S.saved.add(t.id);
   }
   S.lectState = 'ready';
-  lectKeyAt = 0;
-  lectKeys();
+  if (!mergeRecent()) { // a newer full list keeps the newest lectures it doesn't have yet
+    lectKeyAt = 0;
+    lectKeys();
+  }
 }
 
 // Search keys (each lecture's words in lectNorm's spelling) take ~150 ms for the whole list,
@@ -3567,6 +3605,7 @@ function lecturesOld() {
 function forgetLectures() {
   S.lectState = 'locked';
   S.lectures = [];
+  lectRecent = [];
   S.lecturesOld = null;
   // Lectures saved on this device go too: nothing would show them any more.
   for (const id of [...S.saved]) if (id.startsWith('lec-')) S.saved.delete(id);
