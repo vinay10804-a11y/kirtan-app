@@ -15,7 +15,8 @@
 // Kirtans with no picture (the sheet shows "SS" or "GK"), and kirtans whose picture
 // the owner deleted from the sheet, get one at random from the artist's folder in
 // Thumbnails ("SNS" or "GK"), each picture used at most MAX_USES times; the choice
-// is written into the Thumbnail column, so it can be changed there.
+// is written into the Thumbnail column, so it can be changed there. A picture named
+// after the kirtan's place ("berlin.png", "london track.png") comes first.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -37,7 +38,16 @@ const TYPES = ['Mahamantra', 'Bhajans'];
 const IMAGE = /\.(jpe?g|png|heic|heif|webp|tiff?)$/i;
 const FOLDERS = { 'Sacinandana Swami': 'SNS', 'Gour Krishna': 'GK' };
 const MAX_USES = 3; // owner, 24 Oct 2026: a picture on no more than three kirtans
-const GENERAL = /^(gk|sns)\s*\d*\.|^untitled design/i;
+// General photos, given out at random: "GK3.png", "SNS12.png", "Gour krishna2..png",
+// "gk track.png", "any track.png", "Untitled design - 3.png".
+const GENERAL = /^(gk|sns|gour ?krishna|any)( track)?[\s\d.]*\.[a-z]+$|^untitled design/i;
+// A picture named after a place ("berlin.png", "london track.png") goes to that place's
+// kirtans (owner, 20 Nov 2026). Names the owner uses that differ from the app's place names:
+const PLACE_NAMES = { simhacalam: 'simhachalam', 'new vrindavan': 'new vrindaban', 'swiss bhakti': 'switzerland', 'radha londonisvara': 'london' };
+const placeOf = f => {
+  const n = f.split('/').pop().replace(IMAGE, '').replace(/[\s.\d]+$/, '').replace(/ track$/i, '').trim().toLowerCase();
+  return PLACE_NAMES[n] || n;
+};
 
 const COLUMNS = [
   { key: 'no', header: 'No.', width: 6 },
@@ -148,11 +158,16 @@ function allocatePictures(tracks, rows, files, notes) {
   for (const artist of Object.keys(FOLDERS)) {
     // Only general photos go out at random (GK2.png, SNS14.png, "Untitled design - 3.png");
     // a picture named after a song or event is for that kirtan alone.
-    const pool = files.filter(f => f.startsWith(`${FOLDERS[artist]}/`) && GENERAL.test(f.split('/').pop()));
+    const mine = files.filter(f => f.startsWith(`${FOLDERS[artist]}/`));
+    const pool = mine.filter(f => GENERAL.test(f.split('/').pop()));
     const want = shuffle(tracks.filter(t => t.artist === artist && needs(t))).sort((a, b) => needs(a) - needs(b));
     let previous = null;
     for (const t of want) {
-      const open = pool.filter(f => (uses.get(f.toLowerCase()) || 0) < MAX_USES && f !== previous);
+      // Pictures of the kirtan's place first, then general ones.
+      const place = (rows?.get(t.id)?.place || t.place || '').toLowerCase();
+      const free = f => (uses.get(f.toLowerCase()) || 0) < MAX_USES;
+      const local = place ? mine.filter(f => !GENERAL.test(f.split('/').pop()) && placeOf(f) === place && free(f)) : [];
+      const open = local.length ? local : pool.filter(f => free(f) && f !== previous);
       if (!open.length) { left[artist] = (left[artist] || 0) + 1; continue; }
       const least = Math.min(...open.map(f => uses.get(f.toLowerCase()) || 0));
       const f = shuffle(open.filter(x => (uses.get(x.toLowerCase()) || 0) === least))[0];

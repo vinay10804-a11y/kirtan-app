@@ -197,6 +197,14 @@ R2 bucket `kirtans` at `/stream/*`.
   kirtan in `Thumbnails/GK` (e.g. "Radhadesh Mellows 2024" for every GK Mellows kirtan of 2024); they're
   handled the same way, and only general photos ("GK3", "SNS12", "Untitled design …", `GENERAL` in
   sheet.mjs) are given out at random.
+- Place pictures (owner, 20 Nov 2026: "photos with particular names to attach to specific kirtans"): a
+  picture in `Thumbnails/GK` or `SNS` named after a place ("berlin.png", "london track.png") goes first to
+  that place's kirtans that need a picture (still at most 3 each; the rest get general photos).
+  `PLACE_NAMES` in sheet.mjs maps the owner's spellings (simhacalam, new vrindavan, swiss Bhakti, radha
+  londonisvara → London). "Gour krishna…", "gourkrishna", "gk track…" and "any track" are general.
+  A picture named after an event ("london mellows") is set by hand in the Thumbnail column. The owner
+  keeps the master copies in Google Drive and sends a download; compare by content and copy only new
+  ones (a different picture with a name already used gets the next free name, e.g. "Untitled design - 13").
 - Playback flow (audit, 24 Oct 2026): a kirtan tapped in a year/place group plays on through the whole
   page (`playList`); when the queue runs out, `keepListening()` adds the artist's next kirtans (same
   type, newest first), so Next always works. The next kirtan's first 384 KB is fetched ahead
