@@ -5,6 +5,13 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **Done (20 Nov): your new pictures are in.** 45 new ones (26 of Gour Krishna, 19 of Sacinandana
+  Swami) went into Thumbnails/GK and SNS; the other 57 you sent were already there. Every Gour
+  Krishna kirtan now has a picture (39 had none): pictures named after a place (berlin, london
+  track, radhadesh, ...) are on that place's kirtans, and "london mellows" is on London Mellows
+  Day 1 and 2. The new Sacinandana Swami photos wait for his next new kirtans, as all of his
+  already have one. Your new "Untitled design.png" of Maharaja was saved as "Untitled design -
+  13.png", because a different picture already had that name.
 - **Fixed (16 Nov): new lectures now appear even when the Mac is off.** The Mac restarted on
   11 Nov and its lecture job didn't start again, so Kartik katha 13–16 and the offering for
   Srila Prabhupada's disappearance day were missing. They're online now, and Cloudflare itself
