@@ -457,13 +457,16 @@ function trackRow(t, i, listKey, opts = {}) {
   // A lecture with a transcript or a video gets the Lectures page's Transcript / Video buttons on
   // a line of their own under the title, in playlists, Favourites, History, Saved and Search too
   // (a friend, 27 Oct 2026).
-  const tx = t.tx || t.yt ? `<span class="track-tx">${extrasHTML(t)}</span>` : '';
+  const tx = t.tx || (t.yt && isLecture(t)) ? `<span class="track-tx">${extrasHTML(t)}</span>` : '';
+  // A kirtan that's also on YouTube has a small video button beside Save offline instead (owner,
+  // 23 Nov 2026: "an option to watch in a small icon"); the links come from his kirtan videos sheet.
+  const vid = t.yt && !isLecture(t) ? `<button class="icon-btn vid" data-action="watch" data-id="${t.id}" aria-label="Watch ${esc(t.title)} on YouTube">${icon('video')}</button>` : '';
   return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}${tx ? ' has-tx' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${opts.playList || listKey}">
       ${lead}
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
-    ${dlButton(t)}
+    ${vid}${dlButton(t)}
     <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
     ${tx}
   </li>`;
@@ -593,8 +596,8 @@ function homeView() {
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()
-        ? '<b>How to install this website as an app</b><small>On another phone or laptop: steps for Safari and Chrome</small>'
-        : '<b>How to install this website as an app</b><small>On your iPhone or laptop: it opens from its own icon and works offline</small>'}</span>
+        ? '<b>How to install this website as an app</b><small>On another phone or laptop: steps for iPhone, Android and laptop</small>'
+        : '<b>How to install this website as an app</b><small>On your iPhone, Android or laptop: it opens from its own icon and works offline</small>'}</span>
       ${icon('right')}
     </button>
     ${last && lastPos ? `<section class="section"><h2>Continue listening</h2><div class="rows">
@@ -625,8 +628,9 @@ function homeView() {
     <details class="howto">
       <summary>How to use this site</summary>
       <ul>
-        <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
+        <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone, Android and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
+        <li><b>Swipe a kirtan</b> on your phone: to the right to add it to your Favourites, to the left to add it to a playlist.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
         <li><b>Chanting japa:</b> open the player, tap <b>Play next</b> and choose <b>Loop this kirtan</b>, so one kirtan plays again and again while you chant your rounds. <b>Play once</b> stops when the kirtan ends.</li>
         <li><b>Sleep timer</b> in the player stops playback after 15 minutes to an hour.</li>
@@ -1032,8 +1036,8 @@ function openCoverPicker(id) {
 
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
-// Home page: how to install the site as an app on an iPhone or a laptop, in Safari
-// or Chrome. The "How to install this website as an app" button near the top of Home scrolls here.
+// Home page: how to install the site as an app on an iPhone, an Android phone (owner, 23 Nov
+// 2026) or a laptop, in Safari, Chrome or Samsung Internet. The "How to install this website as an app" button near the top of Home scrolls here.
 // Inside the installed app it stays, for installing on another device.
 function installSection() {
   const steps = list => `<ol>${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
@@ -1057,6 +1061,15 @@ function installSection() {
         <h4>Chrome</h4>
         ${steps([`Tap ${share} at the right of the address bar.`,
           'Tap <b>Add to Home Screen</b>, then <b>Add</b>.'])}
+      </div>
+      <div class="install-card">
+        <h3>Android</h3>
+        <h4>Chrome</h4>
+        ${steps(['Tap <b>⋮</b> at the top right.',
+          'Tap <b>Add to Home screen</b> (or <b>Install app</b>), then <b>Install</b>.'])}
+        <h4>Samsung Internet</h4>
+        ${steps(['Tap <b>☰</b> at the bottom right.',
+          'Tap <b>Add page to</b> → <b>Home screen</b>, then <b>Add</b>.'])}
       </div>
       <div class="install-card">
         <h3>Laptop</h3>
@@ -2577,6 +2590,92 @@ function movePlaylistItem(p, id, dir) {
     movePlaylistItem(playlistById(grip.dataset.pl), grip.dataset.id, e.key === 'ArrowUp' ? -1 : 1);
     $(`.pl-grip[data-id="${grip.dataset.id}"]`)?.focus();
   }, true);
+})();
+
+// Like Spotify (owner, 23 Nov 2026): swipe a kirtan or lecture in any list to the right to add it
+// to Favourites (or take it out), to the left to add it to a playlist. Touch only; the row slides
+// over a coloured strip that firms up once the swipe is far enough, then springs back and the
+// action happens. A mostly vertical drag scrolls as before, a short swipe does nothing, the screen
+// edges stay with the browser's back swipe, and a row lifted to reorder a playlist isn't swiped.
+(function swipeRows() {
+  const ROWS = '.tracks:not(.pl-edit) > li.track[data-id]:not(.add-row), li.lect-row[data-id]';
+  const EDGE = 24;
+  let sw = null, swiped = false;
+  const parts = li => [...li.children].filter(c => !c.classList.contains('swipe-act'));
+  const slide = (li, x, ease) => {
+    for (const c of parts(li)) {
+      c.style.transition = ease ? 'transform .2s var(--ease-out)' : 'none';
+      c.style.transform = x ? `translateX(${x}px)` : '';
+    }
+  };
+  const begin = () => {
+    const { li, id } = sw;
+    const fav = S.favs.has(id);
+    li.classList.add('swiping');
+    li.insertAdjacentHTML('beforeend', `<span class="swipe-act" aria-hidden="true">
+      <span class="swipe-fav">${icon('heart')}${fav ? 'Remove' : 'Favourite'}</span>
+      <span class="swipe-pl">${icon('playlist')}Playlist</span></span>`);
+    sw.act = li.lastElementChild;
+    sw.act.classList.toggle('is-fav', fav);
+    sw.far = Math.min(100, li.offsetWidth * 0.26);
+  };
+  const move = dx => {
+    const { li, act, far } = sw;
+    // Past the point where it counts, the row follows the finger more slowly.
+    const x = Math.abs(dx) <= far ? dx : Math.sign(dx) * (far + (Math.abs(dx) - far) * 0.35);
+    slide(li, x);
+    act.classList.toggle('to-fav', x > 0);
+    act.style.width = `${Math.abs(x)}px`;
+    const armed = Math.abs(dx) >= far;
+    if (armed !== sw.armed) {
+      sw.armed = armed;
+      act.classList.toggle('armed', armed);
+      if (armed) navigator.vibrate?.(8);
+    }
+    sw.dx = dx;
+  };
+  const finish = () => {
+    if (!sw) return;
+    const { li, act, id, dx, armed, sideways } = sw;
+    sw = null;
+    if (!sideways) return;
+    swiped = true;
+    setTimeout(() => { swiped = false; }, 400); // only the click the swipe itself makes is ignored
+    slide(li, 0, true);
+    act.style.transition = 'width .2s var(--ease-out)';
+    act.style.width = '0';
+    setTimeout(() => { act.remove(); li.classList.remove('swiping'); for (const c of parts(li)) c.style.transition = ''; }, 220);
+    if (!armed) return;
+    if (dx > 0) {
+      toggleFav(id);
+      if (!S.favs.has(id)) toast('Removed from Favourites', () => toggleFav(id));
+    } else {
+      setTimeout(() => openPlaylistPicker(id), 160);
+    }
+  };
+  document.addEventListener('pointerdown', e => {
+    swiped = false;
+    if (e.pointerType === 'mouse' || sw) return;
+    const li = e.target.closest(ROWS);
+    if (!li || li.closest('.sorting') || e.clientX < EDGE || e.clientX > innerWidth - EDGE) return;
+    sw = { li, id: li.dataset.id, pointer: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, sideways: null, armed: false };
+  });
+  document.addEventListener('pointermove', e => {
+    if (!sw || e.pointerId !== sw.pointer) return;
+    const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+    if (sw.sideways === null) {
+      if (Math.hypot(dx, dy) < 10) return;
+      sw.sideways = Math.abs(dx) > Math.abs(dy) * 1.3 && !sw.li.classList.contains('dragging');
+      if (!sw.sideways) { sw = null; return; }
+      begin();
+    }
+    move(dx);
+  });
+  // While a row is being swiped, the page doesn't scroll; the tap that ends a swipe doesn't play.
+  document.addEventListener('touchmove', e => { if (sw?.sideways) e.preventDefault(); }, { passive: false });
+  document.addEventListener('click', e => { if (swiped) { swiped = false; e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener('pointerup', finish);
+  document.addEventListener('pointercancel', finish);
 })();
 
 // In-page prompt for a playlist name; resolves to the trimmed name, or null.
