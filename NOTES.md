@@ -5,6 +5,11 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **New (23 Nov): swipe a kirtan, like Spotify.** On your phone, swipe any kirtan or lecture in a
+  list to the right to add it to your Favourites (swipe again to take it out; the message has Undo),
+  or to the left to add it to a playlist. Also new: **Kirtan Mela Day 5 (with Gour Krishna)**,
+  Rishikesh 2026, under Sacinandana Swami, with a picture taken from the video (saved in
+  Thumbnails/SNS as "Kirtan Mela Rishikesh 2026"). Rishikesh is a new place.
 - **Done (20 Nov): your new pictures are in.** 45 new ones (26 of Gour Krishna, 19 of Sacinandana
   Swami) went into Thumbnails/GK and SNS; the other 57 you sent were already there. Every Gour
   Krishna kirtan now has a picture (39 had none): pictures named after a place (berlin, london

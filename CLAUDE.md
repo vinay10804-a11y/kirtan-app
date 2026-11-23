@@ -80,6 +80,10 @@ R2 bucket `kirtans` at `/stream/*`.
   card opens the kksongs.org page in an in-app panel (an iframe). Words and translations in the app's own
   style (`verses`) must come from the owner or a source we may use; never copy them from websites or
   write them from memory.
+- Swipe a recording in a list (owner, 23 Nov 2026, "like Spotify"): right adds it to Favourites (or
+  removes it, with Undo), left opens Add to playlist (`swipeRows` in app.js, kirtan and lecture rows,
+  touch only). A teal strip fills the gap and firms up past ~100 px; the screen edges stay with the
+  browser's back swipe; a playlist row lifted by a hold is never swiped. Home's "How to use" says so.
 - Swipe the player artwork or mini player left/right to change recordings; swipe down on the player's
   top bar to close it. Menus and sheets that rise from the bottom (⋯ menus, account, queue, transcript,
   lyrics; all with a grab handle on phones) close with a swipe down or a tap on the dimmed page above,

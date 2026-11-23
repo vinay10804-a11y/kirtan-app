@@ -47,6 +47,7 @@ const PLACES = [
   ['Switzerland', /switzerland/i],
   ['Goloka Dham', /goloka\s*dham/i],
   ['Gita Nagari', /gita\s*nagari/i],
+  ['Rishikesh', /rishikesh/i],
 ];
 
 const MAHAMANTRA = /hare\s*kr?i?s?h?n|maha\s*-?\s*mantra|mahamantra|\bH\.?K\.?\b|hari\s*-?\s*n[aā]m/i;

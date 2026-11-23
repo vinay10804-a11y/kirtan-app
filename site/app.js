@@ -627,6 +627,7 @@ function homeView() {
       <ul>
         <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
+        <li><b>Swipe a kirtan</b> on your phone: to the right to add it to your Favourites, to the left to add it to a playlist.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
         <li><b>Chanting japa:</b> open the player, tap <b>Play next</b> and choose <b>Loop this kirtan</b>, so one kirtan plays again and again while you chant your rounds. <b>Play once</b> stops when the kirtan ends.</li>
         <li><b>Sleep timer</b> in the player stops playback after 15 minutes to an hour.</li>
@@ -2577,6 +2578,92 @@ function movePlaylistItem(p, id, dir) {
     movePlaylistItem(playlistById(grip.dataset.pl), grip.dataset.id, e.key === 'ArrowUp' ? -1 : 1);
     $(`.pl-grip[data-id="${grip.dataset.id}"]`)?.focus();
   }, true);
+})();
+
+// Like Spotify (owner, 23 Nov 2026): swipe a kirtan or lecture in any list to the right to add it
+// to Favourites (or take it out), to the left to add it to a playlist. Touch only; the row slides
+// over a coloured strip that firms up once the swipe is far enough, then springs back and the
+// action happens. A mostly vertical drag scrolls as before, a short swipe does nothing, the screen
+// edges stay with the browser's back swipe, and a row lifted to reorder a playlist isn't swiped.
+(function swipeRows() {
+  const ROWS = '.tracks:not(.pl-edit) > li.track[data-id]:not(.add-row), li.lect-row[data-id]';
+  const EDGE = 24;
+  let sw = null, swiped = false;
+  const parts = li => [...li.children].filter(c => !c.classList.contains('swipe-act'));
+  const slide = (li, x, ease) => {
+    for (const c of parts(li)) {
+      c.style.transition = ease ? 'transform .2s var(--ease-out)' : 'none';
+      c.style.transform = x ? `translateX(${x}px)` : '';
+    }
+  };
+  const begin = () => {
+    const { li, id } = sw;
+    const fav = S.favs.has(id);
+    li.classList.add('swiping');
+    li.insertAdjacentHTML('beforeend', `<span class="swipe-act" aria-hidden="true">
+      <span class="swipe-fav">${icon('heart')}${fav ? 'Remove' : 'Favourite'}</span>
+      <span class="swipe-pl">${icon('playlist')}Playlist</span></span>`);
+    sw.act = li.lastElementChild;
+    sw.act.classList.toggle('is-fav', fav);
+    sw.far = Math.min(100, li.offsetWidth * 0.26);
+  };
+  const move = dx => {
+    const { li, act, far } = sw;
+    // Past the point where it counts, the row follows the finger more slowly.
+    const x = Math.abs(dx) <= far ? dx : Math.sign(dx) * (far + (Math.abs(dx) - far) * 0.35);
+    slide(li, x);
+    act.classList.toggle('to-fav', x > 0);
+    act.style.width = `${Math.abs(x)}px`;
+    const armed = Math.abs(dx) >= far;
+    if (armed !== sw.armed) {
+      sw.armed = armed;
+      act.classList.toggle('armed', armed);
+      if (armed) navigator.vibrate?.(8);
+    }
+    sw.dx = dx;
+  };
+  const finish = () => {
+    if (!sw) return;
+    const { li, act, id, dx, armed, sideways } = sw;
+    sw = null;
+    if (!sideways) return;
+    swiped = true;
+    setTimeout(() => { swiped = false; }, 400); // only the click the swipe itself makes is ignored
+    slide(li, 0, true);
+    act.style.transition = 'width .2s var(--ease-out)';
+    act.style.width = '0';
+    setTimeout(() => { act.remove(); li.classList.remove('swiping'); for (const c of parts(li)) c.style.transition = ''; }, 220);
+    if (!armed) return;
+    if (dx > 0) {
+      toggleFav(id);
+      if (!S.favs.has(id)) toast('Removed from Favourites', () => toggleFav(id));
+    } else {
+      setTimeout(() => openPlaylistPicker(id), 160);
+    }
+  };
+  document.addEventListener('pointerdown', e => {
+    swiped = false;
+    if (e.pointerType === 'mouse' || sw) return;
+    const li = e.target.closest(ROWS);
+    if (!li || li.closest('.sorting') || e.clientX < EDGE || e.clientX > innerWidth - EDGE) return;
+    sw = { li, id: li.dataset.id, pointer: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, sideways: null, armed: false };
+  });
+  document.addEventListener('pointermove', e => {
+    if (!sw || e.pointerId !== sw.pointer) return;
+    const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+    if (sw.sideways === null) {
+      if (Math.hypot(dx, dy) < 10) return;
+      sw.sideways = Math.abs(dx) > Math.abs(dy) * 1.3 && !sw.li.classList.contains('dragging');
+      if (!sw.sideways) { sw = null; return; }
+      begin();
+    }
+    move(dx);
+  });
+  // While a row is being swiped, the page doesn't scroll; the tap that ends a swipe doesn't play.
+  document.addEventListener('touchmove', e => { if (sw?.sideways) e.preventDefault(); }, { passive: false });
+  document.addEventListener('click', e => { if (swiped) { swiped = false; e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener('pointerup', finish);
+  document.addEventListener('pointercancel', finish);
 })();
 
 // In-page prompt for a playlist name; resolves to the trimmed name, or null.

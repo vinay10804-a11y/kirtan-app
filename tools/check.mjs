@@ -51,6 +51,7 @@ const checks = [
   ['Playlists: Add sheet, Edit playlist, multi-select picker', app.includes('function openAddSheet') && app.includes("case 'pl-edit'") && app.includes('function renderPicker')],
   ['Playlist name box stays clear of the iPhone keyboard', css.includes('dialog.menu.name-menu')],
   ['Swipe down anywhere on the player closes it', app.includes("player.addEventListener('touchmove'")],
+  ['Swipe a kirtan or lecture right for Favourites, left for Add to playlist (23 Nov)', app.includes('function swipeRows') && app.includes('openPlaylistPicker(id), 160') && css.includes('.swipe-act.to-fav') && css.includes('.lect-row { touch-action: pan-y; }')],
   ['Kirtans list.xlsx: build reads and rewrites the sheet (edits, thumbnails, hidden)', read('tools/build.mjs').includes('applySheet(tracks)') && read('tools/build.mjs').includes('writeSheet(tracks)')],
   ['Kirtans hidden in the sheet stay out of the app', app.includes('.filter(t => !t.hidden)')],
   ['Accounts: server answers /api/* (worker/api.js) with the D1 database', read('worker/index.js').includes("startsWith('/api/')") && read('wrangler.jsonc').includes('"binding": "DB"')],
