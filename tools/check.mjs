@@ -52,6 +52,8 @@ const checks = [
   ['Playlists: Add sheet, Edit playlist, multi-select picker', app.includes('function openAddSheet') && app.includes("case 'pl-edit'") && app.includes('function renderPicker')],
   ['Playlist name box stays clear of the iPhone keyboard', css.includes('dialog.menu.name-menu')],
   ['Swipe down anywhere on the player closes it', app.includes("player.addEventListener('touchmove'")],
+  ['Faint grey text is readable in light mode, #747874 not #8f938f (audit, 23 Nov)', css.includes('--ink-3: #747874;')],
+  ['Security headers: no framing by other sites, nosniff, referrer policy (audit, 23 Nov)', read('site/_headers').includes("frame-ancestors 'self'") && read('site/_headers').includes('nosniff')],
   ['Kirtans with a YouTube video get a small video button, links from "Kirtans – YouTube links.xlsx" (23 Nov)', app.includes('class="icon-btn vid" data-action="watch"') && css.includes('.track .vid {') && read('publish.sh').includes('node tools/kirtan-videos.mjs') && read('tools/youtube-links.mjs').includes("kirtansFrom === 'sheet'")],
   ['Swipe a kirtan or lecture right for Favourites, left for Add to playlist (23 Nov)', app.includes('function swipeRows') && app.includes('openPlaylistPicker(id), 160') && css.includes('.swipe-act.to-fav') && css.includes('.lect-row { touch-action: pan-y; }')],
   ['Kirtans list.xlsx: build reads and rewrites the sheet (edits, thumbnails, hidden)', read('tools/build.mjs').includes('applySheet(tracks)') && read('tools/build.mjs').includes('writeSheet(tracks)')],

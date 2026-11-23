@@ -1,0 +1,8 @@
+# Sent with every page and file of the app (Cloudflare reads this file; it isn't served).
+# Audit, 23 Nov 2026: other websites may not show the app inside a frame (people sign in here),
+# browsers mustn't guess file types, and other sites see only our address, never a page's.
+/*
+  Content-Security-Policy: frame-ancestors 'self'
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

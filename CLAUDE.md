@@ -273,6 +273,14 @@ R2 bucket `kirtans` at `/stream/*`.
   Sacinandana Swami. / Listen here, or save recordings to play without internet." Right under it, a "How to install this website as an app" button (owner: must be near
   the top, with a clear title) that scrolls to the steps of the same title (iPhone, Android and laptop: Safari, Chrome and Samsung Internet; Android added 23 Nov 2026 at the owner's request) above "How to use this site",
   which also links there. Inside the installed app both stay, worded for installing on another device.
+- Audit (owner, 23 Nov 2026: "do an audit of the platform making any improvements if necessary"): every
+  recording, cover, Japa video/SoundCloud track, linked YouTube video (318) and lyrics page checked live,
+  pages at phone size in both themes, the lecture job and storage (5.57 GB of 10). The three kirtan pairs
+  with the same length to the second (#76/#61, #60/#153, #58/#80) were compared by sound: different
+  recordings. Changed: light-mode `--ink-3` #8f938f → #747874 (was 2.7:1 on the cream; now 3.9:1, still
+  lighter than `--ink-2`), and `site/_headers` (Cloudflare serves it with every static file, never as a
+  file): frame-ancestors 'self' / X-Frame-Options, nosniff, Referrer-Policy. Don't add a full CSP without
+  testing the YouTube, SoundCloud and kksongs frames.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.
 
