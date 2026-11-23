@@ -369,6 +369,9 @@ dialog.menu .account-submit.danger { background: #b0503c; color: #fff; }
 .queue-tiles button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .queue-tiles button.on { color: var(--teal); }
 .dl svg { width: 19px; height: 19px; }
+.track .vid { width: 34px; color: var(--ink-3); }
+.track .vid svg { width: 20px; height: 20px; }
+.track.playing .vid { color: var(--teal-deep); }
 .dl.saved { color: var(--teal); }
 .ring { width: 20px; height: 20px; transform: rotate(-90deg); }
 .ring circle { stroke-width: 2.4; }

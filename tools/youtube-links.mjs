@@ -161,8 +161,15 @@ async function main() {
     links.lectures = before.lectures || {};
     for (const id of Object.values(links.lectures)) usedVideos.add(id);
   }
+  // Kirtans have their own sheet (tools/kirtan-videos.mjs) once it has been read.
+  const kirtanSheet = before.kirtansFrom === 'sheet';
+  if (kirtanSheet) {
+    links.kirtansFrom = 'sheet';
+    links.kirtans = before.kirtans || {};
+  }
   for (const p of pairs(videos, items)) {
     if (sheetDecides && p.x.kind === 'lectures') continue; // the sheet decides
+    if (kirtanSheet && p.x.kind === 'kirtans') continue;
     if (usedVideos.has(p.v.id) || links[p.x.kind][p.x.id]) continue;
     usedVideos.add(p.v.id);
     links[p.x.kind][p.x.id] = p.v.id;
@@ -379,7 +386,7 @@ async function fromSheet(file) {
     lectures[id] = v;
   });
   const before = JSON.parse(await fs.readFile(LINKS, 'utf8').catch(() => '{}'));
-  await fs.writeFile(LINKS, `${JSON.stringify({ lecturesFrom: 'sheet', lectures, kirtans: before.kirtans || {} }, null, 1)}\n`);
+  await fs.writeFile(LINKS, `${JSON.stringify({ ...before, lecturesFrom: 'sheet', lectures, kirtans: before.kirtans || {} }, null, 1)}\n`);
   console.log(`From the sheet: ${Object.keys(lectures).length} talks with a video → ${path.relative(ROOT, LINKS)}`);
   if (unchecked) console.log(`  ${unchecked} links still marked “Check” were left out until someone checks them`);
   for (const p of problems) console.log(`  check ${p}`);

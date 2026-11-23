@@ -5,6 +5,14 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **New (23 Nov): watch a kirtan's video.** Kirtans that are on YouTube as a video now have a small
+  video button on their row (and "Watch video" in ⋯ and in the player): it pauses the kirtan and
+  plays the video in the app. The links are in a new sheet, **"Kirtans – YouTube links"** in your
+  Google Drive (a shortcut is in the platform folder), like the talks' one. Claude found
+  64 kirtans' videos for certain; 13 more are marked "Check" (open the video, and clear "Check"
+  if it's the same kirtan, or delete the link); they stay off the app until then. Add a link to any
+  other kirtan the same way, then ask Claude to publish. Also new: **Android steps** in "How to
+  install this website as an app" (Chrome and Samsung Internet).
 - **New (23 Nov): swipe a kirtan, like Spotify.** On your phone, swipe any kirtan or lecture in a
   list to the right to add it to your Favourites (swipe again to take it out; the message has Undo),
   or to the left to add it to a playlist. Also new: **Kirtan Mela Day 5 (with Gour Krishna)**,

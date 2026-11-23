@@ -56,6 +56,9 @@ fi
 echo "== Photos"
 node tools/photos.mjs
 
+echo "== Kirtan videos (from \"Kirtans – YouTube links.xlsx\")"
+node tools/kirtan-videos.mjs || echo "(Couldn't read the kirtan videos sheet; the video links stay as they were.)"
+
 echo "== Preparing audio"
 node tools/build.mjs "$SRC" ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"}
 

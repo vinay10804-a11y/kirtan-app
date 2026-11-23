@@ -84,6 +84,15 @@ R2 bucket `kirtans` at `/stream/*`.
   removes it, with Undo), left opens Add to playlist (`swipeRows` in app.js, kirtan and lecture rows,
   touch only). A teal strip fills the gap and firms up past ~100 px; the screen edges stay with the
   browser's back swipe; a playlist row lifted by a hold is never swiped. Home's "How to use" says so.
+- Kirtan videos (owner, 23 Nov 2026: "like you have done for lectures … an option watch in a small icon …
+  make a spreadsheet"): a kirtan with `yt` gets a small video button in its row (`.vid` in `trackRow`,
+  beside ⬇), plus Watch video in ⋯ and the player (`watchVideo`). Links come from "Kirtans – YouTube
+  links.xlsx" in the owner's Google Drive (My Drive, symlinked beside the project like the talks' sheet):
+  `tools/kirtan-videos.mjs` makes it (`--make-sheet`, from `tools/kirtan-videos.json`, Claude's first
+  attempt: a YouTube search per kirtan plus the festivals' and SNS's channels, checked by eye for event,
+  day, year, date and length; "Topic" album tracks are audio only and never linked) and reads it
+  (`--from-sheet`, and plain in publish.sh before the build) into `youtube-links.json` `.kirtans` with
+  `kirtansFrom: "sheet"`, after which youtube-links.mjs leaves kirtan links alone. Rows marked Check wait.
 - Swipe the player artwork or mini player left/right to change recordings; swipe down on the player's
   top bar to close it. Menus and sheets that rise from the bottom (⋯ menus, account, queue, transcript,
   lyrics; all with a grab handle on phones) close with a swipe down or a tap on the dimmed page above,
@@ -262,7 +271,7 @@ R2 bucket `kirtans` at `/stream/*`.
 - Home's intro (owner, 27 Oct 2026, from a friend's wording; each sentence on its own line): "Welcome. Immerse
   yourself in kirtans by Sacinandana Swami and Gour Krishna. / Be inspired to chant japa and hear lectures by
   Sacinandana Swami. / Listen here, or save recordings to play without internet." Right under it, a "How to install this website as an app" button (owner: must be near
-  the top, with a clear title) that scrolls to the steps of the same title (iPhone and laptop, Safari and Chrome) above "How to use this site",
+  the top, with a clear title) that scrolls to the steps of the same title (iPhone, Android and laptop: Safari, Chrome and Samsung Internet; Android added 23 Nov 2026 at the owner's request) above "How to use this site",
   which also links there. Inside the installed app both stay, worded for installing on another device.
 - `NOTES.md` is the owner's running list of changes still to make and what is needed from them.
   Read it when they ask what's outstanding, and keep it current.

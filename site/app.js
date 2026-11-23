@@ -457,13 +457,16 @@ function trackRow(t, i, listKey, opts = {}) {
   // A lecture with a transcript or a video gets the Lectures page's Transcript / Video buttons on
   // a line of their own under the title, in playlists, Favourites, History, Saved and Search too
   // (a friend, 27 Oct 2026).
-  const tx = t.tx || t.yt ? `<span class="track-tx">${extrasHTML(t)}</span>` : '';
+  const tx = t.tx || (t.yt && isLecture(t)) ? `<span class="track-tx">${extrasHTML(t)}</span>` : '';
+  // A kirtan that's also on YouTube has a small video button beside Save offline instead (owner,
+  // 23 Nov 2026: "an option to watch in a small icon"); the links come from his kirtan videos sheet.
+  const vid = t.yt && !isLecture(t) ? `<button class="icon-btn vid" data-action="watch" data-id="${t.id}" aria-label="Watch ${esc(t.title)} on YouTube">${icon('video')}</button>` : '';
   return `<li class="track${current ? ' playing' : ''}${off ? ' off' : ''}${thumb ? ' has-thumb' : ''}${tx ? ' has-tx' : ''}"${current ? ' aria-current="true"' : ''} data-id="${t.id}" data-i="${i}" data-list="${listKey}" data-opts='${JSON.stringify(opts)}'>
     <button class="track-main" data-action="play" data-id="${t.id}" data-list="${opts.playList || listKey}">
       ${lead}
       <span class="track-text"><span class="track-title">${esc(t.title)}</span><span class="track-meta">${trackMeta(t, opts)}</span></span>
     </button>
-    ${dlButton(t)}
+    ${vid}${dlButton(t)}
     <button class="icon-btn more" data-action="track-menu" data-id="${t.id}" aria-label="More options">${icon('more')}</button>
     ${tx}
   </li>`;
@@ -593,8 +596,8 @@ function homeView() {
     <button class="install-cta" data-action="show-install">
       <span class="install-cta-icon">${icon('download')}</span>
       <span class="install-cta-text">${isInstalled()
-        ? '<b>How to install this website as an app</b><small>On another phone or laptop: steps for Safari and Chrome</small>'
-        : '<b>How to install this website as an app</b><small>On your iPhone or laptop: it opens from its own icon and works offline</small>'}</span>
+        ? '<b>How to install this website as an app</b><small>On another phone or laptop: steps for iPhone, Android and laptop</small>'
+        : '<b>How to install this website as an app</b><small>On your iPhone, Android or laptop: it opens from its own icon and works offline</small>'}</span>
       ${icon('right')}
     </button>
     ${last && lastPos ? `<section class="section"><h2>Continue listening</h2><div class="rows">
@@ -625,7 +628,7 @@ function homeView() {
     <details class="howto">
       <summary>How to use this site</summary>
       <ul>
-        <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone and laptop</button>.</li>
+        <li><b>Install it as an app:</b> <button class="text-btn" data-action="show-install">see the steps for iPhone, Android and laptop</button>.</li>
         <li><b>Play:</b> tap any kirtan. It keeps playing while you browse and when your phone is locked.</li>
         <li><b>Swipe a kirtan</b> on your phone: to the right to add it to your Favourites, to the left to add it to a playlist.</li>
         <li><b>Offline:</b> tap ${icon('download')} next to a kirtan, or <b>Save all offline</b> on a year or place. Saved kirtans play without internet.</li>
@@ -1033,8 +1036,8 @@ function openCoverPicker(id) {
 
 const isInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 
-// Home page: how to install the site as an app on an iPhone or a laptop, in Safari
-// or Chrome. The "How to install this website as an app" button near the top of Home scrolls here.
+// Home page: how to install the site as an app on an iPhone, an Android phone (owner, 23 Nov
+// 2026) or a laptop, in Safari, Chrome or Samsung Internet. The "How to install this website as an app" button near the top of Home scrolls here.
 // Inside the installed app it stays, for installing on another device.
 function installSection() {
   const steps = list => `<ol>${list.map(x => `<li>${x}</li>`).join('')}</ol>`;
@@ -1058,6 +1061,15 @@ function installSection() {
         <h4>Chrome</h4>
         ${steps([`Tap ${share} at the right of the address bar.`,
           'Tap <b>Add to Home Screen</b>, then <b>Add</b>.'])}
+      </div>
+      <div class="install-card">
+        <h3>Android</h3>
+        <h4>Chrome</h4>
+        ${steps(['Tap <b>⋮</b> at the top right.',
+          'Tap <b>Add to Home screen</b> (or <b>Install app</b>), then <b>Install</b>.'])}
+        <h4>Samsung Internet</h4>
+        ${steps(['Tap <b>☰</b> at the bottom right.',
+          'Tap <b>Add page to</b> → <b>Home screen</b>, then <b>Add</b>.'])}
       </div>
       <div class="install-card">
         <h3>Laptop</h3>

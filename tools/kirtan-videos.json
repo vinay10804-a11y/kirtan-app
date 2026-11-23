@@ -1,0 +1,856 @@
+{
+ "about": "Claude’s first attempt at the kirtans’ YouTube videos (23 Nov 2026), for tools/kirtan-videos.mjs --make-sheet",
+ "attempt": {
+  "ec47291f5606c92c": {
+   "yt": "keH_5Rzt2IY",
+   "sure": true
+  },
+  "52c234566159b757": {
+   "yt": "Oyt_9fGDpCg",
+   "sure": true
+  },
+  "c6db09bf45bbfea6": {
+   "yt": "jldyAN8EfVc",
+   "sure": true
+  },
+  "80f6c3d527882bcb": {
+   "yt": "Xocm2F_9bKg",
+   "sure": true
+  },
+  "0559774f59b708f2": {
+   "yt": "Q7WUypuzvis",
+   "sure": true
+  },
+  "e99bd30a556f3488": {
+   "yt": "S7neW1cEPUQ",
+   "sure": true
+  },
+  "a7ed103a9b424a65": {
+   "yt": "3tVArIO6fsI",
+   "sure": true
+  },
+  "38ba599b7668b0ce": {
+   "yt": "-IctaR1RAFI",
+   "sure": true
+  },
+  "26a0483275f81a12": {
+   "yt": "8tA569QpfzQ",
+   "sure": true
+  },
+  "383fdbe2306ca6a0": {
+   "yt": "TvotmpnTaOw",
+   "sure": true
+  },
+  "a86893a91217dcc3": {
+   "yt": "7GSn0OQNMIQ",
+   "sure": true
+  },
+  "354cb1041b5f3754": {
+   "yt": "sHaF3kY3eQs",
+   "sure": true
+  },
+  "d06aad29bc014ce8": {
+   "yt": "LbFJM4TkN6Y",
+   "sure": true
+  },
+  "8c03a1d97ded6f75": {
+   "yt": "gQUTlXoK1Kc",
+   "sure": true
+  },
+  "8142fc0ae0164775": {
+   "yt": "_e6XEmvgVX4",
+   "sure": true
+  },
+  "eff453df305ee293": {
+   "yt": "ny6ZZDnncL8",
+   "sure": true
+  },
+  "5a7dcbcbf9d244e6": {
+   "yt": "t23SpHIPcVg",
+   "sure": true
+  },
+  "4267c5ce0e0a73dc": {
+   "yt": "_TX0PreeV_s",
+   "sure": true
+  },
+  "1203cb47d073f195": {
+   "yt": "DuAtqrsDlYY",
+   "sure": true
+  },
+  "9666cbf362b5159c": {
+   "yt": "UBLwA_4fOYE",
+   "sure": true
+  },
+  "91429361c40f7cc0": {
+   "yt": "7Mf_Q0wD0xk",
+   "sure": true
+  },
+  "ff374e2a3ec0e0a1": {
+   "yt": "dLR0U6jvc-o",
+   "sure": true
+  },
+  "469cd198be326479": {
+   "yt": "PqClU6SXYZ4",
+   "sure": true
+  },
+  "540f9cc2bb09ca19": {
+   "yt": "0eEVZNkx92Q",
+   "sure": true
+  },
+  "21b3c1f1113f7105": {
+   "yt": "VI63C-GmhUU",
+   "sure": true
+  },
+  "f30a04e52f133ab7": {
+   "yt": "Lves4-C5_mk",
+   "sure": true
+  },
+  "78fdaaffc7620984": {
+   "yt": "EGYIwl-te8g",
+   "sure": true
+  },
+  "86a92abc4db44844": {
+   "yt": "mjZQjzIuB0s",
+   "sure": true
+  },
+  "10fcf260ea5c91da": {
+   "yt": "H0VNxqjyPoM",
+   "sure": true
+  },
+  "0ab8f37e6aa9bf88": {
+   "yt": "ZspJ4P59DEY",
+   "sure": true
+  },
+  "61964fdca41ed4f6": {
+   "yt": "Gj_AQ0nlI0A",
+   "sure": true
+  },
+  "6d2e5553df9e4c1b": {
+   "yt": "q5WL-EnCv1Q",
+   "sure": true
+  },
+  "ff11e569a791e441": {
+   "yt": "xC3VslKO7aU",
+   "sure": true
+  },
+  "c30bcceb55333969": {
+   "yt": "Q-wCPhKR3dc",
+   "sure": true
+  },
+  "daedd828546f0ea0": {
+   "yt": "6AwT7v8MlsM",
+   "sure": true
+  },
+  "f8f367e1f815d81d": {
+   "yt": "HiFTPUiWlJQ",
+   "sure": true
+  },
+  "397f16d8a93efc8d": {
+   "yt": "bSCADU4Iueo",
+   "sure": true
+  },
+  "3e60e3f6f23ebc85": {
+   "yt": "ePaz7SmtKpw",
+   "sure": true
+  },
+  "98aa280ffd76d4f1": {
+   "yt": "c0Foga65PVw",
+   "sure": true
+  },
+  "ae7a5cb8517b88a3": {
+   "yt": "ea1-H1lbQNQ",
+   "sure": true
+  },
+  "78497d13de2f9eee": {
+   "yt": "8mULc64hlMM",
+   "sure": true
+  },
+  "b7f4a723b60d2ee9": {
+   "yt": "UqYcp3RbZsM",
+   "sure": true
+  },
+  "03231b3f1a82c918": {
+   "yt": "ZDu_m8RW-BY",
+   "sure": true
+  },
+  "6e83c196d3d11f94": {
+   "yt": "E5ihtSTNrLI",
+   "sure": true
+  },
+  "78fc91d6b3d981af": {
+   "yt": "w5D8i835WhE",
+   "sure": true
+  },
+  "fce6b74a7c923cea": {
+   "yt": "1DjkuCVtM5M",
+   "sure": true
+  },
+  "514f1594b7fec207": {
+   "yt": "nEYFPMmWItY",
+   "sure": true
+  },
+  "d5327cab8c54596c": {
+   "yt": "zRrEuvKbYY8",
+   "sure": true
+  },
+  "9bb4b42e6beaf55d": {
+   "yt": "ALU72_642gU",
+   "sure": true
+  },
+  "959a2fddd3eac84c": {
+   "yt": "jWkfaOSJEWg",
+   "sure": true
+  },
+  "90e3024d1f039142": {
+   "yt": "OGE0Szii-q8",
+   "sure": true,
+   "note": "The video is 56 min, the recording 45 min."
+  },
+  "452a9d4ccdee01d0": {
+   "yt": "DVrnm8ahghw",
+   "sure": true,
+   "note": "The video is 54 min, the recording 36 min."
+  },
+  "86ba663f009d7f50": {
+   "yt": "bWYP6EHa7PA",
+   "sure": true,
+   "note": "The video is 60 min, the recording 48 min."
+  },
+  "de4768f142a42bc5": {
+   "yt": "j8ZUAQF8lms",
+   "sure": true
+  },
+  "8fbb7754e407c567": {
+   "yt": "0wFUVpVfM9Y",
+   "sure": true
+  },
+  "848ed5ff20925dbd": {
+   "yt": "nKt27_GtqkA",
+   "sure": true
+  },
+  "de2b15bb8376397f": {
+   "yt": "UoJr1l1aWGE",
+   "sure": true
+  },
+  "be967dfa41a084bc": {
+   "yt": "CCs1eZuJtGE",
+   "sure": true
+  },
+  "cee0cdf521362e25": {
+   "yt": "tr20lnSLSlg",
+   "sure": true
+  },
+  "5f6b009859ed0a45": {
+   "yt": "NgAXq3TYaMM",
+   "sure": true
+  },
+  "e58d00516c3bfdbe": {
+   "yt": "w_d8NKoXl-Y",
+   "sure": true
+  },
+  "ab7ffe792d04a9a7": {
+   "yt": "OZz76LzxTuc",
+   "sure": true
+  },
+  "ac31b14d96a31694": {
+   "yt": "DuzOVD8nGvY",
+   "sure": true
+  },
+  "c5f6aa2b25ad57f6": {
+   "yt": "t2FC-5TcGXc",
+   "sure": true
+  },
+  "a0eb7420a395bf0b": {
+   "yt": "Xe7pTAX8uh4",
+   "sure": false,
+   "note": "Berlin’s channel has two “Day 3” videos; the other: https://www.youtube.com/watch?v=gVjiYgCa8W0"
+  },
+  "2812cf99afde6d78": {
+   "yt": "ub6bVgsvxj8",
+   "sure": false,
+   "note": "Holy Name Immersion, Radhadesh, Sept 2023: the retreat may have had more than one kirtan."
+  },
+  "e354c494bd38a3fd": {
+   "yt": "O7b4EPKPRnk",
+   "sure": false,
+   "note": "The video is 31 min, the recording 39 min."
+  },
+  "61fe9f3991f0e608": {
+   "yt": "BhhJiziQgOU",
+   "sure": false
+  },
+  "b59ee1aef14fead9": {
+   "yt": "U2xbd_391GY",
+   "sure": false,
+   "note": "Or this one: https://www.youtube.com/watch?v=4psJ7H4bSHU"
+  },
+  "87a11d3869453220": {
+   "yt": "NbSaxEuKsSg",
+   "sure": false
+  },
+  "ced2ad8403c8ba66": {
+   "yt": "JVGZvrEK25Q",
+   "sure": false,
+   "note": "The video is 38 min, the recording 32 min."
+  },
+  "4064280e103b1c9f": {
+   "yt": "KAtEamkTsFA",
+   "sure": false
+  },
+  "fef71ac4e41a9140": {
+   "yt": "UDXuDoYssmk",
+   "sure": false,
+   "note": "Kirtan Mela Germany, day 5, but the video doesn’t say the year."
+  },
+  "e7e2bedae6218879": {
+   "yt": "ljtN1jSMy0I",
+   "sure": false,
+   "note": "Same date (22 Feb 2012)."
+  },
+  "57682dd090998ba0": {
+   "yt": "MjrA-0edhG8",
+   "sure": false,
+   "note": "Streamed the same day (16 Sept 2026). The video is 57 min, the recording 36 min."
+  },
+  "f003388ef1ac7c7f": {
+   "yt": "IdGiWT_yDTE",
+   "sure": false
+  },
+  "cd09c297609762f8": {
+   "yt": "CmDGHRnM0uU",
+   "sure": false,
+   "note": "An unnamed upload (“03 Gour Krsna”) of the same length: listen to see if it’s this kirtan."
+  },
+  "fed838e9921289b5": {
+   "note": "Maybe https://www.youtube.com/watch?v=ljtN1jSMy0I (Mayapur kirtan mela, 22 Feb 2012; linked to Day 1 Part 2)."
+  },
+  "43ac53c10871fce9": {
+   "note": "Only as audio on YouTube (an album track, Radhadesh Mellows 15 Day 1), no video."
+  },
+  "7f1e8858586111ed": {
+   "note": "Maybe https://www.youtube.com/watch?v=v3bVb_ctGsI (Prabhupada’s House, but dated 24 Nov 2019, 60 min)."
+  }
+ },
+ "videos": {
+  "keH_5Rzt2IY": {
+   "title": "Radhadesh Mellows 2012 HH Sacinandana Swami Saturday",
+   "channel": "Radhadesh Mellows",
+   "duration": 3486
+  },
+  "Oyt_9fGDpCg": {
+   "title": "Radhadesh Mellows 2018 - Invocation Kirtan by Sacinandana Swami",
+   "channel": "Radhadesh Mellows",
+   "duration": 1887
+  },
+  "jldyAN8EfVc": {
+   "title": "Sacinandana Swami - Day 1 - Radhadesh Mellows 2019",
+   "channel": "Radhadesh Mellows",
+   "duration": 3496
+  },
+  "Xocm2F_9bKg": {
+   "title": "Sacinandana Swami - Day 2 - Radhadesh Mellows 2019",
+   "channel": "Radhadesh Mellows",
+   "duration": 3918
+  },
+  "Q7WUypuzvis": {
+   "title": "Sacinandana Swami - Day 3 - Radhadesh Mellows 2019",
+   "channel": "Radhadesh Mellows",
+   "duration": 5483
+  },
+  "S7neW1cEPUQ": {
+   "title": "Sacinandana Swami - Day 1 - Radhadesh Mellows 2020",
+   "channel": "Radhadesh Mellows",
+   "duration": 3701
+  },
+  "3tVArIO6fsI": {
+   "title": "Sacinandana Swami - Day 2 - Radhadesh Mellows 2020",
+   "channel": "Radhadesh Mellows",
+   "duration": 3705
+  },
+  "-IctaR1RAFI": {
+   "title": "Sacinandana Swami - Day 3 - Radhadesh Mellows 2021",
+   "channel": "Radhadesh Mellows",
+   "duration": 1523
+  },
+  "8tA569QpfzQ": {
+   "title": "Meditation in Blissfull Kirtan with Sacinandana Swami - Day 1,  2022 Radhadesh Mellows",
+   "channel": "Radhadesh Mellows",
+   "duration": 3017
+  },
+  "TvotmpnTaOw": {
+   "title": "Sacinandana Swami  - Day 2 -  Radhadesh Mellows 2022",
+   "channel": "Radhadesh Mellows",
+   "duration": 3220
+  },
+  "7GSn0OQNMIQ": {
+   "title": "Inspiring Kirtan by Sacinandana Swami - Day 3 - Radhadesh Mellows 2022",
+   "channel": "Radhadesh Mellows",
+   "duration": 3787
+  },
+  "sHaF3kY3eQs": {
+   "title": "Sacinandana Swami - Day 1 - Radhadesh Mellows 2023",
+   "channel": "Radhadesh Mellows",
+   "duration": 3034
+  },
+  "LbFJM4TkN6Y": {
+   "title": "Sacinandana Swami - Day 2 - Radhadesh Mellows 2023",
+   "channel": "Radhadesh Mellows",
+   "duration": 3598
+  },
+  "gQUTlXoK1Kc": {
+   "title": "Sacinandana Swami - Day 3 - Radhadesh Mellows 2023",
+   "channel": "Radhadesh Mellows",
+   "duration": 4015
+  },
+  "_e6XEmvgVX4": {
+   "title": "Sacinandana Swami - Day 1 - Radhadesh Mellows 2025",
+   "channel": "Radhadesh Mellows",
+   "duration": 4428
+  },
+  "ny6ZZDnncL8": {
+   "title": "Sacinandana Swami - Day 2 - Radhadesh Mellows 2025",
+   "channel": "Radhadesh Mellows",
+   "duration": 2971
+  },
+  "t23SpHIPcVg": {
+   "title": "Sacinandana Swami - Day 3 - Radhadesh Mellows 2025",
+   "channel": "Radhadesh Mellows",
+   "duration": 1903
+  },
+  "_TX0PreeV_s": {
+   "title": "Sacinandana Swami - Day 1 - Radhadesh Mellows 2026",
+   "channel": "Radhadesh Mellows",
+   "duration": 3995
+  },
+  "DuAtqrsDlYY": {
+   "title": "Sacinandana Swami - Day 2 - Radhadesh Mellows 2026 (Live Stream Audio)",
+   "channel": "Radhadesh Mellows",
+   "duration": 2964
+  },
+  "UBLwA_4fOYE": {
+   "title": "Sacinandana Swami - Day 3 - Part 1 - Radhadesh Mellows 2026",
+   "channel": "Radhadesh Mellows",
+   "duration": 5213
+  },
+  "7Mf_Q0wD0xk": {
+   "title": "Sacinandana Swami - Day 3 - Part 2 - Radhadesh Mellows 2026",
+   "channel": "Radhadesh Mellows",
+   "duration": 2738
+  },
+  "dLR0U6jvc-o": {
+   "title": "HH Sacinandana Maharaja l Kirtan Mela Berlin 2025 l Day 2",
+   "channel": "Krishna Berlin – ISKCON",
+   "duration": 4053
+  },
+  "PqClU6SXYZ4": {
+   "title": "Radhadesh Mellows 2017 Gaur Krishna",
+   "channel": "Radhadesh Mellows",
+   "duration": 2726
+  },
+  "0eEVZNkx92Q": {
+   "title": "Radhadesh Mellows 2018 - Day 1, Gour Krsna Dasa",
+   "channel": "Radhadesh Mellows",
+   "duration": 3665
+  },
+  "VI63C-GmhUU": {
+   "title": "Radhadesh Mellows 2018 - Day 2, Gour Krsna dasa",
+   "channel": "Radhadesh Mellows",
+   "duration": 2381
+  },
+  "Lves4-C5_mk": {
+   "title": "Radhadesh Mellows 2018 - Day 3, Gour Krsna dasa",
+   "channel": "Radhadesh Mellows",
+   "duration": 2749
+  },
+  "EGYIwl-te8g": {
+   "title": "Gour Krsna - Day 2 - Radhadesh Mellows 2019",
+   "channel": "Radhadesh Mellows",
+   "duration": 3136
+  },
+  "mjZQjzIuB0s": {
+   "title": "Gour Krsna - Day 3 - Radhadesh Mellows 2019",
+   "channel": "Radhadesh Mellows",
+   "duration": 2721
+  },
+  "H0VNxqjyPoM": {
+   "title": "Gour Krsna - Day 1 - Radhadesh Mellows 2020",
+   "channel": "Radhadesh Mellows",
+   "duration": 3509
+  },
+  "ZspJ4P59DEY": {
+   "title": "Gour Krsna - Day 3 - Radhadesh Mellows 2020",
+   "channel": "Radhadesh Mellows",
+   "duration": 3268
+  },
+  "Gj_AQ0nlI0A": {
+   "title": "Gour Krsna - Day 1- Radhadesh Mellows 2021",
+   "channel": "Radhadesh Mellows",
+   "duration": 2002
+  },
+  "q5WL-EnCv1Q": {
+   "title": "Gour Krsna - Day 2 - Radhadesh Mellows 2021",
+   "channel": "Radhadesh Mellows",
+   "duration": 2987
+  },
+  "xC3VslKO7aU": {
+   "title": "Sweet and Profound Kirtan by Gour Krsna - Day 1 - Radhadesh Mellows 2022",
+   "channel": "Radhadesh Mellows",
+   "duration": 2238
+  },
+  "Q-wCPhKR3dc": {
+   "title": "Divine by Gour Krsna - Day 3 - Radhadesh Mellows 2022",
+   "channel": "Radhadesh Mellows",
+   "duration": 3716
+  },
+  "6AwT7v8MlsM": {
+   "title": "Gour Krishna Prabhu Kirtan | Kusum Sarovar 2023",
+   "channel": "Arjunism",
+   "duration": 3253
+  },
+  "HiFTPUiWlJQ": {
+   "title": "Gour Krsna - Day 1 - Radhadesh Mellows 2023",
+   "channel": "Radhadesh Mellows",
+   "duration": 2501
+  },
+  "bSCADU4Iueo": {
+   "title": "Gour Krsna Prabhu | Day 1 | Kirtan Fest Bahrain 2024",
+   "channel": "Kirtan Fest Bahrain",
+   "duration": 2713
+  },
+  "ePaz7SmtKpw": {
+   "title": "Gour Krsna Prabhu | Day 3 | Kirtan Fest Bahrain 2024",
+   "channel": "Kirtan Fest Bahrain",
+   "duration": 3242
+  },
+  "c0Foga65PVw": {
+   "title": "Gour Krsna - Day 3 - Radhadesh Mellows 2024",
+   "channel": "Radhadesh Mellows",
+   "duration": 2796
+  },
+  "ea1-H1lbQNQ": {
+   "title": "Gour Krsna Prabhu | Day 2 | Kirtan Fest Bahrain 2025",
+   "channel": "Kirtan Fest Bahrain",
+   "duration": 3445
+  },
+  "8mULc64hlMM": {
+   "title": "Gour Krsna - Day 1 - Radhadesh Mellows 2025",
+   "channel": "Radhadesh Mellows",
+   "duration": 3481
+  },
+  "UqYcp3RbZsM": {
+   "title": "Gour Krsna - Day 3 - Radhadesh Mellows 2025",
+   "channel": "Radhadesh Mellows",
+   "duration": 3266
+  },
+  "ZDu_m8RW-BY": {
+   "title": "Gour Krsna  - Day 1 - Radhadesh Mellows 2026",
+   "channel": "Radhadesh Mellows",
+   "duration": 2600
+  },
+  "E5ihtSTNrLI": {
+   "title": "Gour Krsna - Day 3 - Radhadesh Mellows 2026",
+   "channel": "Radhadesh Mellows",
+   "duration": 3999
+  },
+  "w5D8i835WhE": {
+   "title": "Gour Krsna Prabhu l Kirtan Mela Berlin 2025 l Day 2",
+   "channel": "Krishna Berlin – ɪsᴋᴄᴏɴ",
+   "duration": 2544
+  },
+  "1DjkuCVtM5M": {
+   "title": "Gaur Krsna - Mama Mana Mandire at Haridev, Mansi Ganga Govardhan Kartik 2023",
+   "channel": "Kartik Tyagi",
+   "duration": 2667
+  },
+  "nEYFPMmWItY": {
+   "title": "Kirtan with Gour Krsna / Siksastakam 1-4 / Holy Name Immersion Radhadesh 2023",
+   "channel": "Sacinandana Swami",
+   "duration": 1535
+  },
+  "zRrEuvKbYY8": {
+   "title": "Hare Krishna Kirtan - Sacinandana Swami in Mayapur During 2013 Kirtan Mela (Day 2)",
+   "channel": "Classic Kirtans",
+   "duration": 3415
+  },
+  "ALU72_642gU": {
+   "title": "Hare Krishna Kirtan - Sacinandana Swami in Mayapur During 2013 Kirtan Mela (Day 5)",
+   "channel": "Classic Kirtans",
+   "duration": 3985
+  },
+  "jWkfaOSJEWg": {
+   "title": "Mayapur Kirtan Mela 2015 Day 1 Sacinandana Swami - Feb 16th 2015",
+   "channel": "MayapurTv",
+   "duration": 3422
+  },
+  "OGE0Szii-q8": {
+   "title": "Mayapur Kirtan Mela 2015 Day 2 Sacinandan Swami - Feb 17th 2015",
+   "channel": "MayapurTv",
+   "duration": 3350
+  },
+  "DVrnm8ahghw": {
+   "title": "Mayapur Kirtan Mela 2015 | Day 3 | Sacinandan Swami | Hare Krishna Kirtan",
+   "channel": "Hare Krsna TV",
+   "duration": 3252
+  },
+  "bWYP6EHa7PA": {
+   "title": "Mayapur Kirtan Mela 2015 Day 4 Sacinandana Swami - Feb 19th 2015",
+   "channel": "MayapurTv",
+   "duration": 3582
+  },
+  "j8ZUAQF8lms": {
+   "title": "Kirtan with Gour Krishna / Holy Name Immersion ‘26",
+   "channel": "Sacinandana Swami",
+   "duration": 3418
+  },
+  "0wFUVpVfM9Y": {
+   "title": "HH Sacinandana Swami's Kirtan | Day 1 | Kirtan Rasa 2022 | Dubai Kirtan Mela",
+   "channel": "Kirtan Rasa",
+   "duration": 2275
+  },
+  "nKt27_GtqkA": {
+   "title": "HH Sacinandana Swami's Kirtan | Day 1 | Kirtan Rasa 2025 | 4K | Dubai Kirtan Mela",
+   "channel": "Kirtan Rasa",
+   "duration": 2613
+  },
+  "UoJr1l1aWGE": {
+   "title": "HH Sacinandana Swami's Kirtan | Day 3 | Kirtan Rasa 2025 | 4K | Dubai Kirtan Mela",
+   "channel": "Kirtan Rasa",
+   "duration": 2601
+  },
+  "CCs1eZuJtGE": {
+   "title": "Kirtan with Sacinandana Swami / London Mellows '26 / Day 1",
+   "channel": "Sacinandana Swami",
+   "duration": 2804
+  },
+  "tr20lnSLSlg": {
+   "title": "Kirtan with Sacinandana Swami / London Mellows '26 / Day 2",
+   "channel": "Sacinandana Swami",
+   "duration": 3301
+  },
+  "NgAXq3TYaMM": {
+   "title": "Gour Krsna Prabhu's Kirtan | Day 1 | Kirtan Rasa Dubai 2022 | Dubai Kirtan Mela",
+   "channel": "Kirtan Rasa",
+   "duration": 2656
+  },
+  "w_d8NKoXl-Y": {
+   "title": "Gour Krsna Das' Kirtan | Day 1 | Kirtan Rasa 2025 | 4K | Dubai Kirtan Mela",
+   "channel": "Kirtan Rasa",
+   "duration": 2725
+  },
+  "OZz76LzxTuc": {
+   "title": "Kirtan with Gour Krishna / London Mellows '26 / Day 1",
+   "channel": "Sacinandana Swami",
+   "duration": 2146
+  },
+  "DuzOVD8nGvY": {
+   "title": "Kirtan with Gour Krishna / London Mellows '26 / Day 2",
+   "channel": "Sacinandana Swami",
+   "duration": 2604
+  },
+  "t2FC-5TcGXc": {
+   "title": "Sacinandana Swami & Gour Krishna Das | Hare Krishna Kirtan | Kirtan Mela 2026 Rishikesh | 4K",
+   "channel": "Bhakti Yoga Rishikesh",
+   "duration": 3201
+  },
+  "Xe7pTAX8uh4": {
+   "title": "HH Sacinandana Maharaja l Kirtan Mela Berlin 2025 l Day 3",
+   "channel": "Krishna Berlin – ɪsᴋᴄᴏɴ",
+   "duration": 2744
+  },
+  "ub6bVgsvxj8": {
+   "title": "Kirtan With Sacinandana Swami / Holy Name Immersion / Radhadesh 2023",
+   "channel": "Sacinandana Swami",
+   "duration": 3754
+  },
+  "O7b4EPKPRnk": {
+   "title": "Gour Krsna - 06/05/2022 - Radhadesh Evening Kirtans",
+   "channel": "Radhadesh TV",
+   "duration": 1872
+  },
+  "BhhJiziQgOU": {
+   "title": "Kirtan with Gour Krsna / Holy Name Immersion '25 / Radhadesh",
+   "channel": "Sacinandana Swami",
+   "duration": 3018
+  },
+  "U2xbd_391GY": {
+   "title": "Gour Krsna - Holy Name Immersion New Vrindaban '25 - Day 2",
+   "channel": "Sacinandana Swami",
+   "duration": 2610
+  },
+  "NbSaxEuKsSg": {
+   "title": "Kirtan with Gour Krishna / Holy Name Immersion Radhadesh 2023",
+   "channel": "Sacinandana Swami",
+   "duration": 2558
+  },
+  "JVGZvrEK25Q": {
+   "title": "Kirtan with Gour Krsna / Siksastakam 5-8 / Holy Name Immersion Radhadesh 2023",
+   "channel": "Sacinandana Swami",
+   "duration": 2279
+  },
+  "KAtEamkTsFA": {
+   "title": "Sri Krishna Caitanya Prabhu Doya Koro More - Bhajan by Sai Gadhvi",
+   "channel": "ISKCON London Radha-Krishna Temple",
+   "duration": 848
+  },
+  "UDXuDoYssmk": {
+   "title": "HH Sacinandana Swami || Kirtana Mela || Germany || day 5 @SacinandanaSwamiYouTube",
+   "channel": "STUDIO ISKCON",
+   "duration": 3665
+  },
+  "ljtN1jSMy0I": {
+   "title": "2012.02.22 Mayapur kirtana-mela Sacinandana Swami.MTS",
+   "channel": "Niranjana Swami tape ministry Moscow",
+   "duration": 3101
+  },
+  "MjrA-0edhG8": {
+   "title": "Kirtan with Sacinandana Swami/ Holy Name Immersion",
+   "channel": "Sacinandana Swami",
+   "duration": 3418
+  },
+  "IdGiWT_yDTE": {
+   "title": "An Evening with Gour Krsna Prabhu-Radhadesh",
+   "channel": "ISKCON Radhadesh",
+   "duration": 1957
+  },
+  "CmDGHRnM0uU": {
+   "title": "03 Gour Krsna",
+   "channel": "Yutaka Baba",
+   "duration": 3601
+  },
+  "4psJ7H4bSHU": {
+   "title": "Holy Name Immersion ‘25 / Kirtan with Gour Krishna",
+   "channel": "Sacinandana Swami",
+   "duration": 2642
+  },
+  "gVjiYgCa8W0": {
+   "title": "HH Sacinandana Maharaja l Kirtan Mela Berlin 2025 l Day 3",
+   "channel": "Krishna Berlin – ɪsᴋᴄᴏɴ",
+   "duration": 2628
+  },
+  "x4u_YY8aY94": {
+   "title": "Gour Krishna Das LIVE Kirtan | Mentorship 2025 Final Night",
+   "channel": "Sena Studios and Gokulananda's Kirtans",
+   "duration": 2042
+  },
+  "HHvIXYKIjD0": {
+   "title": "Kirtan By H.G Guru Gaur Krishna Das | 10th Oct 2023",
+   "channel": "ISKCON Juhu Mumbai",
+   "duration": 1317
+  },
+  "LA-wLuk4Bj0": {
+   "title": "Radhadesh Mellows 2018 — Gour Krsna Das",
+   "channel": "Nikhil Gohil",
+   "duration": 2354
+  },
+  "nrXpXAeEnw0": {
+   "title": "Gour Krishna - 11.11.2021 - Radhadesh Evening Kirtans",
+   "channel": "Radhadesh TV",
+   "duration": 2245
+  },
+  "cCVCsVD0XyU": {
+   "title": "Day 3 / Kirtan with Gour Krsna / Holy Name Immersion 2024",
+   "channel": "",
+   "duration": 2872
+  },
+  "UvgA3--o3So": {
+   "title": "Gour Krsna - 08/05/2022 - Radhadesh Evening Kirtans",
+   "channel": "Radhadesh TV",
+   "duration": 1453
+  },
+  "VkOLZU3d_R8": {
+   "title": "Rishikesh Kirtan Mela | Sacinandana Swami | Bhakti Yoga Rishikesh",
+   "channel": "",
+   "duration": 3206
+  },
+  "fZkjNLm7aa0": {
+   "title": "Rishikesh Kirtan Mela | Sacinandana Swami | Bhakti Yoga Rishikesh",
+   "channel": "",
+   "duration": 3205
+  },
+  "kdxKFjNgy6M": {
+   "title": "Swiss Bhakti Retreat '26 – Sacinandana Swami's Kirtan",
+   "channel": "",
+   "duration": 3227
+  },
+  "ximuj47X0eo": {
+   "title": "Holy Name Immersion ‘25 / Kirtan with Sacinandana Swami",
+   "channel": "",
+   "duration": 3327
+  },
+  "SN6QTsuimKc": {
+   "title": "Holy Name Immersion ‘25 / Kirtan with Sacinandana Swami",
+   "channel": "",
+   "duration": 2711
+  },
+  "KdVm2a8O0K0": {
+   "title": "Sacinandana Swami THE POWER OF SOUND / LIVE from the Bhakti Bloom Festival 2023",
+   "channel": "",
+   "duration": 3446
+  },
+  "Y7nSBPWrpCQ": {
+   "title": "Mayapur Kirtan Mela 2015 Day 1 - By Sacinandana Swami",
+   "channel": "Hare Krsna TV",
+   "duration": 3425
+  },
+  "WeZAVlZf2Nk": {
+   "title": "Sacinandan Swami Singing Hare Krishna Mahamantra Mayapur Kirtan Mela 2015 Day 1",
+   "channel": "Hare Krsna TV",
+   "duration": 3560
+  },
+  "aUVPAdTJcNs": {
+   "title": "Mauritius Kirtan Mela 2015 Day 1 Sacinandana Swami - April 10th 2015",
+   "channel": "",
+   "duration": 3532
+  },
+  "Z39ah7hIDew": {
+   "title": "Mayapur Kirtan Mela Nama Yajna with H.H. Sacinandana Swami 12.03.2013 in India",
+   "channel": "Purusottam108",
+   "duration": 3164
+  },
+  "2CfrmNIbM7E": {
+   "title": "Mayapur Kirtan Mela 2015 | Sacinandan Swami | Day 2 | Hare Krishna Kirtan",
+   "channel": "Hare Krsna TV",
+   "duration": 3354
+  },
+  "G-2yxLybmso": {
+   "title": "Mayapur Kirtan Mela 2015 | Day 4 | Sacinandana Swami | Hare Krishna Kirtan",
+   "channel": "Hare Krsna TV",
+   "duration": 3585
+  },
+  "GTXgbgJkXGk": {
+   "title": "Sacinandana Swami (Radhadesh Mellows 13 Day 1)",
+   "channel": "",
+   "duration": 3479
+  },
+  "wIs7y4lvric": {
+   "title": "Radhadesh Mellows with H.H. Sacinandana Swami \"Connect with the Mantra & Chant in a Prayerful Way\"",
+   "channel": "Purusottam108",
+   "duration": 3430
+  },
+  "SyfNBla_J54": {
+   "title": "Bhakti Immersion Retreat 25' Day 1 / The Promise Stone / Sacinandana Swami",
+   "channel": "",
+   "duration": 4444
+  },
+  "e3xcPEwALTI": {
+   "title": "Morning Lecture by HH Sacinandana Swami, Day 2 Radhadesh Mellows 2026",
+   "channel": "",
+   "duration": 4173
+  },
+  "KEQBLQaDULg": {
+   "title": "Sacinandana Swami - Day 2 Radhadesh Mellows morning class - Sat 25 Jan 2025",
+   "channel": "Radhadesh TV",
+   "duration": 3604
+  },
+  "uPTTz_Hhdeo": {
+   "title": "Day 3 / Guided Japa with Sacinandana Swami",
+   "channel": "",
+   "duration": 5436
+  },
+  "D8miCzT_fCY": {
+   "title": "Holy Name Immersion ‘25 / Kirtan with Sacinandana Swami",
+   "channel": "",
+   "duration": 1909
+  }
+ }
+}
