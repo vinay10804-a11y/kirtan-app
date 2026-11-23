@@ -12,7 +12,7 @@
   --surface-2: #e7ebe0;
   --ink: #34343a;
   --ink-2: #62666a;
-  --ink-3: #8f938f;
+  --ink-3: #747874; /* places, lengths, counts, menu labels: was #8f938f (2.7:1 on the cream, hard to read on a phone outdoors; audit 23 Nov 2026) */
   --teal: #3a8487;
   --teal-deep: #24585c;
   --teal-soft: #dcebe5;

@@ -5,6 +5,12 @@ Tick items off (or delete them) as they're done.
 
 ## Changes still to make
 
+- **Audit: done (23 Nov).** Checked that every kirtan plays and has its picture, every Japa video and
+  SoundCloud track, every YouTube link (318) and lyrics page still works, every page on a phone in
+  light and dark, and that the lecture job and storage are fine (5.6 GB of the free 10 GB). All good.
+  Two improvements: the light grey text (places, lengths, counts, the bottom menu's labels) is a little
+  darker so it's easier to read in daylight, and other websites can no longer show the site inside
+  theirs (a safety measure now that people sign in).
 - **New (23 Nov): watch a kirtan's video.** Kirtans that are on YouTube as a video now have a small
   video button on their row (and "Watch video" in ⋯ and in the player): it pauses the kirtan and
   plays the video in the app. The links are in a new sheet, **"Kirtans – YouTube links"** in your
